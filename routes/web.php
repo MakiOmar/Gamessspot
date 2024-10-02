@@ -18,19 +18,20 @@ use App\Http\Controllers\ManagerController;
 Route::get('/', function () {
     return view('welcome');
 });
+
 Route::prefix('manager')->group(function () {
-    // Manager login routes
+    // Manager login routes (no middleware needed here)
     Route::get('/login', [AdminLoginController::class, 'showLoginForm'])->name('manager.login');
     Route::post('/login', [AdminLoginController::class, 'login'])->name('manager.login.submit');
     Route::post('/logout', [AdminLoginController::class, 'logout'])->name('manager.logout');
 
-    // Manager dashboard (protected route)
-    Route::get('/dashboard', function () {
-        return view('manager.dashboard');
-    })->middleware('auth:admin')->name('manager.dashboard');
-
-    // Protected routes for managers (only admins can access these routes)
+    // Group routes that require 'auth:admin' middleware
     Route::middleware('auth:admin')->group(function () {
+        // Manager dashboard
+        Route::get('/dashboard', function () {
+            return view('manager.dashboard');
+        })->name('manager.dashboard');
+
         // Games management route
         Route::get('/games', [ManagerController::class, 'showGames'])->name('manager.games');
     });

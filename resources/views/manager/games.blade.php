@@ -5,7 +5,7 @@
 @section('content')
     <div class="container mt-5">
         <h1 class="text-center mb-4">Games Management</h1>
-        
+
         <!-- Scrollable table container -->
         <div style="overflow-x:auto; max-width: 100%; white-space: nowrap;">
             <table class="table table-striped table-bordered" style="min-width: 800px;">
@@ -34,6 +34,11 @@
                     @endforeach
                 </tbody>
             </table>
+        </div>
+
+        <!-- Pagination links -->
+        <div class="d-flex justify-content-center mt-4">
+            {{ $games->links() }}
         </div>
     </div>
 @endsection
