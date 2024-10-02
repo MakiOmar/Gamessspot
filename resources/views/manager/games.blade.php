@@ -140,9 +140,9 @@
 
 
 @endsection
-
+@push('scripts')
 <script>
-    $(document).ready(function() {
+    jQuery(document).ready(function($) {
         // Set up AJAX to include CSRF token in every request
         $.ajaxSetup({
             headers: {
@@ -153,6 +153,11 @@
         // When the "Edit" button is clicked
         $('.edit-game').on('click', function() {
             var gameId = $(this).data('id');
+
+            // Clear any previous error messages or inputs
+            $('#editGameForm').find('input').val(''); // Reset all input fields to blank
+            $('#editGameForm').find('.is-invalid').removeClass('is-invalid'); // Remove previous validation errors
+            $('#editGameForm').find('.invalid-feedback').remove(); // Remove previous error messages
 
             // Use AJAX to fetch the game data
             $.ajax({
@@ -197,10 +202,23 @@
                     location.reload();
                 },
                 error: function(xhr) {
-                    // Handle error
-                    alert('An error occurred.');
+                    if (xhr.status === 422) { // 422 is Laravel's response code for validation errors
+                        // Handle validation errors and display them on the form
+                        var errors = xhr.responseJSON.errors;
+
+                        // Loop through the validation errors and display them
+                        $.each(errors, function(key, value) {
+                            var inputField = $('#' + key);
+                            inputField.addClass('is-invalid');
+                            inputField.after('<div class="invalid-feedback">' + value[0] + '</div>');
+                        });
+                    } else {
+                        // Handle other errors (non-validation)
+                        alert('An error occurred.');
+                    }
                 }
             });
         });
     });
 </script>
+@endpush
