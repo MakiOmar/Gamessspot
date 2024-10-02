@@ -36,8 +36,8 @@ Route::prefix('manager')->group(function () {
         Route::get('/games', [ManagerController::class, 'showGames'])->name('manager.games');
         // Route to get game data for editing
         Route::get('/games/{id}/edit', [ManagerController::class, 'edit'])->name('manager.games.edit');
-
-    // Route to update game data
+        Route::post('/store/games', [ManagerController::class, 'store'])->name('games.store');
+        // Route to update game data
         Route::put('/games/{id}', [ManagerController::class, 'update'])->name('manager.games.update');
     });
 });
