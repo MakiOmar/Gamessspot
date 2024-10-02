@@ -38,7 +38,7 @@
 
         <!-- Pagination links -->
         <div class="d-flex justify-content-center mt-4">
-            {{ $games->links() }}
+            {{ $games->links('vendor.pagination.bootstrap-5') }}
         </div>
     </div>
 @endsection
