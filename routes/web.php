@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Auth\AdminLoginController;
+use App\Http\Controllers\ManagerController;
 
 /*
 |--------------------------------------------------------------------------
@@ -17,7 +18,6 @@ use App\Http\Controllers\Auth\AdminLoginController;
 Route::get('/', function () {
     return view('welcome');
 });
-
 Route::prefix('manager')->group(function () {
     // Manager login routes
     Route::get('/login', [AdminLoginController::class, 'showLoginForm'])->name('manager.login');
@@ -28,4 +28,10 @@ Route::prefix('manager')->group(function () {
     Route::get('/dashboard', function () {
         return view('manager.dashboard');
     })->middleware('auth:admin')->name('manager.dashboard');
+
+    // Protected routes for managers (only admins can access these routes)
+    Route::middleware('auth:admin')->group(function () {
+        // Games management route
+        Route::get('/games', [ManagerController::class, 'showGames'])->name('manager.games');
+    });
 });
