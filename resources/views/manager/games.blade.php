@@ -16,8 +16,6 @@
                         <th style="width: 286px;">Code</th>
                         <th style="width: 98px;">Reports</th>
                         <th style="width: 73px;">Edit</th>
-                        <th style="width: 106px;">ps4 Poster Edit</th>
-                        <th style="width: 106px;">ps5 Poster Edit</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -28,8 +26,6 @@
                             <td>{{ $game->code }}</td>
                             <td><a href="#">View Reports</a></td>
                             <td><a href="#" class="btn btn-primary edit-game" data-id="{{ $game->id }}" data-bs-toggle="modal" data-bs-target="#editGameModal">Edit</a></td>
-                            <td><a href="#">Edit PS4 Poster</a></td>
-                            <td><a href="#">Edit PS5 Poster</a></td>
                         </tr>
                     @endforeach
                 </tbody>
@@ -51,7 +47,7 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    <form id="editGameForm">
+                    <form id="editGameForm" enctype="multipart/form-data">
                         @csrf
                         <input type="hidden" id="gameId" name="gameId">
 
@@ -122,13 +118,22 @@
                             <option value="0">Not Available</option>
                         </select>
 
-                        <!-- PS4 Image URL -->
-                        <label for="ps4ImageUrl" class="mt-3">PS4 Image URL</label>
-                        <input type="text" id="ps4ImageUrl" name="ps4_image_url" class="form-control" style="border-radius: 10px;">
+                        <!-- PS4 Image Upload -->
+                        <a href="#" id="ps4ImageLink" target="_blank">
+                            <img id="ps4ImagePreview" class="img-thumbnail" style="max-width: 150px; display:none;">
+                        </a>
+                        <br>
+                        <label for="ps4Image" class="mt-3">PS4 Image</label>
+                        <input type="file" id="ps4Image" name="ps4_image" class="form-control" style="border-radius: 10px;" accept="image/*">
 
-                        <!-- PS5 Image URL -->
-                        <label for="ps5ImageUrl" class="mt-3">PS5 Image URL</label>
-                        <input type="text" id="ps5ImageUrl" name="ps5_image_url" class="form-control" style="border-radius: 10px;">
+                        <!-- PS5 Image Upload -->
+                        <a href="#" id="ps5ImageLink" target="_blank">
+                            <img id="ps5ImagePreview" class="img-thumbnail" style="max-width: 150px; display:none;">
+                        </a>
+                        <br>
+                        <label for="ps5Image" class="mt-3">PS5 Image</label>
+                        <input type="file" id="ps5Image" name="ps5_image" class="form-control" style="border-radius: 10px;" accept="image/*">
+
 
                         <!-- Save Button -->
                         <button type="submit" class="btn btn-success mt-3">Save Changes</button>
@@ -181,6 +186,24 @@
                     $('#ps5OfflineStatus').val(response.ps5_offline_status);
                     $('#ps4ImageUrl').val(response.ps4_image_url);
                     $('#ps5ImageUrl').val(response.ps5_image_url);
+
+                    // Generate preview for the PS4 image
+                    if (response.ps4_image_url) {
+                        $('#ps4ImagePreview').attr('src', '/' + response.ps4_image_url).show();
+                        $('#ps4ImageLink').attr('href', '/' + response.ps4_image_url).show();
+                    } else {
+                        $('#ps4ImagePreview').hide(); // Hide if no image available
+                        $('#ps4ImageLink').hide();
+                    }
+
+                    // Generate preview for the PS5 image
+                    if (response.ps5_image_url) {
+                        $('#ps5ImagePreview').attr('src', '/' + response.ps5_image_url).show();
+                        $('#ps5ImageLink').attr('href', '/' + response.ps5_image_url).show();
+                    } else {
+                        $('#ps5ImagePreview').hide(); // Hide if no image available
+                        $('#ps5ImageLink').hide();
+                    }
                 }
             });
         });
@@ -190,18 +213,22 @@
             e.preventDefault();
 
             var gameId = $('#gameId').val();
-            var formData = $(this).serialize();
-
+            var formData = new FormData(this);
+            // Append the method for PUT request if needed
+            formData.append('_method', 'PUT'); 
             $.ajax({
                 url: '/manager/games/' + gameId,
-                method: 'PUT',
+                method: 'POST',
                 data: formData,
+                contentType: false, // Required for file uploads
+                processData: false, // Required for file uploads
                 success: function(response) {
                     // Handle success (reload the page or update the table row)
                     alert('Game updated successfully!');
-                    location.reload();
+                   // location.reload();
                 },
                 error: function(xhr) {
+                    console.log(xhr.responseText);
                     if (xhr.status === 422) { // 422 is Laravel's response code for validation errors
                         // Handle validation errors and display them on the form
                         var errors = xhr.responseJSON.errors;

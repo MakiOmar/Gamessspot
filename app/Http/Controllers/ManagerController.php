@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Game;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 class ManagerController extends Controller
 {
@@ -29,6 +30,9 @@ class ManagerController extends Controller
 
     public function update(Request $request, $id)
     {
+         // Log the entire request input data
+        Log::info('Update Request Data: ', $request->all());
+
         $game = Game::findOrFail($id);
 
         // Validate the request
@@ -41,17 +45,33 @@ class ManagerController extends Controller
             'ps4_offline_price' => 'nullable|numeric|min:0',
             'ps5_primary_price' => 'nullable|numeric|min:0',
             'ps5_offline_price' => 'nullable|numeric|min:0',
-            'ps4_image_url' => 'nullable|string',
-            'ps5_image_url' => 'nullable|string',
+            'ps4_image' => 'nullable|image|mimes:webp,jpeg,png,jpg,gif,svg|max:2048', // Validate image upload
+            'ps5_image' => 'nullable|image|mimes:webp,jpeg,png,jpg,gif,svg|max:2048', // Validate image upload
             'ps4_primary_status' => 'required|boolean',
             'ps4_secondary_status' => 'required|boolean',
             'ps4_offline_status' => 'required|boolean',
             'ps5_primary_status' => 'required|boolean',
             'ps5_offline_status' => 'required|boolean',
         ]);
+        $data = $request->except('_token', 'ps4_image', 'ps5_image'); // Exclude image files from mass assignment
 
+        // Handle PS4 image upload
+        if ($request->hasFile('ps4_image')) {
+            $imageFile = $request->file('ps4_image');
+            $imageName = $imageFile->getClientOriginalName(); // Get original file name
+            $imageFile->move(public_path('assets/uploads/ps4'), $imageName); // Move file to /public/assets/uploads/ps4
+            $data['ps4_image_url'] = 'assets/uploads/ps4/' . $imageName; // Save relative path to database
+        }
+
+        // Handle PS5 image upload
+        if ($request->hasFile('ps5_image')) {
+            $imageFile = $request->file('ps5_image');
+            $imageName = $imageFile->getClientOriginalName(); // Get original file name
+            $imageFile->move(public_path('assets/uploads/ps5'), $imageName); // Move file to /public/assets/uploads/ps5
+            $data['ps5_image_url'] = 'assets/uploads/ps5/' . $imageName; // Save relative path to database
+        }
         // Update the game with the new data
-        $game->update($request->all());
+        $game->update($data);
 
         return response()->json(['message' => 'Game updated successfully!']);
     }
