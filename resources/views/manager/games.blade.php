@@ -67,6 +67,69 @@
                         <label for="fullPrice" class="mt-3">Full Price</label>
                         <input type="number" id="fullPrice" name="full_price" class="form-control" style="border-radius: 10px;" required>
 
+                        <!-- PS4 Primary Price -->
+                        <label for="ps4PrimaryPrice" class="mt-3">PS4 Primary Price</label>
+                        <input type="number" id="ps4PrimaryPrice" name="ps4_primary_price" class="form-control" style="border-radius: 10px;">
+
+                        <!-- PS4 Primary Status -->
+                        <label for="ps4PrimaryStatus" class="mt-3">PS4 Primary Status</label>
+                        <select id="ps4PrimaryStatus" name="ps4_primary_status" class="form-control" style="border-radius: 10px;">
+                            <option value="1">Available</option>
+                            <option value="0">Not Available</option>
+                        </select>
+
+                        <!-- PS4 Secondary Price -->
+                        <label for="ps4SecondaryPrice" class="mt-3">PS4 Secondary Price</label>
+                        <input type="number" id="ps4SecondaryPrice" name="ps4_secondary_price" class="form-control" style="border-radius: 10px;">
+
+                        <!-- PS4 Secondary Status -->
+                        <label for="ps4SecondaryStatus" class="mt-3">PS4 Secondary Status</label>
+                        <select id="ps4SecondaryStatus" name="ps4_secondary_status" class="form-control" style="border-radius: 10px;">
+                            <option value="1">Available</option>
+                            <option value="0">Not Available</option>
+                        </select>
+
+                        <!-- PS4 Offline Price -->
+                        <label for="ps4OfflinePrice" class="mt-3">PS4 Offline Price</label>
+                        <input type="number" id="ps4OfflinePrice" name="ps4_offline_price" class="form-control" style="border-radius: 10px;">
+
+                        <!-- PS4 Offline Status -->
+                        <label for="ps4OfflineStatus" class="mt-3">PS4 Offline Status</label>
+                        <select id="ps4OfflineStatus" name="ps4_offline_status" class="form-control" style="border-radius: 10px;">
+                            <option value="1">Available</option>
+                            <option value="0">Not Available</option>
+                        </select>
+
+                        <!-- PS5 Primary Price -->
+                        <label for="ps5PrimaryPrice" class="mt-3">PS5 Primary Price</label>
+                        <input type="number" id="ps5PrimaryPrice" name="ps5_primary_price" class="form-control" style="border-radius: 10px;">
+
+                        <!-- PS5 Primary Status -->
+                        <label for="ps5PrimaryStatus" class="mt-3">PS5 Primary Status</label>
+                        <select id="ps5PrimaryStatus" name="ps5_primary_status" class="form-control" style="border-radius: 10px;">
+                            <option value="1">Available</option>
+                            <option value="0">Not Available</option>
+                        </select>
+
+                        <!-- PS5 Offline Price -->
+                        <label for="ps5OfflinePrice" class="mt-3">PS5 Offline Price</label>
+                        <input type="number" id="ps5OfflinePrice" name="ps5_offline_price" class="form-control" style="border-radius: 10px;">
+
+                        <!-- PS5 Offline Status -->
+                        <label for="ps5OfflineStatus" class="mt-3">PS5 Offline Status</label>
+                        <select id="ps5OfflineStatus" name="ps5_offline_status" class="form-control" style="border-radius: 10px;">
+                            <option value="1">Available</option>
+                            <option value="0">Not Available</option>
+                        </select>
+
+                        <!-- PS4 Image URL -->
+                        <label for="ps4ImageUrl" class="mt-3">PS4 Image URL</label>
+                        <input type="text" id="ps4ImageUrl" name="ps4_image_url" class="form-control" style="border-radius: 10px;">
+
+                        <!-- PS5 Image URL -->
+                        <label for="ps5ImageUrl" class="mt-3">PS5 Image URL</label>
+                        <input type="text" id="ps5ImageUrl" name="ps5_image_url" class="form-control" style="border-radius: 10px;">
+
                         <!-- Save Button -->
                         <button type="submit" class="btn btn-success mt-3">Save Changes</button>
                     </form>
@@ -74,6 +137,7 @@
             </div>
         </div>
     </div>
+
 
 @endsection
 
@@ -100,6 +164,18 @@
                     $('#gameName').val(response.title);
                     $('#gameCode').val(response.code);
                     $('#fullPrice').val(response.full_price);
+                    $('#ps4PrimaryPrice').val(response.ps4_primary_price);
+                    $('#ps4PrimaryStatus').val(response.ps4_primary_status);
+                    $('#ps4SecondaryPrice').val(response.ps4_secondary_price);
+                    $('#ps4SecondaryStatus').val(response.ps4_secondary_status);
+                    $('#ps4OfflinePrice').val(response.ps4_offline_price);
+                    $('#ps4OfflineStatus').val(response.ps4_offline_status);
+                    $('#ps5PrimaryPrice').val(response.ps5_primary_price);
+                    $('#ps5PrimaryStatus').val(response.ps5_primary_status);
+                    $('#ps5OfflinePrice').val(response.ps5_offline_price);
+                    $('#ps5OfflineStatus').val(response.ps5_offline_status);
+                    $('#ps4ImageUrl').val(response.ps4_image_url);
+                    $('#ps5ImageUrl').val(response.ps5_image_url);
                 }
             });
         });

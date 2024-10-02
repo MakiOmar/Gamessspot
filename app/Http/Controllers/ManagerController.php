@@ -27,7 +27,6 @@ class ManagerController extends Controller
         return response()->json($game); // Return the game data as JSON
     }
 
-    // Handle updating the game
     public function update(Request $request, $id)
     {
         $game = Game::findOrFail($id);
@@ -37,14 +36,22 @@ class ManagerController extends Controller
             'title' => 'required|string|max:255',
             'code' => 'required|string|max:255',
             'full_price' => 'required|numeric|min:0',
+            'ps4_primary_price' => 'nullable|numeric|min:0',
+            'ps4_secondary_price' => 'nullable|numeric|min:0',
+            'ps4_offline_price' => 'nullable|numeric|min:0',
+            'ps5_primary_price' => 'nullable|numeric|min:0',
+            'ps5_offline_price' => 'nullable|numeric|min:0',
+            'ps4_image_url' => 'nullable|string',
+            'ps5_image_url' => 'nullable|string',
+            'ps4_primary_status' => 'required|boolean',
+            'ps4_secondary_status' => 'required|boolean',
+            'ps4_offline_status' => 'required|boolean',
+            'ps5_primary_status' => 'required|boolean',
+            'ps5_offline_status' => 'required|boolean',
         ]);
 
         // Update the game with the new data
-        $game->update([
-            'title' => $request->title,
-            'code' => $request->code,
-            'full_price' => $request->full_price,
-        ]);
+        $game->update($request->all());
 
         return response()->json(['message' => 'Game updated successfully!']);
     }
