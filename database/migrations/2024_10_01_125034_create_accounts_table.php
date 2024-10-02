@@ -7,7 +7,7 @@ use Illuminate\Support\Facades\Schema;
 /**
  * Create games table
  */
-class CreateGamesTable extends Migration
+class CreateAccountsTable extends Migration
 {
     /**
      * Run the migrations.
@@ -16,9 +16,8 @@ class CreateGamesTable extends Migration
      */
     public function up()
     {
-        Schema::create('games', function (Blueprint $table) {
+        Schema::create('accounts', function (Blueprint $table) {
             $table->id();
-            $table->string('title');
             $table->string('mail');
             $table->string('region', 2); // ISO 3166-1 alpha-2 country code
             $table->integer('ps4_offline_stock')->default(0);
@@ -38,6 +37,6 @@ class CreateGamesTable extends Migration
      */
     public function down()
     {
-        Schema::dropIfExists('games');
+        Schema::dropIfExists('accounts');
     }
 }

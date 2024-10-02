@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Auth\AdminLoginController;
 
 /*
 |--------------------------------------------------------------------------
@@ -15,4 +16,16 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
     return view('welcome');
+});
+
+Route::prefix('manager')->group(function () {
+    // Manager login routes
+    Route::get('/login', [AdminLoginController::class, 'showLoginForm'])->name('manager.login');
+    Route::post('/login', [AdminLoginController::class, 'login'])->name('manager.login.submit');
+    Route::post('/logout', [AdminLoginController::class, 'logout'])->name('manager.logout');
+
+    // Manager dashboard (protected route)
+    Route::get('/dashboard', function () {
+        return view('manager.dashboard');
+    })->middleware('auth:admin')->name('manager.dashboard');
 });
