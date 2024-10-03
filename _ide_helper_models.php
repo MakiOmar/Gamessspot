@@ -43,6 +43,10 @@ namespace App\Models{
  * @method static \Illuminate\Database\Eloquent\Builder|Account whereRegion($value)
  * @method static \Illuminate\Database\Eloquent\Builder|Account whereUpdatedAt($value)
  * @mixin \Eloquent
+ * @property int $game_id
+ * @property-read \App\Models\Game $game
+ * @method static \Database\Factories\AccountFactory factory($count = null, $state = [])
+ * @method static \Illuminate\Database\Eloquent\Builder|Account whereGameId($value)
  */
 	class Account extends \Eloquent {}
 }

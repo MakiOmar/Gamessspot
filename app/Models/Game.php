@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 /**
- * 
+ *
  *
  * @property int $id
  * @property string $title
@@ -80,6 +80,6 @@ class Game extends Model
      */
     public function accounts()
     {
-        return $this->belongsToMany(Account::class);
+        return $this->hasMany(Account::class);
     }
 }

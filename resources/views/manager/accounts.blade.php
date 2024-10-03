@@ -26,35 +26,31 @@
                 </tr>
             </thead>
             <tbody>
+                <!-- Region with Emoji -->
+                @php
+                    $regionEmojis = [
+                        'US' => '🇺🇸',
+                        'UK' => '🇬🇧',
+                        'JP' => '🇯🇵',
+                        'EU' => '🇪🇺',
+                        'CA' => '🇨🇦',
+                        // Add more region codes and their corresponding emojis here
+                    ];
+                @endphp
                 @foreach($accounts as $account)
                 <tr>
                     <td>{{ $account->id }}</td>
                     <td>{{ $account->mail }}</td>
-                    <td>{{ $account->game_name }}</td>
-                    
-                    <!-- Region with Emoji -->
-                    <td>
-                        @php
-                            $regionEmojis = [
-                                'US' => '🇺🇸',
-                                'UK' => '🇬🇧',
-                                'JP' => '🇯🇵',
-                                'EU' => '🇪🇺',
-                                'CA' => '🇨🇦',
-                                // Add more region codes and their corresponding emojis here
-                            ];
-                        @endphp
-                        {{ $regionEmojis[$account->region] ?? $account->region }}
-                    </td>
-
-                    <td>{{ $account->ps4_offline }}</td>
-                    <td>{{ $account->ps4_primary }}</td>
-                    <td>{{ $account->ps4_secondary }}</td>
-                    <td>{{ $account->ps5_offline }}</td>
-                    <td>{{ $account->ps5_primary }}</td>
-                    <td>{{ $account->ps5_secondary }}</td>
-                    <td>{{ $account->cost }}</td>
-                    <td>{{ $account->password }}</td>
+                    <td>{{ $account->game->title }}</td>
+                    <td>{{ $regionEmojis[$account->region] ?? $account->region }}</td>
+                    <td>{{ $account->ps4_offline_stock }}</td>
+                    <td>{{ $account->ps4_primary_stock }}</td>
+                    <td>{{ $account->ps4_secondary_stock }}</td>
+                    <td>{{ $account->ps5_offline_stock }}</td>
+                    <td>{{ $account->ps5_primary_stock }}</td>
+                    <td>{{ $account->ps5_secondary_stock }}</td>
+                    <td></td>
+                    <td></td>
                 </tr>
                 @endforeach
             </tbody>

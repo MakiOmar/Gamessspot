@@ -2,13 +2,13 @@
 
 namespace Database\Seeders;
 
-use App\Models\Account;
 use Illuminate\Database\Seeder;
+use App\Models\Account;
 
-class AccountSeeder extends Seeder
+class DatabaseSeeder extends Seeder
 {
     /**
-     * Run the database seeds.
+     * Seed the application's database.
      *
      * @return void
      */

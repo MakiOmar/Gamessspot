@@ -39,11 +39,25 @@ use Illuminate\Database\Eloquent\Model;
  */
 class Account extends Model
 {
+    use HasFactory;
+
+    protected $fillable = [
+        'mail',
+        'region',
+        'ps4_offline_stock',
+        'ps4_primary_stock',
+        'ps4_secondary_stock',
+        'ps5_offline_stock',
+        'ps5_primary_stock',
+        'ps5_secondary_stock',
+        'game_id', // Include game_id in the fillable fields
+    ];
+
     /**
      * The games that belong to the account.
      */
-    public function games()
+    public function game()
     {
-        return $this->belongsToMany(Game::class);
+        return $this->belongsTo(Game::class, 'game_id');
     }
 }
