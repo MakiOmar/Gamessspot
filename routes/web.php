@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Auth\AdminLoginController;
 use App\Http\Controllers\ManagerController;
+use App\Http\Controllers\AccountController;
 
 /*
 |--------------------------------------------------------------------------
@@ -39,5 +40,7 @@ Route::prefix('manager')->group(function () {
         Route::post('/store/games', [ManagerController::class, 'store'])->name('games.store');
         // Route to update game data
         Route::put('/games/{id}', [ManagerController::class, 'update'])->name('manager.games.update');
+
+        Route::get('/manager/accounts', [AccountController::class, 'index'])->name('manager.accounts');
     });
 });

@@ -2,20 +2,19 @@
 
 namespace Database\Seeders;
 
+use App\Models\Account;
 use Illuminate\Database\Seeder;
-use App\Models\User;
-use App\Models\Game;
 
-class DatabaseSeeder extends Seeder
+class AccountSeeder extends Seeder
 {
     /**
-     * Seed the application's database.
+     * Run the database seeds.
      *
      * @return void
      */
     public function run()
     {
-        // Seed 10 games into the database
-        Game::factory(10)->create();
+        // Create 10 accounts, each associated with a game
+        Account::factory()->count(10)->create();
     }
 }

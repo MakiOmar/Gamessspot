@@ -28,6 +28,6 @@
             <a href="#" class="list-group-item list-group-item-action">Card 1</a>
             <a href="#" class="list-group-item list-group-item-action">Card 2</a>
         </div>
-
+        <a href="{{ route( 'manager.accounts' ) }}" class="list-group-item list-group-item-action">Accounts</a>
     </div>
 </div>
