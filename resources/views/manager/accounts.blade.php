@@ -6,9 +6,15 @@
 <div class="container mt-5">
     <h1 class="text-center mb-4">Accounts Management</h1>
     <!-- Add Account Button (Bootstrap 5) -->
-    <button type="button" class="btn btn-success mb-4 float-right" data-bs-toggle="modal" data-bs-target="#addAccountModal">
-        Add New Account
-    </button>
+    <div class="d-flex justify-content-between mb-4">
+        <!-- Search Box -->
+        <input type="text" class="form-control w-50" id="searchAccount" placeholder="Search accounts by email or game name">
+        
+        <!-- Add Account Button -->
+        <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addAccountModal">
+            Add New Account
+        </button>
+    </div>
     <!-- Region with Emoji -->
     @php
         $regionEmojis = config('flags.flags');
@@ -33,7 +39,7 @@
                     <th style="width: 120px;">Password</th>
                 </tr>
             </thead>
-            <tbody>
+            <tbody id="accountTableBody">
                 @foreach($accounts as $account)
                 <tr>
                     <td>{{ $account->id }}</td>
@@ -201,6 +207,27 @@
                     }
                 }
             });
+        });
+
+        // Handle search input
+        $('#searchAccount').on('input', function() {
+            let query = $(this).val();
+
+            // Check if the input has 3 or more characters before running the search
+            if (query.length >= 3) {
+                $.ajax({
+                    url: "{{ route('manager.accounts.search') }}", // Add search route
+                    method: 'GET',
+                    data: { search: query },
+                    success: function(response) {
+                        if ( '' !== response ) {
+                            $('#accountTableBody').html(response); // Replace table rows with search results
+                        }
+                    }
+                });
+            } else if (query === '') {
+                location.reload(); // Reload the page if the search is cleared
+            }
         });
     });
 </script>

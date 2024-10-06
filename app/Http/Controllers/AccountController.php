@@ -22,6 +22,21 @@ class AccountController extends Controller
         // Return the view with the accounts data
         return view('manager.accounts', compact('accounts', 'games', 'flags'));
     }
+
+    public function search(Request $request)
+    {
+        $query = $request->get('search');
+
+        $accounts = Account::with('game')
+        ->where('mail', 'like', "%{$query}%")
+        ->orWhereHas('game', function ($q) use ($query) {
+            $q->where('title', 'like', "%{$query}%");
+        })
+        ->get();
+
+        return view('manager.partials.account_rows', compact('accounts'))->render(); // Use a partial view to render rows
+    }
+
     public function store(Request $request)
     {
     // Validate the request data
