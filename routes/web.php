@@ -41,6 +41,8 @@ Route::prefix('manager')->group(function () {
         // Route to update game data
         Route::put('/games/{id}', [ManagerController::class, 'update'])->name('manager.games.update');
 
-        Route::get('/manager/accounts', [AccountController::class, 'index'])->name('manager.accounts');
+        Route::get('/accounts', [AccountController::class, 'index'])->name('manager.accounts');
+        Route::post('/accounts/store', [AccountController::class, 'store'])->name('manager.accounts.store');
+
     });
 });

@@ -74,14 +74,9 @@
             <div class="container mt-4">
                 @yield('content') <!-- Main content will be injected here -->
             </div>
-            <footer class="footer mt-4">
-                <p class="text-center">2021© GAMESPOT</p>
-            </footer>
+            @include('layouts.footer') <!-- Reusable header -->
         </div>
     </div>
-
-    @include('layouts.footer') <!-- Reusable footer -->
-
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.6/dist/umd/popper.min.js"></script>
     <!-- FontAwesome for icons -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/js/all.min.js"></script>

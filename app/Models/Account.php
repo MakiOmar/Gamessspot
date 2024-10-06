@@ -43,14 +43,18 @@ class Account extends Model
 
     protected $fillable = [
         'mail',
+        'password',
+        'game_id',
         'region',
-        'ps4_offline_stock',
+        'cost',
+        'birthdate',
+        'login_code',
         'ps4_primary_stock',
         'ps4_secondary_stock',
-        'ps5_offline_stock',
+        'ps4_offline_stock',
         'ps5_primary_stock',
         'ps5_secondary_stock',
-        'game_id', // Include game_id in the fillable fields
+        'ps5_offline_stock',
     ];
 
     /**

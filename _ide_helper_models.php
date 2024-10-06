@@ -44,9 +44,17 @@ namespace App\Models{
  * @method static \Illuminate\Database\Eloquent\Builder|Account whereUpdatedAt($value)
  * @mixin \Eloquent
  * @property int $game_id
+ * @property string $cost
+ * @property string $password
+ * @property string|null $login_code
+ * @property string|null $birthdate
  * @property-read \App\Models\Game $game
  * @method static \Database\Factories\AccountFactory factory($count = null, $state = [])
+ * @method static \Illuminate\Database\Eloquent\Builder|Account whereBirthdate($value)
+ * @method static \Illuminate\Database\Eloquent\Builder|Account whereCost($value)
  * @method static \Illuminate\Database\Eloquent\Builder|Account whereGameId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder|Account whereLoginCode($value)
+ * @method static \Illuminate\Database\Eloquent\Builder|Account wherePassword($value)
  */
 	class Account extends \Eloquent {}
 }
