@@ -69,11 +69,14 @@ class Game extends Model
         'ps4_offline_status',
         'ps5_primary_price',
         'ps5_primary_status',
+        'ps5_secondary_price',
+        'ps5_secondary_status',
         'ps5_offline_price',
         'ps5_offline_status',
         'ps4_image_url',
         'ps5_image_url'
     ];
+    
 
     /**
      * The accounts that belong to the game.

@@ -106,6 +106,10 @@ namespace App\Models{
  * @method static \Illuminate\Database\Eloquent\Builder|Game whereTitle($value)
  * @method static \Illuminate\Database\Eloquent\Builder|Game whereUpdatedAt($value)
  * @mixin \Eloquent
+ * @property string $ps5_secondary_price
+ * @property int $ps5_secondary_status
+ * @method static \Illuminate\Database\Eloquent\Builder|Game wherePs5SecondaryPrice($value)
+ * @method static \Illuminate\Database\Eloquent\Builder|Game wherePs5SecondaryStatus($value)
  */
 	class Game extends \Eloquent {}
 }

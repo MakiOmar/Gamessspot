@@ -76,7 +76,7 @@ class AccountController extends Controller
         }
 
         // Create the new account with adjusted stock values
-        Account::create([
+        $account = Account::create([
         'mail' => $request->mail,
         'password' => $request->password,
         'game_id' => $request->game_id,
@@ -92,6 +92,26 @@ class AccountController extends Controller
         'ps5_offline_stock' => $ps5_offline_stock,
         ]);
 
-        return response()->json(['success' => 'Account created successfully!']);
+        // Check if the account was created successfully
+        if ($account) {
+            // Update the game stock statuses based on the newly created account stocks
+            $game = Game::find($request->game_id);
+
+            // Adjust the game's stock statuses
+            $game->ps4_primary_status += $ps4_primary_stock;
+            $game->ps4_secondary_status += $ps4_secondary_stock;
+            $game->ps4_offline_status += $ps4_offline_stock;
+            $game->ps5_primary_status += $ps5_primary_stock;
+            $game->ps5_secondary_status += $ps5_secondary_stock;
+            $game->ps5_offline_status += $ps5_offline_stock;
+
+            // Save the game updates
+            $game->save();
+
+            return response()->json(['success' => 'Account created and game stock updated successfully!']);
+        }
+
+        // If account creation failed, return an error response
+        return response()->json(['error' => 'Failed to create account. Please try again.'], 500);
     }
 }
