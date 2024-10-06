@@ -6,10 +6,14 @@
 <div class="container mt-5">
     <h1 class="text-center mb-4">Accounts Management</h1>
     <!-- Add Account Button (Bootstrap 5) -->
-    <div class="d-flex justify-content-between mb-4">
-        <!-- Search Box -->
-        <input type="text" class="form-control w-50" id="searchAccount" placeholder="Search accounts by email or game name">
-        
+    <div class="d-flex justify-content-between mb-4 align-items-end">
+        <div class="w-50">
+            <div class="alert alert-warning" id="noResultsMessage" style="display: none;">
+                No results found.
+            </div>
+            <!-- Search Box -->
+            <input type="text" class="form-control" id="searchAccount" placeholder="Search accounts by email or game name">
+        </div>
         <!-- Add Account Button -->
         <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addAccountModal">
             Add New Account
@@ -220,7 +224,10 @@
                     method: 'GET',
                     data: { search: query },
                     success: function(response) {
-                        if ( '' !== response ) {
+                        if (response.trim() === '') { // Check if response is empty
+                            $('#noResultsMessage').show(); // Show 'No results' message
+                        } else {
+                            $('#noResultsMessage').hide(); // Hide 'No results' message
                             $('#accountTableBody').html(response); // Replace table rows with search results
                         }
                     }
