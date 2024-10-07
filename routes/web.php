@@ -45,7 +45,6 @@ Route::prefix('manager')->group(function () {
         Route::post('/accounts/store', [AccountController::class, 'store'])->name('manager.accounts.store');
 
         Route::get('/accounts/search', [AccountController::class, 'search'])->name('manager.accounts.search');
-
-
+        Route::get('/accounts/export', [AccountController::class, 'export'])->name('manager.accounts.export');
     });
 });

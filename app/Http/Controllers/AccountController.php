@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\Account; // Assuming Account is the model
 use Illuminate\Http\Request;
 use App\Models\Game;
+use App\Exports\AccountsExport;
+use Maatwebsite\Excel\Facades\Excel;
 
 class AccountController extends Controller
 {
@@ -21,6 +23,10 @@ class AccountController extends Controller
 
         // Return the view with the accounts data
         return view('manager.accounts', compact('accounts', 'games', 'flags'));
+    }
+    public function export()
+    {
+        return Excel::download(new AccountsExport(), 'accounts.xlsx');
     }
 
     public function search(Request $request)

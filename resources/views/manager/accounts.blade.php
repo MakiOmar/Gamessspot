@@ -14,11 +14,18 @@
             <!-- Search Box -->
             <input type="text" class="form-control" id="searchAccount" placeholder="Search accounts by email or game name">
         </div>
-        <!-- Add Account Button -->
-        <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addAccountModal">
-            Add New Account
-        </button>
+        <div class="d-flex justify-content-end">
+            <!-- Add Account Button -->
+            <a type="button" data-bs-toggle="modal" data-bs-target="#addAccountModal">
+                <svg xmlns="http://www.w3.org/2000/svg"  viewBox="0 0 512 512" width="64px" height="48px"><path fill="#32BEA6" d="M7.9,256C7.9,119,119,7.9,256,7.9C393,7.9,504.1,119,504.1,256c0,137-111.1,248.1-248.1,248.1C119,504.1,7.9,393,7.9,256z"/><path fill="#FFF" d="M391.5,214.5H297v-93.9c0-4-3.2-7.2-7.2-7.2h-68.1c-4,0-7.2,3.2-7.2,7.2v93.9h-93.9c-4,0-7.2,3.2-7.2,7.2v69.2c0,4,3.2,7.2,7.2,7.2h93.9v93.4c0,4,3.2,7.2,7.2,7.2h68.1c4,0,7.2-3.2,7.2-7.2v-93.4h94.5c4,0,7.2-3.2,7.2-7.2v-69.2C398.7,217.7,395.4,214.5,391.5,214.5z"/></svg>
+            </a>
+            <!-- Export Button -->
+            <a href="{{ route('manager.accounts.export') }}" class="d-flex -4 float-right">
+                <svg xmlns="http://www.w3.org/2000/svg"  viewBox="0 0 48 48" width="48px" height="48px"><path fill="#4CAF50" d="M41,10H25v28h16c0.553,0,1-0.447,1-1V11C42,10.447,41.553,10,41,10z"/><path fill="#FFF" d="M32 15H39V18H32zM32 25H39V28H32zM32 30H39V33H32zM32 20H39V23H32zM25 15H30V18H25zM25 25H30V28H25zM25 30H30V33H25zM25 20H30V23H25z"/><path fill="#2E7D32" d="M27 42L6 38 6 10 27 6z"/><path fill="#FFF" d="M19.129,31l-2.411-4.561c-0.092-0.171-0.186-0.483-0.284-0.938h-0.037c-0.046,0.215-0.154,0.541-0.324,0.979L13.652,31H9.895l4.462-7.001L10.274,17h3.837l2.001,4.196c0.156,0.331,0.296,0.725,0.42,1.179h0.04c0.078-0.271,0.224-0.68,0.439-1.22L19.237,17h3.515l-4.199,6.939l4.316,7.059h-3.74V31z"/></svg>
+            </a>
+        </div>
     </div>
+
     <!-- Region with Emoji -->
     @php
         $regionEmojis = config('flags.flags');
