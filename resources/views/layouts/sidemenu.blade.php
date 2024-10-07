@@ -1,6 +1,6 @@
 <!-- Sidebar -->
 <div class="bg-light border-right" id="sidebar-wrapper">
-    <div class="sidebar-heading">Games Spot</div>
+    <div class="sidebar-heading gms-bg">Games Spot</div>
     <!-- Dashboard Section with Divider -->
     <div class="list-group list-group-flush">
         <a href="{{ route('manager.dashboard') }}" class="list-group-item list-group-item-action bg-light">

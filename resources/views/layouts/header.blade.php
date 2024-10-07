@@ -1,6 +1,6 @@
 <nav class="navbar navbar-expand-lg navbar-light bg-light">
     <div class="container-fluid">
-        <a class="btn btn-primary" id="menu-toggle"><i class="fa-solid fa-bars"></i></a>
+        <a class="btn" id="menu-toggle" style="color: #32BEA6;font-size:20px"><i class="fa-solid fa-bars"></i></a>
         <div class="collapse navbar-collapse" id="navbarNav">
             <ul class="navbar-nav ms-auto">
                 <li class="nav-item">

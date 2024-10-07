@@ -43,7 +43,7 @@
 
 
         .list-group-item {
-            background-color: #ffcc99;
+            background-color: #ffd9b8;
             border: none;
         }
 
@@ -61,6 +61,19 @@
             padding: 1rem;
             color: #6a1b0e;
             text-align: center;
+        }
+        .gms-bg, .btn-primary, .page-link.active, .active > .page-link{
+            background-color: #32BEA6
+        }
+        .page-link.active, .active > .page-link {
+            border-color: #32BEA6
+        }
+        .page-link{
+            color: #32BEA6
+        }
+        #page-content-wrapper > nav{
+            background-color: #f0f0f0 !important;
+            height: 70px;
         }
     </style>
 </head>
