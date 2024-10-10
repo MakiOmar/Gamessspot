@@ -3,7 +3,7 @@
 namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
-use App\Models\Game;
+use App\Models\Order;
 
 class DatabaseSeeder extends Seeder
 {
@@ -15,6 +15,6 @@ class DatabaseSeeder extends Seeder
     public function run()
     {
         // Create 10 accounts, each associated with a game
-        Game::factory()->count(50)->create();
+        Order::factory()->count(10)->create();  // This will create 10 random orders
     }
 }

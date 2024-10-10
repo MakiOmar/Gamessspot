@@ -119,6 +119,40 @@ namespace App\Models{
  * 
  *
  * @property int $id
+ * @property int $seller_id
+ * @property int $account_id
+ * @property string $buyer_phone
+ * @property string $buyer_name
+ * @property string $price
+ * @property string|null $notes
+ * @property string $sold_item
+ * @property \Illuminate\Support\Carbon|null $created_at
+ * @property \Illuminate\Support\Carbon|null $updated_at
+ * @property-read \App\Models\Account $account
+ * @property-read \App\Models\User $seller
+ * @method static \Database\Factories\OrderFactory factory($count = null, $state = [])
+ * @method static \Illuminate\Database\Eloquent\Builder|Order newModelQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder|Order newQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder|Order query()
+ * @method static \Illuminate\Database\Eloquent\Builder|Order whereAccountId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder|Order whereBuyerName($value)
+ * @method static \Illuminate\Database\Eloquent\Builder|Order whereBuyerPhone($value)
+ * @method static \Illuminate\Database\Eloquent\Builder|Order whereCreatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder|Order whereId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder|Order whereNotes($value)
+ * @method static \Illuminate\Database\Eloquent\Builder|Order wherePrice($value)
+ * @method static \Illuminate\Database\Eloquent\Builder|Order whereSellerId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder|Order whereSoldItem($value)
+ * @method static \Illuminate\Database\Eloquent\Builder|Order whereUpdatedAt($value)
+ */
+	class Order extends \Eloquent {}
+}
+
+namespace App\Models{
+/**
+ * 
+ *
+ * @property int $id
  * @property string $phone
  * @property int $role
  * @property string $name

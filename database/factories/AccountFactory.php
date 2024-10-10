@@ -27,6 +27,7 @@ class AccountFactory extends Factory
 
         return [
             'mail' => $this->faker->unique()->safeEmail,
+            'password' => '123456',
             'region' => $this->faker->randomElement($regions),
             'ps4_offline_stock' => $this->faker->numberBetween(0, 100),
             'ps4_primary_stock' => $this->faker->numberBetween(0, 100),
