@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Auth\AdminLoginController;
 use App\Http\Controllers\ManagerController;
 use App\Http\Controllers\AccountController;
+use App\Http\Controllers\OrderController;
 
 /*
 |--------------------------------------------------------------------------
@@ -37,18 +38,21 @@ Route::prefix('manager')->group(function () {
         Route::get('/games', [ManagerController::class, 'showGames'])->name('manager.games');
         // Route to get game data for editing
         Route::get('/games/{id}/edit', [ManagerController::class, 'edit'])->name('manager.games.edit');
-        Route::post('/store/games', [ManagerController::class, 'store'])->name('games.store');
-        // Route to update game data
+        Route::post('/games/store', [ManagerController::class, 'store'])->name('games.store');
         Route::put('/games/{id}', [ManagerController::class, 'update'])->name('manager.games.update');
-
         Route::get('/games/ps4', [ManagerController::class, 'showPS4Games'])->name('manager.games.ps4');
         Route::get('/games/ps5', [ManagerController::class, 'showPS5Games'])->name('manager.games.ps5');
 
 
         Route::get('/accounts', [AccountController::class, 'index'])->name('manager.accounts');
         Route::post('/accounts/store', [AccountController::class, 'store'])->name('manager.accounts.store');
-
         Route::get('/accounts/search', [AccountController::class, 'search'])->name('manager.accounts.search');
         Route::get('/accounts/export', [AccountController::class, 'export'])->name('manager.accounts.export');
+
+
+        Route::get('/orders', [OrderController::class, 'index'])->name('manager.orders');
+        Route::get('/orders/search', [OrderController::class, 'search'])->name('manager.orders.search');
+        Route::get('/orders/export', [OrderController::class, 'export'])->name('manager.orders.export');
+        Route::post('/orders/undo', [OrderController::class, 'undo'])->name('manager.orders.undo');
     });
 });
