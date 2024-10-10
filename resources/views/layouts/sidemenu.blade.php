@@ -16,8 +16,8 @@
         </a>
         <div class="collapse" id="gamesMenu">
             <a href="{{ route('manager.games') }}" class="list-group-item list-group-item-action">Edit/Add Games</a>
-            <a href="#" class="list-group-item list-group-item-action">PS4 Games</a>
-            <a href="#" class="list-group-item list-group-item-action">PS5 Games</a>
+            <a href="{{ route('manager.games.ps4') }}" class="list-group-item list-group-item-action">PS4 Games</a>
+            <a href="{{ route('manager.games.ps5') }}" class="list-group-item list-group-item-action">PS5 Games</a>
         </div>
 
         <!-- Cards Menu -->

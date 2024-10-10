@@ -115,20 +115,6 @@ class AccountController extends Controller
 
         // Check if the account was created successfully
         if ($account) {
-            // Update the game stock statuses based on the newly created account stocks
-            $game = Game::find($request->game_id);
-
-            // Adjust the game's stock statuses
-            $game->ps4_primary_status += $ps4_primary_stock;
-            $game->ps4_secondary_status += $ps4_secondary_stock;
-            $game->ps4_offline_status += $ps4_offline_stock;
-            $game->ps5_primary_status += $ps5_primary_stock;
-            $game->ps5_secondary_status += $ps5_secondary_stock;
-            $game->ps5_offline_status += $ps5_offline_stock;
-
-            // Save the game updates
-            $game->save();
-
             return response()->json(['success' => 'Account created and game stock updated successfully!']);
         }
 

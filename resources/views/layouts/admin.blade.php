@@ -16,6 +16,9 @@
             font-family: 'Poppins', sans-serif;
             background-color: #f8f9fa;
         }
+        a{
+            text-decoration: none
+        }
         #sidebar-wrapper {
             width: 250px;
             transition: all 0.3s ease;

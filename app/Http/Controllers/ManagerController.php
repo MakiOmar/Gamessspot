@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\Game;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 
 class ManagerController extends Controller
 {
@@ -27,7 +29,26 @@ class ManagerController extends Controller
         $game = Game::findOrFail($id);
         return response()->json($game); // Return the game data as JSON
     }
+    private function clearPaginatedGameCache()
+    {
+        // Calculate total pages for PS4 and PS5
+        $ps4GamesCount = Game::where('ps4_offline_status', true)->where('ps5_offline_status', false)->count();
+        $ps5GamesCount = Game::where('ps5_offline_status', true)->where('ps4_offline_status', false)->count();
 
+        $paginationLimit = 10; // Assuming 10 games per page
+        $ps4TotalPages = ceil($ps4GamesCount / $paginationLimit);
+        $ps5TotalPages = ceil($ps5GamesCount / $paginationLimit);
+
+        // Forget cache for all pages of PS4 games
+        for ($page = 1; $page <= $ps4TotalPages; $page++) {
+            Cache::forget("ps4_games_page_{$page}");
+        }
+
+        // Forget cache for all pages of PS5 games
+        for ($page = 1; $page <= $ps5TotalPages; $page++) {
+            Cache::forget("ps5_games_page_{$page}");
+        }
+    }
     public function update(Request $request, $id)
     {
          // Log the entire request input data
@@ -72,7 +93,8 @@ class ManagerController extends Controller
         }
         // Update the game with the new data
         $game->update($data);
-
+        // Clear the cache after updating the game
+        $this->clearPaginatedGameCache();
         return response()->json(['message' => 'Game updated successfully!']);
     }
 
@@ -115,7 +137,69 @@ class ManagerController extends Controller
 
         // Create the new game
         Game::create($validatedData);
-
+        // Clear the cache after updating the game
+        $this->clearPaginatedGameCache();
         return response()->json(['message' => 'Game created successfully!']);
+    }
+
+    /**
+     * Show the list of PS4 games.
+     *
+     * @return \Illuminate\View\View
+     */
+    public function showPS4Games()
+    {
+        $psGames = DB::table('accounts')
+                ->select(
+                    'games.*',  // Get all columns from the games table
+                    DB::raw('SUM(accounts.ps4_offline_stock) as ps4_offline_stock'),
+                    DB::raw('SUM(accounts.ps4_primary_stock) as ps4_primary_stock'),
+                    DB::raw('SUM(accounts.ps4_secondary_stock) as ps4_secondary_stock')
+                )
+                ->join('games', 'accounts.game_id', '=', 'games.id')
+                ->groupBy('accounts.game_id')
+                ->havingRaw('SUM(accounts.ps4_offline_stock) > 0')  // Only fetch games with non-zero PS4 offline stock
+                ->paginate(10);  // Paginate 10 results per page
+
+        $n = 4;
+        return view('manager.games_listings', compact('psGames', 'n'));
+    }
+
+
+    public function showPS5Games()
+    {
+        $psGames = DB::table('accounts')
+                ->select(
+                    'games.*',  // Get all columns from the games table
+                    DB::raw('SUM(accounts.ps5_offline_stock) as ps5_offline_stock'),
+                    DB::raw('SUM(accounts.ps5_primary_stock) as ps5_primary_stock'),
+                    DB::raw('SUM(accounts.ps5_secondary_stock) as ps5_secondary_stock')
+                )
+                ->join('games', 'accounts.game_id', '=', 'games.id')
+                ->groupBy('accounts.game_id')
+                ->havingRaw('SUM(accounts.ps5_offline_stock) > 0')  // Only fetch games with non-zero PS5 offline stock
+                ->paginate(10);  // Paginate 10 results per page
+        $n = 5;
+        return view('manager.games_listings', compact('psGames', 'n'));
+    }
+
+    public function getGamesWithAccountStocks()
+    {
+        $psGames = DB::table('accounts')
+                    ->select(
+                        'games.*',
+                        'accounts.game_id',
+                        DB::raw('SUM(accounts.ps4_offline_stock) as ps4_offline_stock'),
+                        DB::raw('SUM(accounts.ps4_primary_stock) as ps4_primary_stock'),
+                        DB::raw('SUM(accounts.ps4_secondary_stock) as ps4_secondary_stock'),
+                        DB::raw('SUM(accounts.ps5_offline_stock) as ps5_offline_stock'),
+                        DB::raw('SUM(accounts.ps5_primary_stock) as ps5_primary_stock'),
+                        DB::raw('SUM(accounts.ps5_secondary_stock) as ps5_secondary_stock')
+                    )
+                    ->join('games', 'accounts.game_id', '=', 'games.id')
+                    ->groupBy('accounts.game_id')
+                    ->paginate(10); // Paginate 10 results per page
+
+        return view('manager.games_listings', compact('psGames'));
     }
 }

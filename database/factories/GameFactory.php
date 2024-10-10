@@ -40,16 +40,22 @@ class GameFactory extends Factory
             'full_price' => $this->faker->randomFloat(2, 30, 100),
             'ps4_primary_price' => $this->faker->randomFloat(2, 20, 80),
             'ps4_primary_status' => $this->faker->boolean(),
+            'ps4_primary_stock' => $this->faker->numberBetween(1, 100),
             'ps4_secondary_price' => $this->faker->randomFloat(2, 10, 50),
             'ps4_secondary_status' => $this->faker->boolean(),
+            'ps4_secondary_stock' => $this->faker->numberBetween(1, 100),
             'ps4_offline_price' => $this->faker->randomFloat(2, 5, 40),
             'ps4_offline_status' => $this->faker->boolean(),
+            'ps4_offline_stock' => $this->faker->numberBetween(1, 100),
             'ps5_primary_price' => $this->faker->randomFloat(2, 20, 80),
             'ps5_primary_status' => $this->faker->boolean(),
+            'ps5_primary_stock' => $this->faker->numberBetween(1, 100),
             'ps5_offline_price' => $this->faker->randomFloat(2, 10, 50),
             'ps5_offline_status' => $this->faker->boolean(),
-            'ps4_image_url' => 'images/default-game.webp',
-            'ps5_image_url' => 'images/default-game.webp',
+            'ps5_offline_stock' => $this->faker->numberBetween(1, 100),
+            'ps4_image_url' => 'assets/uploads/default-game.webp',
+            'ps5_image_url' => 'assets/uploads/default-game.webp',
         ];
     }
 }
+
