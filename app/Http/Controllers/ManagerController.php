@@ -141,6 +141,34 @@ class ManagerController extends Controller
         $this->clearPaginatedGameCache();
         return response()->json(['message' => 'Game created successfully!']);
     }
+    /**
+     * Fetch games with dynamic stock based on the $n argument.
+     *
+     * @param int $n
+     * @return \Illuminate\View\View
+     */
+    public function getGamesByPlatform($n)
+    {
+        // Determine the stock and image fields based on the $n value
+        $offline_stock = "ps{$n}_offline_stock";
+        $primary_stock = "ps{$n}_primary_stock";
+        $secondary_stock = "ps{$n}_secondary_stock";
+
+        $psGames = DB::table('accounts')
+                ->select(
+                    'games.*',  // Get all columns from the games table
+                    DB::raw("SUM(accounts.{$offline_stock}) as {$offline_stock}"),
+                    DB::raw("SUM(accounts.{$primary_stock}) as {$primary_stock}"),
+                    DB::raw("SUM(accounts.{$secondary_stock}) as {$secondary_stock}")
+                )
+                ->join('games', 'accounts.game_id', '=', 'games.id')
+                ->groupBy('accounts.game_id')
+                ->havingRaw("SUM(accounts.{$offline_stock}) > 0")  // Only fetch games with non-zero offline stock
+                ->paginate(10);  // Paginate 10 results per page
+
+        // Return the view with the games and the platform indicator $n
+        return view('manager.games_listings', compact('psGames', 'n'));
+    }
 
     /**
      * Show the list of PS4 games.
@@ -149,38 +177,13 @@ class ManagerController extends Controller
      */
     public function showPS4Games()
     {
-        $psGames = DB::table('accounts')
-                ->select(
-                    'games.*',  // Get all columns from the games table
-                    DB::raw('SUM(accounts.ps4_offline_stock) as ps4_offline_stock'),
-                    DB::raw('SUM(accounts.ps4_primary_stock) as ps4_primary_stock'),
-                    DB::raw('SUM(accounts.ps4_secondary_stock) as ps4_secondary_stock')
-                )
-                ->join('games', 'accounts.game_id', '=', 'games.id')
-                ->groupBy('accounts.game_id')
-                ->havingRaw('SUM(accounts.ps4_offline_stock) > 0')  // Only fetch games with non-zero PS4 offline stock
-                ->paginate(10);  // Paginate 10 results per page
-
-        $n = 4;
-        return view('manager.games_listings', compact('psGames', 'n'));
+        return $this->getGamesByPlatform(4);
     }
 
 
     public function showPS5Games()
     {
-        $psGames = DB::table('accounts')
-                ->select(
-                    'games.*',  // Get all columns from the games table
-                    DB::raw('SUM(accounts.ps5_offline_stock) as ps5_offline_stock'),
-                    DB::raw('SUM(accounts.ps5_primary_stock) as ps5_primary_stock'),
-                    DB::raw('SUM(accounts.ps5_secondary_stock) as ps5_secondary_stock')
-                )
-                ->join('games', 'accounts.game_id', '=', 'games.id')
-                ->groupBy('accounts.game_id')
-                ->havingRaw('SUM(accounts.ps5_offline_stock) > 0')  // Only fetch games with non-zero PS5 offline stock
-                ->paginate(10);  // Paginate 10 results per page
-        $n = 5;
-        return view('manager.games_listings', compact('psGames', 'n'));
+        return $this->getGamesByPlatform(5);
     }
 
     public function getGamesWithAccountStocks()
