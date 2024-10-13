@@ -59,7 +59,6 @@ class User extends Authenticatable
         'password',
         'store_profile_id',
         'phone',
-        'role'
     ];
 
     /**
@@ -85,5 +84,9 @@ class User extends Authenticatable
     public function storeProfile()
     {
         return $this->belongsTo(StoresProfile::class, 'store_profile_id');
+    }
+    public function roles()
+    {
+        return $this->belongsToMany(Role::class, 'role_user', 'user_id', 'role_id');
     }
 }

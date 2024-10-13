@@ -17,7 +17,11 @@ class AdminMiddleware
      */
     public function handle(Request $request, Closure $next)
     {
-        if (Auth::check() && Auth::user()->role === 0) {
+        if (
+            Auth::check() && Auth::user()->roles->contains(function ($role) {
+                return in_array($role->id, [1, 2, 3]); // Role IDs for 'admin', 'sales', and 'accountant'
+            })
+        ) {
             return $next($request);
         }
 

@@ -7,6 +7,8 @@ use App\Http\Controllers\AccountController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\StoreProfileController;
+use App\Http\Controllers\RoleAssignmentController;
+
 
 /*
 |--------------------------------------------------------------------------
@@ -71,5 +73,7 @@ Route::prefix('manager')->group(function () {
         Route::get('/storeProfiles/{id}/edit', [StoreProfileController::class, 'edit'])->name('manager.storeProfiles.edit');
         Route::put('/storeProfiles/update/{id}', [StoreProfileController::class, 'update'])->name('manager.storeProfiles.update');
         Route::get('/storeProfiles/search', [StoreProfileController::class, 'search'])->name('manager.storeProfiles.search');
+
+        Route::get('/assign-roles', [RoleAssignmentController::class, 'assignRolesBasedOnQuery']);
     });
 });

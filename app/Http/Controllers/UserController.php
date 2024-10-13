@@ -11,11 +11,14 @@ class UserController extends Controller
     // Method to list users with role 1 or 2
     public function index()
     {
-        $users = User::whereIn('role', [1, 2])->with('storeProfile')->paginate(10);
+    // Fetch users who have role with id 2 (sales)
+        $users = User::whereHas('roles', function ($query) {
+            $query->where('id', 2); // Role ID 2 corresponds to 'sales'
+        })->with('storeProfile')->paginate(10);
+
         $storeProfiles = StoresProfile::all(); // Fetch all store profiles
         return view('manager.users', compact('users', 'storeProfiles'));
     }
-
 
     // Method to search users based on the input
     public function search(Request $request)
@@ -59,8 +62,8 @@ class UserController extends Controller
             'phone' => 'nullable|string|max:20', // Phone can be optional
             'store_profile_id' => 'nullable|exists:stores_profile,id',
             'password' => 'nullable|min:8|confirmed', // Optional password field, must be at least 8 characters if filled
-            'role' => 'nullable|integer',
-
+            'roles' => 'required|array',
+            'roles.*' => 'exists:roles,id',
         ]);
         // Update only if a new password is provided
         if ($request->filled('password')) {
@@ -70,7 +73,7 @@ class UserController extends Controller
         }
         // Update user
         $user->update($validated);
-
+        $user->roles()->sync($request->input('roles')); // Sync roles
         return response()->json(['message' => 'User updated successfully']);
     }
     public function store(Request $request)
@@ -81,13 +84,14 @@ class UserController extends Controller
         'phone' => 'nullable|string|max:20',
         'password' => 'required|min:8|confirmed', // Required for creation
         'store_profile_id' => 'nullable|exists:stores_profile,id',
-        'role' => 'nullable|integer'
+        'roles' => 'required|array',
+        'roles.*' => 'exists:roles,id',
         ]);
 
         $validated['password'] = bcrypt($request->input('password')); // Hash the password
 
-        User::create($validated);
-
+        $user = User::create($validated);
+        $user->roles()->sync($request->input('roles')); // Sync roles
         return response()->json(['message' => 'User created successfully']);
     }
 }
