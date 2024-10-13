@@ -143,7 +143,8 @@
 <!-- JavaScript for handling modal edit functionality -->
 <script>
     $(document).ready(function() {
-        $('.deleteUserButton').on('click', function() {
+        // Handle delete user button click using event delegation
+        $(document).on('click', '.deleteUserButton', function() {
             var userId = $(this).data('id'); // Get user ID from button data attribute
             var confirmation = confirm('Are you sure you want to delete this user?');
 
@@ -165,6 +166,7 @@
                 });
             }
         });
+
         // Handle search input
         $('#searchUser').on('input', function() {
             let query = $(this).val();
@@ -180,7 +182,7 @@
                             $('#noResultsMessage').show();
                         } else {
                             $('#noResultsMessage').hide();
-                            $('#userTableBody').html(response);
+                            $('#userTableBody').html(response); // Update the user table with the search results
                         }
                     }
                 });
@@ -188,20 +190,20 @@
                 location.reload(); // Reload the page if the search is cleared
             }
         });
+
         // Handle opening the Create User modal
-        $('#createUserButton').on('click', function () {
+        $(document).on('click', '#createUserButton', function () {
             $('#editUserModalLabel').text('Create New User'); // Change modal title
             $('#editUserForm').trigger('reset'); // Reset the form
             $('#userId').val(''); // Clear user ID to indicate creation
         });
 
-        // Load user data into the modal on click of Edit button
-        $('#editUserModal').on('show.bs.modal', function (event) {
-            
-            var button = $(event.relatedTarget); // Button that triggered the modal
+        // Load user data into the modal on click of Edit button (using event delegation)
+        $(document).on('click', '.btn-primary[data-bs-target="#editUserModal"]', function () {
+            var button = $(this); // Button that triggered the modal
             var userId = button.data('id'); // Extract info from data-* attributes
-            
-            if ( userId ) {
+
+            if (userId) {
                 $('#editUserModalLabel').text('Edit User'); // Change modal title for editing
                 // Make AJAX request to get user data
                 $.ajax({
@@ -222,6 +224,13 @@
                         data.roles.forEach(function(role) {
                             $('#role_' + role.id).prop('checked', true);
                         });
+
+                        // Show the modal after population
+                        $('#editUserModal').modal('show');
+                    },
+                    error: function(xhr) {
+                        console.log(xhr.responseText);
+                        alert('An error occurred while fetching the user data.');
                     }
                 });
             }
@@ -270,7 +279,7 @@
                 }
             });
         });
-
     });
+
 </script>
 @endpush
