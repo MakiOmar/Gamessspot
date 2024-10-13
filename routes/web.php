@@ -5,6 +5,7 @@ use App\Http\Controllers\Auth\AdminLoginController;
 use App\Http\Controllers\ManagerController;
 use App\Http\Controllers\AccountController;
 use App\Http\Controllers\OrderController;
+use App\Http\Controllers\UserController;
 
 /*
 |--------------------------------------------------------------------------
@@ -33,6 +34,9 @@ Route::prefix('manager')->group(function () {
         Route::get('/dashboard', function () {
             return view('manager.dashboard');
         })->name('manager.dashboard');
+        Route::get('/', function () {
+            return view('manager.dashboard');
+        })->name('manager.dashboard');
 
         // Games management route
         Route::get('/games', [ManagerController::class, 'showGames'])->name('manager.games');
@@ -54,5 +58,11 @@ Route::prefix('manager')->group(function () {
         Route::get('/orders/search', [OrderController::class, 'search'])->name('manager.orders.search');
         Route::get('/orders/export', [OrderController::class, 'export'])->name('manager.orders.export');
         Route::post('/orders/undo', [OrderController::class, 'undo'])->name('manager.orders.undo');
+
+        Route::get('/users', [UserController::class, 'index'])->name('manager.users.index');
+        Route::get('/users/search', [UserController::class, 'search'])->name('manager.users.search');
+        Route::get('/users/{id}/edit', [UserController::class, 'edit'])->name('manager.users.edit');
+        Route::put('/users/update/{id}', [UserController::class, 'update'])->name('manager.users.update');
+        Route::post('/users/store', [UserController::class, 'store'])->name('manager.users.store');
     });
 });

@@ -153,6 +153,30 @@ namespace App\Models{
  * 
  *
  * @property int $id
+ * @property string $name
+ * @property string $phone_number
+ * @property \Illuminate\Support\Carbon|null $created_at
+ * @property \Illuminate\Support\Carbon|null $updated_at
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\User> $users
+ * @property-read int|null $users_count
+ * @method static \Database\Factories\StoresProfileFactory factory($count = null, $state = [])
+ * @method static \Illuminate\Database\Eloquent\Builder|StoresProfile newModelQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder|StoresProfile newQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder|StoresProfile query()
+ * @method static \Illuminate\Database\Eloquent\Builder|StoresProfile whereCreatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder|StoresProfile whereId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder|StoresProfile whereName($value)
+ * @method static \Illuminate\Database\Eloquent\Builder|StoresProfile wherePhoneNumber($value)
+ * @method static \Illuminate\Database\Eloquent\Builder|StoresProfile whereUpdatedAt($value)
+ */
+	class StoresProfile extends \Eloquent {}
+}
+
+namespace App\Models{
+/**
+ * 
+ *
+ * @property int $id
  * @property string $phone
  * @property int $role
  * @property string $name
@@ -181,6 +205,9 @@ namespace App\Models{
  * @method static \Illuminate\Database\Eloquent\Builder|User whereRole($value)
  * @method static \Illuminate\Database\Eloquent\Builder|User whereUpdatedAt($value)
  * @mixin \Eloquent
+ * @property int|null $store_profile_id
+ * @property-read \App\Models\StoresProfile|null $storeProfile
+ * @method static \Illuminate\Database\Eloquent\Builder|User whereStoreProfileId($value)
  */
 	class User extends \Eloquent {}
 }
