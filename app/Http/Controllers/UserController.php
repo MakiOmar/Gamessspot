@@ -59,6 +59,7 @@ class UserController extends Controller
             'phone' => 'nullable|string|max:20', // Phone can be optional
             'store_profile_id' => 'nullable|exists:stores_profile,id',
             'password' => 'nullable|min:8|confirmed', // Optional password field, must be at least 8 characters if filled
+            'role' => 'nullable|integer',
 
         ]);
         // Update only if a new password is provided
@@ -71,5 +72,22 @@ class UserController extends Controller
         $user->update($validated);
 
         return response()->json(['message' => 'User updated successfully']);
+    }
+    public function store(Request $request)
+    {
+        $validated = $request->validate([
+        'name' => 'required|string|max:255',
+        'email' => 'required|email|max:255|unique:users',
+        'phone' => 'nullable|string|max:20',
+        'password' => 'required|min:8|confirmed', // Required for creation
+        'store_profile_id' => 'nullable|exists:stores_profile,id',
+        'role' => 'nullable|integer'
+        ]);
+
+        $validated['password'] = bcrypt($request->input('password')); // Hash the password
+
+        User::create($validated);
+
+        return response()->json(['message' => 'User created successfully']);
     }
 }

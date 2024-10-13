@@ -5,6 +5,12 @@
 @section('content')
 <div class="container mt-5">
     <h1 class="text-center mb-4">Users Management</h1>
+    <!-- Add User Button -->
+    <div class="d-flex justify-content-end mb-4">
+        <button type="button" class="btn btn-success mb-3" data-bs-toggle="modal" data-bs-target="#editUserModal" id="createUserButton">
+            Create New User
+        </button>
+    </div>
     <!-- Search Box -->
     <div class="d-flex justify-content-between mb-4 align-items-end">
         <div class="w-50">
@@ -56,7 +62,7 @@
                 @csrf
                 @method('PUT')
                 <div class="modal-header">
-                    <h5 class="modal-title" id="editUserModalLabel">Edit User</h5>
+                    <h5 class="modal-title" id="editUserModalLabel">Create New User</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
@@ -141,25 +147,34 @@
                 location.reload(); // Reload the page if the search is cleared
             }
         });
-        
+        // Handle opening the Create User modal
+        $('#createUserButton').on('click', function () {
+            $('#editUserModalLabel').text('Create New User'); // Change modal title
+            $('#editUserForm').trigger('reset'); // Reset the form
+            $('#userId').val(''); // Clear user ID to indicate creation
+        });
+
         // Load user data into the modal on click of Edit button
         $('#editUserModal').on('show.bs.modal', function (event) {
+            
             var button = $(event.relatedTarget); // Button that triggered the modal
             var userId = button.data('id'); // Extract info from data-* attributes
-
-            // Make AJAX request to get user data
-            $.ajax({
-                url: '/manager/users/' + userId + '/edit', // Your route to fetch user data
-                method: 'GET',
-                success: function(data) {
-                    // Populate the modal with user data
-                    $('#userId').val(data.id);
-                    $('#editName').val(data.name);
-                    $('#editEmail').val(data.email);
-                    $('#editPhone').val(data.phone);
-                    $('#editStoreProfileId').val(data.store_profile_id);
-                }
-            });
+            if ( userId ) {
+                $('#editUserModalLabel').text('Edit User'); // Change modal title for editing
+                // Make AJAX request to get user data
+                $.ajax({
+                    url: '/manager/users/' + userId + '/edit', // Your route to fetch user data
+                    method: 'GET',
+                    success: function(data) {
+                        // Populate the modal with user data
+                        $('#userId').val(data.id);
+                        $('#editName').val(data.name);
+                        $('#editEmail').val(data.email);
+                        $('#editPhone').val(data.phone);
+                        $('#editStoreProfileId').val(data.store_profile_id);
+                    }
+                });
+            }
         });
 
         // Handle form submission
@@ -172,6 +187,7 @@
             if (!userId) {
                 var url = '/manager/users/store';
                 var method = 'POST';
+                formData.append('_method', 'POST');
             } else {
                 var url = '/manager/users/update/' + userId;
                 var method = 'POST';
