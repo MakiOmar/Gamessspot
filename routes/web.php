@@ -9,7 +9,6 @@ use App\Http\Controllers\UserController;
 use App\Http\Controllers\StoreProfileController;
 use App\Http\Controllers\RoleAssignmentController;
 
-
 /*
 |--------------------------------------------------------------------------
 | Web Routes

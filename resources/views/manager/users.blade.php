@@ -109,6 +109,22 @@
                             @endforeach
                         </select>
                     </div>
+                    <!-- Role Checkboxes -->
+                    <div class="form-group mb-3">
+                        <label for="roles">Roles</label>
+                        <div id="rolesCheckboxes">
+                            @foreach($roles as $role)
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="roles[]" value="{{ $role->id }}" id="role_{{ $role->id }}">
+                                    <label class="form-check-label" for="role_{{ $role->id }}">
+                                        {{ $role->name }}
+                                    </label>
+                                </div>
+                            @endforeach
+                        </div>
+                    </div>
+
+
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
@@ -159,6 +175,7 @@
             
             var button = $(event.relatedTarget); // Button that triggered the modal
             var userId = button.data('id'); // Extract info from data-* attributes
+            
             if ( userId ) {
                 $('#editUserModalLabel').text('Edit User'); // Change modal title for editing
                 // Make AJAX request to get user data
@@ -172,6 +189,14 @@
                         $('#editEmail').val(data.email);
                         $('#editPhone').val(data.phone);
                         $('#editStoreProfileId').val(data.store_profile_id);
+
+                        // Uncheck all checkboxes first
+                        $('#rolesCheckboxes input[type="checkbox"]').prop('checked', false);
+
+                        // Loop through user roles and check the corresponding checkboxes
+                        data.roles.forEach(function(role) {
+                            $('#role_' + role.id).prop('checked', true);
+                        });
                     }
                 });
             }

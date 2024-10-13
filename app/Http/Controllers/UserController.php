@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\User;
 use Illuminate\Http\Request;
 use App\Models\StoresProfile;
+use App\Models\Role;
 
 class UserController extends Controller
 {
@@ -17,7 +18,10 @@ class UserController extends Controller
         })->with('storeProfile')->paginate(10);
 
         $storeProfiles = StoresProfile::all(); // Fetch all store profiles
-        return view('manager.users', compact('users', 'storeProfiles'));
+
+        $roles = Role::all(); // Fetch all available roles
+
+        return view('manager.users', compact('users', 'storeProfiles', 'roles'));
     }
 
     // Method to search users based on the input
@@ -45,8 +49,12 @@ class UserController extends Controller
 
     public function edit($id)
     {
-        $user = User::with('storeProfile')->findOrFail($id);
-        return response()->json($user); // Return user data as JSON
+        $user = User::with(['storeProfile', 'roles'])->findOrFail($id);
+        // Convert the user object to an array
+        $userArray = $user->toArray();
+
+        // Return the user data as a JSON response
+        return response()->json($userArray);
     }
 
 
