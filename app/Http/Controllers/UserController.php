@@ -30,8 +30,12 @@ class UserController extends Controller
         $query = $request->input('search');
 
         if (!empty($query)) {
-            $users = User::whereIn('role', [1, 2])
+            // Fetch users who have the 'sales' role (role ID 2)
+            $users = User::whereHas('roles', function ($q) {
+                    $q->where('id', 2); // Role ID for 'sales'
+            })
                 ->where(function ($q) use ($query) {
+                    // Search for the query in the user's name or the store profile's name
                     $q->where('name', 'like', "%{$query}%")
                         ->orWhereHas('storeProfile', function ($q) use ($query) {
                             $q->where('name', 'like', "%{$query}%");
