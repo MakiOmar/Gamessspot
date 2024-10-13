@@ -34,7 +34,7 @@ class UserController extends Controller
                 ->get();
 
             // Return the search result as a partial view to dynamically update the table rows
-            return view('manager.users.partials.user_table_rows', compact('users'))->render();
+            return view('manager.partials.user_table_rows', compact('users'))->render();
         }
 
         return '';

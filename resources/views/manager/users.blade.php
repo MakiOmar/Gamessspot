@@ -119,6 +119,29 @@
 <!-- JavaScript for handling modal edit functionality -->
 <script>
     $(document).ready(function() {
+        // Handle search input
+        $('#searchUser').on('input', function() {
+            let query = $(this).val();
+
+            if (query.length >= 3) {
+                $.ajax({
+                    url: "{{ route('manager.users.search') }}", // Your search route
+                    method: 'GET',
+                    data: { search: query },
+                    success: function(response) {
+                        if (response.trim() === '') {
+                            $('#noResultsMessage').show();
+                        } else {
+                            $('#noResultsMessage').hide();
+                            $('#userTableBody').html(response);
+                        }
+                    }
+                });
+            } else if (query === '') {
+                location.reload(); // Reload the page if the search is cleared
+            }
+        });
+        
         // Load user data into the modal on click of Edit button
         $('#editUserModal').on('show.bs.modal', function (event) {
             var button = $(event.relatedTarget); // Button that triggered the modal
