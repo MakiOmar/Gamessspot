@@ -11,6 +11,15 @@ class StoresProfile extends Model
 
     protected $table = 'stores_profile';
 
+    /**
+     * The attributes that are mass assignable.
+     *
+     * @var array<int, string>
+     */
+    protected $fillable = [
+        'name',
+        'phone_number',
+    ];
     public function users()
     {
         return $this->hasMany(User::class, 'store_profile_id');

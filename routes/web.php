@@ -6,6 +6,7 @@ use App\Http\Controllers\ManagerController;
 use App\Http\Controllers\AccountController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\StoreProfileController;
 
 /*
 |--------------------------------------------------------------------------
@@ -64,5 +65,11 @@ Route::prefix('manager')->group(function () {
         Route::get('/users/{id}/edit', [UserController::class, 'edit'])->name('manager.users.edit');
         Route::put('/users/update/{id}', [UserController::class, 'update'])->name('manager.users.update');
         Route::post('/users/store', [UserController::class, 'store'])->name('manager.users.store');
+
+        Route::get('/storeProfiles', [StoreProfileController::class, 'index'])->name('manager.storeProfiles.index');
+        Route::post('/storeProfiles/store', [StoreProfileController::class, 'store'])->name('manager.storeProfiles.store');
+        Route::get('/storeProfiles/{id}/edit', [StoreProfileController::class, 'edit'])->name('manager.storeProfiles.edit');
+        Route::put('/storeProfiles/update/{id}', [StoreProfileController::class, 'update'])->name('manager.storeProfiles.update');
+        Route::get('/storeProfiles/search', [StoreProfileController::class, 'search'])->name('manager.storeProfiles.search');
     });
 });
