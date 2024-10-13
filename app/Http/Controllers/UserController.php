@@ -57,6 +57,16 @@ class UserController extends Controller
         return response()->json($userArray);
     }
 
+    public function destroy($id)
+    {
+        $user = User::findOrFail($id);
+
+        // Delete the user
+        $user->delete();
+
+        // Return a success response
+        return response()->json(['message' => 'User deleted successfully!']);
+    }
 
     // Method to update the user in the database
     public function update(Request $request, $id)

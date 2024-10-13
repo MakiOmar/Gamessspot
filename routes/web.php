@@ -66,6 +66,8 @@ Route::prefix('manager')->group(function () {
         Route::get('/users/{id}/edit', [UserController::class, 'edit'])->name('manager.users.edit');
         Route::put('/users/update/{id}', [UserController::class, 'update'])->name('manager.users.update');
         Route::post('/users/store', [UserController::class, 'store'])->name('manager.users.store');
+        Route::delete('/users/delete/{id}', [UserController::class, 'destroy'])->name('users.delete');
+
 
         Route::get('/storeProfiles', [StoreProfileController::class, 'index'])->name('manager.storeProfiles.index');
         Route::post('/storeProfiles/store', [StoreProfileController::class, 'store'])->name('manager.storeProfiles.store');

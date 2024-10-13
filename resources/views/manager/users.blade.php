@@ -41,6 +41,8 @@
                     <td>{{ $user->storeProfile->name ?? 'No Store Profile' }}</td>
                     <td>
                         <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#editUserModal" data-id="{{ $user->id }}">Edit</button>
+                        <!-- Delete Button -->
+                        <button type="button" class="btn btn-danger deleteUserButton" data-id="{{ $user->id }}">Delete</button>
                     </td>
                 </tr>
                 @endforeach
@@ -141,6 +143,28 @@
 <!-- JavaScript for handling modal edit functionality -->
 <script>
     $(document).ready(function() {
+        $('.deleteUserButton').on('click', function() {
+        var userId = $(this).data('id'); // Get user ID from button data attribute
+        var confirmation = confirm('Are you sure you want to delete this user?');
+
+        if (confirmation) {
+            $.ajax({
+                url: '/manager/users/delete/' + userId, // Your route to handle deletion
+                method: 'DELETE',
+                data: {
+                    _token: '{{ csrf_token() }}' // Pass CSRF token for security
+                },
+                success: function(response) {
+                    alert('User deleted successfully!');
+                    location.reload(); // Reload the page or update the table dynamically
+                },
+                error: function(xhr) {
+                    console.log(xhr.responseText);
+                    alert('An error occurred while deleting the user.');
+                }
+            });
+        }
+    });
         // Handle search input
         $('#searchUser').on('input', function() {
             let query = $(this).val();
