@@ -7,6 +7,8 @@ use App\Models\Account;
 use Illuminate\Http\Request;
 use App\Exports\OrdersExport;
 use Maatwebsite\Excel\Facades\Excel;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Auth;
 
 class OrderController extends Controller
 {
@@ -95,5 +97,62 @@ class OrderController extends Controller
         }
 
         return response()->json(['success' => false]);
+    }
+    public function store(Request $request)
+    {
+        Log::info('Order Request Data:', $request->all());
+
+        // Validate incoming data
+        $validatedData = $request->validate([
+        'store_profile_id' => 'required|exists:stores_profile,id',
+        'game_id' => 'required|exists:games,id',
+        'buyer_phone' => 'required|string|max:15',
+        'buyer_name' => 'required|string|max:100',
+        'price' => 'required|numeric|min:0',
+        'type' => 'required|string|max:255',
+        'platform' => 'required|string|max:255',
+        ]);
+
+        // Determine the sold item field dynamically
+        $sold_item = "ps{$validatedData['platform']}_{$validatedData['type']}_stock";
+
+        // Fetch the appropriate account based on type and stock availability
+        $accountQuery = Account::where('game_id', $validatedData['game_id']);
+
+        if ($validatedData['type'] === 'offline') {
+            // For offline, just check the corresponding stock field has available stock
+            $accountQuery->where($sold_item, '>', 0);
+        } elseif ($validatedData['type'] === 'primary') {
+            // For primary, offline stock must be 0 and primary stock must be greater than 0
+            $accountQuery->where('ps' . $validatedData['platform'] . '_offline_stock', 0)
+                     ->where($sold_item, '>', 0);
+        } elseif ($validatedData['type'] === 'secondary') {
+            // For secondary, both offline and primary stocks must be 0, but secondary must have stock
+            $accountQuery->where('ps' . $validatedData['platform'] . '_offline_stock', 0)
+                     ->where('ps' . $validatedData['platform'] . '_primary_stock', 0)
+                     ->where($sold_item, '>', 0);
+        }
+
+        // Fetch the first matching account
+        $account = $accountQuery->firstOrFail();  // Fail if no matching account is found
+
+        // Prepare the order data
+        $order_data = [
+        'seller_id' => Auth::id(),  // Get the currently authenticated user's ID
+        'account_id' => $account->id,  // Set the matched account ID
+        'buyer_phone' => $validatedData['buyer_phone'],
+        'buyer_name' => $validatedData['buyer_name'],
+        'price' => $validatedData['price'],  // Set the price
+        'notes' => '',  // Optional notes
+        'sold_item' => $sold_item,  // Sold item is dynamically set
+        ];
+
+        // Create the order
+        Order::create($order_data);
+        // Reduce the corresponding stock by 1 for the account
+        $account->decrement($sold_item, 1);
+
+        // Return a JSON response on success
+        return response()->json(['message' => 'Order created successfully!']);
     }
 }

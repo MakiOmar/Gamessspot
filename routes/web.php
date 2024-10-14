@@ -60,6 +60,8 @@ Route::prefix('manager')->group(function () {
         Route::get('/orders/search', [OrderController::class, 'search'])->name('manager.orders.search');
         Route::get('/orders/export', [OrderController::class, 'export'])->name('manager.orders.export');
         Route::post('/orders/undo', [OrderController::class, 'undo'])->name('manager.orders.undo');
+        Route::post('/orders/store', [OrderController::class, 'store'])->name('orders.store');
+
 
         Route::get('/users', [UserController::class, 'index'])->name('manager.users.index');
         Route::get('/users/search', [UserController::class, 'search'])->name('manager.users.search');

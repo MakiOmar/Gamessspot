@@ -16,6 +16,9 @@
             font-family: 'Poppins', sans-serif;
             background-color: #f8f9fa;
         }
+        .open-modal{
+            cursor: pointer;
+        }
         a{
             text-decoration: none
         }

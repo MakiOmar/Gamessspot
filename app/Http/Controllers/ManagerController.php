@@ -156,16 +156,17 @@ class ManagerController extends Controller
         $secondary_stock = "ps{$n}_secondary_stock";
 
         $psGames = DB::table('accounts')
-                ->select(
-                    'games.*',  // Get all columns from the games table
-                    DB::raw("SUM(accounts.{$offline_stock}) as {$offline_stock}"),
-                    DB::raw("SUM(accounts.{$primary_stock}) as {$primary_stock}"),
-                    DB::raw("SUM(accounts.{$secondary_stock}) as {$secondary_stock}")
-                )
-                ->join('games', 'accounts.game_id', '=', 'games.id')
-                ->groupBy('accounts.game_id')
-                ->havingRaw("SUM(accounts.{$offline_stock}) > 0")  // Only fetch games with non-zero offline stock
-                ->paginate(10);  // Paginate 10 results per page
+        ->select(
+            'games.*',  // Get all columns from the games table
+            DB::raw("SUM(accounts.{$offline_stock}) as {$offline_stock}"),
+            DB::raw("SUM(accounts.{$primary_stock}) as {$primary_stock}"),
+            DB::raw("SUM(accounts.{$secondary_stock}) as {$secondary_stock}")
+        )
+        ->join('games', 'accounts.game_id', '=', 'games.id')
+        ->groupBy('accounts.game_id')
+        // Fetch games where at least one stock type is greater than 0
+        ->havingRaw("SUM(accounts.{$offline_stock}) > 0 OR SUM(accounts.{$primary_stock}) > 0 OR SUM(accounts.{$secondary_stock}) > 0")
+        ->paginate(10);  // Paginate 10 results per page
 
         $storeProfiles = StoresProfile::all(); // Fetch all store profiles
         // Return the view with the games and the platform indicator $n
