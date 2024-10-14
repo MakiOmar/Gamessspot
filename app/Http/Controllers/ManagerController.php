@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use App\Models\StoresProfile;
 
 class ManagerController extends Controller
 {
@@ -166,8 +167,9 @@ class ManagerController extends Controller
                 ->havingRaw("SUM(accounts.{$offline_stock}) > 0")  // Only fetch games with non-zero offline stock
                 ->paginate(10);  // Paginate 10 results per page
 
+        $storeProfiles = StoresProfile::all(); // Fetch all store profiles
         // Return the view with the games and the platform indicator $n
-        return view('manager.games_listings', compact('psGames', 'n'));
+        return view('manager.games_listings', compact('psGames', 'n', 'storeProfiles'));
     }
 
     /**
@@ -203,6 +205,7 @@ class ManagerController extends Controller
                     ->groupBy('accounts.game_id')
                     ->paginate(10); // Paginate 10 results per page
 
-        return view('manager.games_listings', compact('psGames'));
+        $storeProfiles = StoresProfile::all(); // Fetch all store profiles
+        return view('manager.games_listings', compact('psGames', 'storeProfiles'));
     }
 }
