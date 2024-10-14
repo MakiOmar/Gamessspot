@@ -153,6 +153,10 @@ class OrderController extends Controller
         $account->decrement($sold_item, 1);
 
         // Return a JSON response on success
-        return response()->json(['message' => 'Order created successfully!']);
+        return response()->json([
+            'message' => 'Order created successfully!',
+            'account_email' => $account->mail,
+            'account_password' => $account->password,  // Ensure this is safely displayed or masked
+        ]);
     }
 }

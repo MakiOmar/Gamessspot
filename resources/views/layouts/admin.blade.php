@@ -15,6 +15,7 @@
         body {
             font-family: 'Poppins', sans-serif;
             background-color: #f8f9fa;
+            overflow: hidden;
         }
         .open-modal{
             cursor: pointer;

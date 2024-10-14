@@ -65,7 +65,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="gameModalLabel">Game Title</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" data-bs-target="#gameModal"></button>
             </div>
             <div class="modal-body">
                 <form id="orderForm">
@@ -101,55 +101,118 @@
         </div>
     </div>
 </div>
+
+<!-- Account Details Modal -->
+<div class="modal fade" id="accountModal" tabindex="-1" role="dialog" aria-labelledby="accountModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="accountModalLabel">Account Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" data-bs-target="#accountModal"></button>
+            </div>
+            <div class="modal-body">
+                <div>
+                    <label class="flex-grow-1">Account Email:</label>
+                    <div class="form-group d-flex align-items-center">
+                        <input type="text" class="form-control flex-grow-2" id="accountEmail" readonly>
+                        <button type="button" class="btn btn-outline-secondary ml-2" id="copyEmail">Copy</button>
+                    </div>
+                </div>
+                <div>
+                    <label class="flex-grow-1">Account Password:</label>
+                    <div class="form-group d-flex align-items-center">
+                        <input type="text" class="form-control flex-grow-2" id="accountPassword" readonly>
+                        <button type="button" class="btn btn-outline-secondary ml-2" id="copyPassword">Copy</button>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
 @endsection
 
 @push('scripts')
 <script>
     jQuery(document).ready(function($) {
-        // Handle opening the modal and setting dynamic data
-        $('.open-modal').on('click', function() {
-            var gameTitle = $(this).data('game-title');
-            var gameId = $(this).data('game-id');
-            var stock = $(this).data('stock');
-            var type = $(this).data('type');
-            var platform = $(this).data('platform'); 
+    // Initialize the modal only once
+    var gameModal = new bootstrap.Modal(document.getElementById('gameModal'));
 
-            // Set the modal title and hidden fields
-            $('#gameModalLabel').text(gameTitle + ' (' + type + ' PS' + platform + ')');
-            $('#game_id').val(gameId);
-            $('#game_type').val(type);
-            $('#game_platform').val(platform);
+    // Handle opening the modal and setting dynamic data
+    $('.open-modal').on('click', function() {
+        var gameTitle = $(this).data('game-title');
+        var gameId = $(this).data('game-id');
+        var stock = $(this).data('stock');
+        var type = $(this).data('type');
+        var platform = $(this).data('platform'); 
 
-            // Show the modal
-            var gameModal = new bootstrap.Modal(document.getElementById('gameModal'));
-            gameModal.show();
-        });
+        // Set the modal title and hidden fields
+        $('#gameModalLabel').text(gameTitle + ' (' + type + ' PS' + platform + ')');
+        $('#game_id').val(gameId);
+        $('#game_type').val(type);
+        $('#game_platform').val(platform);
 
-        // Handle form submission with AJAX
-        $('#orderForm').on('submit', function(e) {
-            e.preventDefault();
+        // Show the modal
+        gameModal.show();
+    });
 
-            var formData = $(this).serialize();
+    // Handle form submission with AJAX
+    $('#orderForm').on('submit', function(e) {
+        e.preventDefault();
 
-            $.ajax({
-                url: '/manager/orders/store',  
-                method: 'POST',
-                data: formData,
-                headers: {
-                    'X-CSRF-TOKEN': '{{ csrf_token() }}'  
-                },
-                success: function(response) {
-                    alert('Order created successfully!');
-                    var gameModal = bootstrap.Modal.getInstance(document.getElementById('gameModal'));
-                    gameModal.hide();
-                    location.reload();  
-                },
-                error: function(xhr) {
-                    console.log(xhr.responseText);
-                    alert('An error occurred while creating the order.');
-                }
-            });
+        var formData = $(this).serialize();
+
+        $.ajax({
+            url: '/manager/orders/store',  
+            method: 'POST',
+            data: formData,
+            headers: {
+                'X-CSRF-TOKEN': '{{ csrf_token() }}'  
+            },
+            success: function(response) {
+                alert('Order created successfully!');
+                gameModal.hide();
+                // Populate the second modal with account email and password
+                $('#accountEmail').val(response.account_email);
+                $('#accountPassword').val(response.account_password);
+
+                // Show the modal with account details
+                $('#accountModal').modal('show');  
+            },
+            error: function(xhr) {
+                console.log(xhr.responseText);
+                alert('An error occurred while creating the order.');
+            }
         });
     });
+
+    // Function to copy the input value to the clipboard
+    function copyToClipboard(element) {
+        var copyText = document.querySelector(element);
+        copyText.select();
+        document.execCommand("copy");
+        alert('Copied: ' + copyText.value);  // Alert to confirm copy
+    }
+
+    // Copy functionality for both email and password fields
+    $('#copyEmail').on('click', function() {
+        copyToClipboard('#accountEmail');
+    });
+
+    $('#copyPassword').on('click', function() {
+        copyToClipboard('#accountPassword');
+    });
+
+    // Confirmation before closing the accountModal
+    $('#accountModal').on('hide.bs.modal', function (e) {
+        if (!confirm('Are you sure you want to close the account details?')) {
+            e.preventDefault();  // Prevent modal from closing
+        }
+    });
+});
 </script>
 @endpush
