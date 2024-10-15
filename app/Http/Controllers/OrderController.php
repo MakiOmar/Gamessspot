@@ -100,8 +100,6 @@ class OrderController extends Controller
     }
     public function store(Request $request)
     {
-        Log::info('Order Request Data:', $request->all());
-
         // Validate incoming data
         $validatedData = $request->validate([
         'store_profile_id' => 'required|exists:stores_profile,id',

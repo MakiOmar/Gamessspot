@@ -263,13 +263,12 @@
                     location.reload(); // Reload the page or update the table dynamically
                 },
                 error: function(xhr) {
-                    console.log(xhr.responseText); // Log the error for debugging
                     if (xhr.status === 422) { // Handle validation errors
                         var errors = xhr.responseJSON.errors;
 
                         // Loop through validation errors and display them
                         $.each(errors, function(key, value) {
-                            var inputField = $('#' + key);
+                            var inputField = $('input[name=' + key + ']');
                             inputField.addClass('is-invalid');
                             inputField.after('<div class="invalid-feedback">' + value[0] + '</div>');
                         });

@@ -71,12 +71,20 @@
                 <form id="orderForm">
                     <div class="form-group">
                         <label>Store Profile</label>
-                        <select class="form-control" name="store_profile_id" required>
-                            @foreach ($storeProfiles as $profile)
-                                <option value="{{ $profile->id }}">{{ $profile->name }}</option>
-                            @endforeach
-                        </select>
+                        
+                        @if(auth()->user()->roles->contains('name', 'admin')) <!-- Check if the user has the 'admin' role -->
+                            <select class="form-control" name="store_profile_id" required>
+                                @foreach ($storeProfiles as $profile)
+                                    <option value="{{ $profile->id }}">{{ $profile->name }}</option>
+                                @endforeach
+                            </select>
+                        @else
+                            <input type="hidden" name="store_profile_id" value="{{ auth()->user()->store_profile_id }}">
+                            <!-- Optionally display the store profile name, handling if storeProfile relation is null -->
+                            <p>{{ auth()->user()->storeProfile->name ?? 'No Store Profile Assigned' }}</p>
+                        @endif
                     </div>
+                    
                     <div class="form-group">
                         <label>Client Name:</label>
                         <input type="text" class="form-control" placeholder="Client name" name="buyer_name" required>
