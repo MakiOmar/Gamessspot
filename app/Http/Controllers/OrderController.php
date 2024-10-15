@@ -115,9 +115,12 @@ class OrderController extends Controller
 
         // Determine the sold item field dynamically
         $sold_item = "ps{$validatedData['platform']}_{$validatedData['type']}_stock";
+        $sold_item_status = "ps{$validatedData['platform']}_{$validatedData['type']}_status";
 
-        // Fetch the appropriate account based on type and stock availability
-        $accountQuery = Account::where('game_id', $validatedData['game_id']);
+        // Fetch the appropriate account based on type, stock availability, and game status
+        $accountQuery = Account::where('game_id', $validatedData['game_id'])
+        ->join('games', 'accounts.game_id', '=', 'games.id')
+        ->where("games.{$sold_item_status}", true); // Ensure the game's status is true
 
         if ($validatedData['type'] === 'offline') {
             // For offline, just check the corresponding stock field has available stock
@@ -133,8 +136,15 @@ class OrderController extends Controller
                      ->where($sold_item, '>', 0);
         }
 
-        // Fetch the first matching account
-        $account = $accountQuery->firstOrFail();  // Fail if no matching account is found
+        // Try to fetch the first matching account
+        try {
+            $account = $accountQuery->select('accounts.*')->firstOrFail();  // Fail if no matching account is found
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            // Return an error response if no account was found
+            return response()->json([
+            'message' => 'No account found with the required stock.',
+            ], 200);  // Return 404 status
+        }
 
         // Prepare the order data
         $order_data = [
@@ -149,14 +159,15 @@ class OrderController extends Controller
 
         // Create the order
         Order::create($order_data);
+
         // Reduce the corresponding stock by 1 for the account
         $account->decrement($sold_item, 1);
 
         // Return a JSON response on success
         return response()->json([
-            'message' => 'Order created successfully!',
-            'account_email' => $account->mail,
-            'account_password' => $account->password,  // Ensure this is safely displayed or masked
+        'message' => 'Order created successfully!',
+        'account_email' => $account->mail,
+        'account_password' => $account->password,  // Ensure this is safely displayed or masked
         ]);
     }
 }
