@@ -7,8 +7,9 @@ use App\Models\Account;
 use Illuminate\Http\Request;
 use App\Exports\OrdersExport;
 use Maatwebsite\Excel\Facades\Excel;
-use Illuminate\Support\Facades\Log;
+use App\Models\User;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 
 class OrderController extends Controller
 {
@@ -100,7 +101,7 @@ class OrderController extends Controller
     }
     public function store(Request $request)
     {
-        // Validate incoming data
+    // Validate incoming data
         $validatedData = $request->validate([
         'store_profile_id' => 'required|exists:stores_profile,id',
         'game_id' => 'required|exists:games,id',
@@ -111,11 +112,12 @@ class OrderController extends Controller
         'platform' => 'required|string|max:255',
         ]);
 
-        // Determine the sold item field dynamically
+    // Determine the sold item field dynamically
         $sold_item = "ps{$validatedData['platform']}_{$validatedData['type']}_stock";
         $sold_item_status = "ps{$validatedData['platform']}_{$validatedData['type']}_status";
+        $sold_offline_item = "ps{$validatedData['platform']}_offline_stock";
 
-        // Fetch the appropriate account based on type, stock availability, and game status
+    // Fetch the appropriate account based on type, stock availability, and game status
         $accountQuery = Account::where('game_id', $validatedData['game_id'])
         ->join('games', 'accounts.game_id', '=', 'games.id')
         ->where("games.{$sold_item_status}", true); // Ensure the game's status is true
@@ -134,38 +136,71 @@ class OrderController extends Controller
                      ->where($sold_item, '>', 0);
         }
 
-        // Try to fetch the first matching account
+    // Try to fetch the first matching account
         try {
             $account = $accountQuery->select('accounts.*')->firstOrFail();  // Fail if no matching account is found
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             // Return an error response if no account was found
             return response()->json([
             'message' => 'No account found with the required stock.',
-            ], 200);  // Return 404 status
+            ], 200);
         }
 
-        // Prepare the order data
-        $order_data = [
-        'seller_id' => Auth::id(),  // Get the currently authenticated user's ID
-        'account_id' => $account->id,  // Set the matched account ID
-        'buyer_phone' => $validatedData['buyer_phone'],
-        'buyer_name' => $validatedData['buyer_name'],
-        'price' => $validatedData['price'],  // Set the price
-        'notes' => '',  // Optional notes
-        'sold_item' => $sold_item,  // Sold item is dynamically set
-        ];
-
-        // Create the order
-        Order::create($order_data);
-
-        // Reduce the corresponding stock by 1 for the account
+    // Reduce the corresponding stock by 1 for the account
         $account->decrement($sold_item, 1);
 
-        // Return a JSON response on success
+    // After the order has been created, check if this was an "offline" order with only 1 stock left before decrement
+        $recentOrder = null;
+        $message = null;
+        if (
+            $validatedData['platform'] == 4 &&
+            (
+            ($validatedData['type'] === 'offline' && $account->$sold_item == 0) ||
+            ($validatedData['type'] === 'primary' && $account->$sold_offline_item == 0)
+            )
+        ) {
+ 
+            $check_for = $validatedData['type'] === 'primary' ? $sold_offline_item : $sold_item;
+            // Fetch the recent order for this account and item within the last 11 minutes
+            $recentOrder = Order::where('account_id', $account->id)
+            ->where('sold_item', $check_for)
+            ->where('created_at', '>=', now()->subMinutes(11))
+            ->latest()
+            ->first();
+            Log::debug('Debugging some data.', ['data' => $check_for]);
+
+            if ($recentOrder) {
+                // Fetch the seller details
+                $seller = User::find($recentOrder->seller_id);
+                if ( $seller ) {
+                    if ( $validatedData['type'] === 'offline' ) {
+                        $sold = 'one offline';
+                    } else {
+                        $sold = 'the latest offline';
+                    }
+                    $message = $seller->name . ' has sold ' . $sold . ' from this account.Please contact him on ' . $seller->phone;
+                }
+            }
+        }
+        // Prepare the order data
+        $order_data = [
+            'seller_id' => Auth::id(),  // Get the currently authenticated user's ID
+            'account_id' => $account->id,  // Set the matched account ID
+            'buyer_phone' => $validatedData['buyer_phone'],
+            'buyer_name' => $validatedData['buyer_name'],
+            'price' => $validatedData['price'],  // Set the price
+            'notes' => '',  // Optional notes
+            'sold_item' => $sold_item,  // Sold item is dynamically set
+            ];
+        // Create the order
+        $order = Order::create($order_data);
+    // Return a JSON response on success, including recent order and seller details if applicable
         return response()->json([
         'message' => 'Order created successfully!',
         'account_email' => $account->mail,
         'account_password' => $account->password,  // Ensure this is safely displayed or masked
+        'recent_order' => $recentOrder,
+        'message' => $message,
         ]);
     }
 }

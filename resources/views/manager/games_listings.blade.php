@@ -136,6 +136,10 @@
                         </div>
                     </div>
                 </div>
+                <!-- Seller Details -->
+                <div id="sellerDetailsContainer" style="display:none;">
+                    <!-- Seller details will be dynamically added here -->
+                </div>
                 <div id="noAccountMessage" style="display:none;">
                     <p class="text-danger">No Available account with the required stock.</p>
                 </div>
@@ -187,6 +191,7 @@
                 },
                 success: function(response) {
                     gameModal.hide();
+
                     // Check if the response contains account data
                     if (response.account_email && response.account_password) {
                         // Populate the account modal with account details
@@ -194,13 +199,21 @@
                         $('#accountPassword').val(response.account_password);
                         $('#accountDetailsContainer').show();
                         $('#noAccountMessage').hide();
+
+                        // Check for seller details and display them if available
+                        if (response.message) {
+                            $('#sellerDetailsContainer').html(`
+                                <div class="alert alert-warning mt-3" role="alert">${response.message}</div>
+                            `).show();
+                        } else {
+                            $('#sellerDetailsContainer').hide();
+                        }
                     } else {
-                        // Show a message that no account was found
                         $('#accountDetailsContainer').hide();
                         $('#noAccountMessage').show();
                     }
 
-                    // Show the modal with account details or the no account message
+                    // Show the modal with account and seller details or the no account message
                     $('#accountModal').modal('show');
                 },
                 error: function(xhr) {
@@ -209,6 +222,7 @@
                 }
             });
         });
+
 
         // Copy functionality for both email and password fields
         $('#copyEmail').on('click', function() {
@@ -224,6 +238,7 @@
             if (!confirm('Are you sure you want to close the account details?')) {
                 e.preventDefault();  // Prevent modal from closing
             }
+            location.reload();
         });
 });
 </script>
