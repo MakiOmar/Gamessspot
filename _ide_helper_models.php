@@ -120,6 +120,7 @@ namespace App\Models{
  *
  * @property int $id
  * @property int $seller_id
+ * @property int|null $store_profile_id
  * @property int $account_id
  * @property string $buyer_phone
  * @property string $buyer_name
@@ -129,6 +130,8 @@ namespace App\Models{
  * @property \Illuminate\Support\Carbon|null $created_at
  * @property \Illuminate\Support\Carbon|null $updated_at
  * @property-read \App\Models\Account $account
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Report> $reports
+ * @property-read int|null $reports_count
  * @property-read \App\Models\User $seller
  * @method static \Database\Factories\OrderFactory factory($count = null, $state = [])
  * @method static \Illuminate\Database\Eloquent\Builder|Order newModelQuery()
@@ -143,9 +146,37 @@ namespace App\Models{
  * @method static \Illuminate\Database\Eloquent\Builder|Order wherePrice($value)
  * @method static \Illuminate\Database\Eloquent\Builder|Order whereSellerId($value)
  * @method static \Illuminate\Database\Eloquent\Builder|Order whereSoldItem($value)
+ * @method static \Illuminate\Database\Eloquent\Builder|Order whereStoreProfileId($value)
  * @method static \Illuminate\Database\Eloquent\Builder|Order whereUpdatedAt($value)
  */
 	class Order extends \Eloquent {}
+}
+
+namespace App\Models{
+/**
+ * 
+ *
+ * @property int $id
+ * @property int $order_id
+ * @property int $seller_id
+ * @property string $status
+ * @property string $note
+ * @property \Illuminate\Support\Carbon|null $created_at
+ * @property \Illuminate\Support\Carbon|null $updated_at
+ * @property-read \App\Models\Order $order
+ * @property-read \App\Models\User $seller
+ * @method static \Illuminate\Database\Eloquent\Builder|Report newModelQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder|Report newQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder|Report query()
+ * @method static \Illuminate\Database\Eloquent\Builder|Report whereCreatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder|Report whereId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder|Report whereNote($value)
+ * @method static \Illuminate\Database\Eloquent\Builder|Report whereOrderId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder|Report whereSellerId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder|Report whereStatus($value)
+ * @method static \Illuminate\Database\Eloquent\Builder|Report whereUpdatedAt($value)
+ */
+	class Report extends \Eloquent {}
 }
 
 namespace App\Models{

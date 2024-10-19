@@ -10,6 +10,7 @@ use Maatwebsite\Excel\Facades\Excel;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use App\Models\Report;
 
 class OrderController extends Controller
 {
@@ -89,7 +90,15 @@ class OrderController extends Controller
 
                 // Save the updated account stock
                 $account->save();
-
+                // If the report_id is provided, update the report status to 'solved'
+                if ($request->has('report_id')) {
+                    $report = Report::find($request->report_id);
+                    if ($report && $report->status == 'needs_return') {
+                        $report->update(['status' => 'solved']);
+                    }
+                }
+                // Delete related reports before deleting the order
+                $order->reports()->delete();
                 // Delete the order
                 $order->delete();
 
@@ -101,7 +110,7 @@ class OrderController extends Controller
     }
     public function store(Request $request)
     {
-    // Validate incoming data
+        // Validate incoming data
         $validatedData = $request->validate([
         'store_profile_id' => 'required|exists:stores_profile,id',
         'game_id' => 'required|exists:games,id',
@@ -112,12 +121,12 @@ class OrderController extends Controller
         'platform' => 'required|string|max:255',
         ]);
 
-    // Determine the sold item field dynamically
+        // Determine the sold item field dynamically
         $sold_item = "ps{$validatedData['platform']}_{$validatedData['type']}_stock";
         $sold_item_status = "ps{$validatedData['platform']}_{$validatedData['type']}_status";
         $sold_offline_item = "ps{$validatedData['platform']}_offline_stock";
 
-    // Fetch the appropriate account based on type, stock availability, and game status
+        // Fetch the appropriate account based on type, stock availability, and game status
         $accountQuery = Account::where('game_id', $validatedData['game_id'])
         ->join('games', 'accounts.game_id', '=', 'games.id')
         ->where("games.{$sold_item_status}", true); // Ensure the game's status is true
@@ -136,7 +145,7 @@ class OrderController extends Controller
                      ->where($sold_item, '>', 0);
         }
 
-    // Try to fetch the first matching account
+        // Try to fetch the first matching account
         try {
             $account = $accountQuery->select('accounts.*')->firstOrFail();  // Fail if no matching account is found
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
@@ -146,10 +155,10 @@ class OrderController extends Controller
             ], 200);
         }
 
-    // Reduce the corresponding stock by 1 for the account
+        // Reduce the corresponding stock by 1 for the account
         $account->decrement($sold_item, 1);
 
-    // After the order has been created, check if this was an "offline" order with only 1 stock left before decrement
+        // After the order has been created, check if this was an "offline" order with only 1 stock left before decrement
         $recentOrder = null;
         $message = null;
         if (
@@ -159,7 +168,6 @@ class OrderController extends Controller
             ($validatedData['type'] === 'primary' && $account->$sold_offline_item == 0)
             )
         ) {
- 
             $check_for = $validatedData['type'] === 'primary' ? $sold_offline_item : $sold_item;
             // Fetch the recent order for this account and item within the last 11 minutes
             $recentOrder = Order::where('account_id', $account->id)
@@ -172,8 +180,8 @@ class OrderController extends Controller
             if ($recentOrder) {
                 // Fetch the seller details
                 $seller = User::find($recentOrder->seller_id);
-                if ( $seller ) {
-                    if ( $validatedData['type'] === 'offline' ) {
+                if ($seller) {
+                    if ($validatedData['type'] === 'offline') {
                         $sold = 'one offline';
                     } else {
                         $sold = 'the latest offline';
@@ -194,13 +202,27 @@ class OrderController extends Controller
             ];
         // Create the order
         $order = Order::create($order_data);
-    // Return a JSON response on success, including recent order and seller details if applicable
+        // Return a JSON response on success, including recent order and seller details if applicable
         return response()->json([
         'message' => 'Order created successfully!',
         'account_email' => $account->mail,
         'account_password' => $account->password,  // Ensure this is safely displayed or masked
         'recent_order' => $recentOrder,
         'message' => $message,
+        'order_id' => $order->id
         ]);
+    }
+
+    public function ordersWithNeedsReturn()
+    {
+        // Retrieve all orders with a related report that has status 'needs_return'
+        $orders = Order::with(['seller', 'account.game'])
+        ->whereHas('reports', function ($query) {
+            $query->where('status', 'needs_return');
+        })
+        ->paginate(10); // Adjust pagination as needed
+        $needs_return = true;
+        // Return the view with the filtered orders
+        return view('manager.orders', compact('orders', 'needs_return'));
     }
 }

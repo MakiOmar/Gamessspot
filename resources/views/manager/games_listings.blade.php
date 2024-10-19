@@ -143,6 +143,22 @@
                 <div id="noAccountMessage" style="display:none;">
                     <p class="text-danger">No Available account with the required stock.</p>
                 </div>
+                <!-- New report form -->
+                <form id="reportForm">
+                    <div class="form-group">
+                        <label>Status:</label>
+                        <div>
+                            <input type="radio" name="status" value="has_problem" required> Has Problem
+                            <input type="radio" name="status" value="needs_return" required> Needs Return
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="note">Note:</label>
+                        <textarea class="form-control" name="note" rows="3" placeholder="Describe the issue" required></textarea>
+                    </div>
+                    <input type="hidden" name="order_id" id="reportOrderId">
+                    <button type="submit" class="btn btn-primary">Submit Report</button>
+                </form>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
@@ -157,6 +173,35 @@
 <script>
     jQuery(document).ready(function($) {
         var gameModal = new bootstrap.Modal(document.getElementById('gameModal'));
+        $('#reportForm').on('submit', function(e) {
+            e.preventDefault();
+
+            var formData = $(this).serialize();
+
+            $.ajax({
+                url: '/manager/reports/store',  // Change this to your actual report submission route
+                method: 'POST',
+                data: formData,
+                headers: {
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}'  // CSRF token for security
+                },
+                success: function(response) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Report Submitted!',
+                        text: 'Your report has been successfully submitted.'
+                    });
+                    $('#accountModal').modal('hide');
+                },
+                error: function(xhr) {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Oops...',
+                        text: 'An error occurred while submitting the report.'
+                    });
+                }
+            });
+        });
 
         // Handle opening the modal and setting dynamic data
         $('.open-modal').on('click', function() {
@@ -212,7 +257,10 @@
                         $('#accountDetailsContainer').hide();
                         $('#noAccountMessage').show();
                     }
-
+                    // Set the order_id in the report form
+                    if (response.order_id) {
+                        $('#reportOrderId').val(response.order_id);
+                    }
                     // Show the modal with account and seller details or the no account message
                     $('#accountModal').modal('show');
                 },
@@ -235,11 +283,24 @@
 
         // Confirmation before closing the accountModal
         $('#accountModal').on('hide.bs.modal', function (e) {
-            if (!confirm('Are you sure you want to close the account details?')) {
-                e.preventDefault();  // Prevent modal from closing
-            }
-            location.reload();
+            e.preventDefault(); // Prevent the modal from closing automatically
+
+            Swal.fire({
+                title: 'Are you sure?',
+                text: "Do you really want to close the account details?",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Yes, close it!',
+                cancelButtonText: 'No, keep it open'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    // If confirmed, hide the modal and reload the page
+                    $('#accountModal').modal('hide');
+                    location.reload();
+                }
+            });
         });
+
 });
 </script>
 @endpush

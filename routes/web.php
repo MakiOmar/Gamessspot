@@ -8,6 +8,7 @@ use App\Http\Controllers\OrderController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\StoreProfileController;
 use App\Http\Controllers\RoleAssignmentController;
+use App\Http\Controllers\ReportsController;
 
 /*
 |--------------------------------------------------------------------------
@@ -61,6 +62,10 @@ Route::prefix('manager')->group(function () {
         Route::get('/orders/export', [OrderController::class, 'export'])->name('manager.orders.export');
         Route::post('/orders/undo', [OrderController::class, 'undo'])->name('manager.orders.undo');
         Route::post('/orders/store', [OrderController::class, 'store'])->name('orders.store');
+        Route::get(
+            '/orders/needs-return',
+            [OrderController::class, 'ordersWithNeedsReturn']
+        )->name('orders.needs_return');
 
 
         Route::get('/users', [UserController::class, 'index'])->name('manager.users.index');
@@ -72,10 +77,31 @@ Route::prefix('manager')->group(function () {
 
 
         Route::get('/storeProfiles', [StoreProfileController::class, 'index'])->name('manager.storeProfiles.index');
-        Route::post('/storeProfiles/store', [StoreProfileController::class, 'store'])->name('manager.storeProfiles.store');
-        Route::get('/storeProfiles/{id}/edit', [StoreProfileController::class, 'edit'])->name('manager.storeProfiles.edit');
-        Route::put('/storeProfiles/update/{id}', [StoreProfileController::class, 'update'])->name('manager.storeProfiles.update');
-        Route::get('/storeProfiles/search', [StoreProfileController::class, 'search'])->name('manager.storeProfiles.search');
+        Route::post(
+            '/storeProfiles/store',
+            [StoreProfileController::class, 'store']
+        )->name('manager.storeProfiles.store');
+
+        Route::get(
+            '/storeProfiles/{id}/edit',
+            [StoreProfileController::class, 'edit']
+        )->name('manager.storeProfiles.edit');
+
+        Route::put(
+            '/storeProfiles/update/{id}',
+            [StoreProfileController::class, 'update']
+        )->name('manager.storeProfiles.update');
+
+        Route::get(
+            '/storeProfiles/search',
+            [StoreProfileController::class, 'search']
+        )->name('manager.storeProfiles.search');
+
+
+
+        Route::post('/reports/store', [ReportsController::class, 'store']);
+        Route::get('/reports/{order_id}', [ReportsController::class, 'getReportsForOrder']);
+
 
         Route::get('/assign-roles', [RoleAssignmentController::class, 'assignRolesBasedOnQuery']);
     });

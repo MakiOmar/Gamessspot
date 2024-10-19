@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Models\Report;
 
 class Order extends Model
 {
@@ -35,5 +36,11 @@ class Order extends Model
     {
         return $this->belongsTo(Account::class, 'account_id');
     }
+    /**
+     * An order can have many reports.
+     */
+    public function reports()
+    {
+        return $this->hasMany(Report::class, 'order_id');
+    }
 }
-

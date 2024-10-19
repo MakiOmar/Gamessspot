@@ -30,6 +30,7 @@
         </div>
         <a href="{{ route( 'manager.accounts' ) }}" class="list-group-item bg-light">Accounts</a>
         <a href="{{ route( 'manager.orders' ) }}" class="list-group-item bg-light">Sell log</a>
+        <a href="{{ route( 'orders.needs_return' ) }}" class="list-group-item bg-light">Needs return</a>
         <a href="{{ route( 'manager.users.index' ) }}" class="list-group-item bg-light">Employees</a>
         <a href="{{ route( 'manager.storeProfiles.index' ) }}" class="list-group-item bg-light">Stores Profiles</a>
     </div>

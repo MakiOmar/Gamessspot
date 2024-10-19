@@ -56,9 +56,18 @@
                     <td>{{ $order->notes }}</td>
                     <td>{{ $order->created_at }}</td>
                     <td>
-                        <button class="btn btn-danger btn-sm undo-order" data-order-id="{{ $order->id }}" data-sold-item="{{ $order->sold_item }}">
-                            Undo
-                        </button>
+                        <!-- Check if 'needs_return' flag is true -->
+                        @if(isset($needs_return) && $needs_return)
+                            <!-- Button for orders with 'needs_return' -->
+                            <button class="btn btn-danger btn-sm undo-order" data-order-id="{{ $order->id }}" data-sold-item="{{ $order->sold_item }}" data-report-id="{{ $order->reports->first()->id }}">
+                                Undo & Mark Solved
+                            </button>
+                        @else
+                            <!-- Regular undo button -->
+                            <button class="btn btn-danger btn-sm undo-order" data-order-id="{{ $order->id }}" data-sold-item="{{ $order->sold_item }}">
+                                Undo
+                            </button>
+                        @endif
                     </td>
                 </tr>
                 @endforeach
@@ -112,29 +121,59 @@
 
         let orderId = $(this).data('order-id');
         let soldItem = $(this).data('sold-item');
+        let reportId = $(this).data('report-id');  // Get the report_id if available
 
-        if (confirm('Are you sure you want to undo this order?')) {
-            $.ajax({
-                url: "{{ route('manager.orders.undo') }}", // Route to handle the undo action
-                method: 'POST',
-                data: {
-                    _token: "{{ csrf_token() }}",
-                    order_id: orderId,
-                    sold_item: soldItem
-                },
-                success: function(response) {
-                    if (response.success) {
-                        $('#orderRow-' + orderId).remove(); // Remove the row from the table
-                        alert('Order successfully undone and stock updated!');
-                    } else {
-                        alert('Failed to undo order. Please try again.');
+        // Use SweetAlert2 for confirmation dialog
+        Swal.fire({
+            title: 'Are you sure?',
+            text: "Do you really want to undo this order?",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Yes, undo it!',
+            cancelButtonText: 'No, keep it'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                // Make the AJAX request if confirmed
+                $.ajax({
+                    url: "{{ route('manager.orders.undo') }}", // Route to handle the undo action
+                    method: 'POST',
+                    data: {
+                        _token: "{{ csrf_token() }}",
+                        order_id: orderId,
+                        sold_item: soldItem,
+                        report_id: reportId  // Pass the report_id only if available
+                    },
+                    success: function(response) {
+                        if (response.success) {
+                            // Success alert with SweetAlert2
+                            Swal.fire({
+                                title: 'Success!',
+                                text: 'Order successfully undone and stock updated!',
+                                icon: 'success',
+                                confirmButtonText: 'OK'
+                            }).then(() => {
+                                $('#orderRow-' + orderId).remove(); // Remove the row from the table
+                            });
+                        } else {
+                            Swal.fire({
+                                title: 'Failed',
+                                text: 'Failed to undo order. Please try again.',
+                                icon: 'error',
+                                confirmButtonText: 'OK'
+                            });
+                        }
+                    },
+                    error: function(xhr) {
+                        Swal.fire({
+                            title: 'Error',
+                            text: 'An error occurred while processing your request.',
+                            icon: 'error',
+                            confirmButtonText: 'OK'
+                        });
                     }
-                },
-                error: function(xhr) {
-                    alert('An error occurred while processing your request.');
-                }
-            });
-        }
+                });
+            }
+        });
     });
 </script>
 @endpush
