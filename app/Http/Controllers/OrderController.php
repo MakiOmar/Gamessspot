@@ -21,8 +21,27 @@ class OrderController extends Controller
      */
     public function index()
     {
-        // Retrieve all orders with pagination
-        $orders = Order::with(['seller', 'account.game'])->paginate(10); // Adjust pagination size if needed
+        // Check the roles of the authenticated user
+        $user = Auth::guard('admin')->user(); // Assuming you're using the 'admin' guard for authentication
+
+        // If the user has the 'admin' role, fetch all orders
+        if (
+            $user->roles->contains(function ($role) {
+                return $role->name === 'admin';
+            })
+        ) {
+            $orders = Order::with(['seller', 'account.game'])->paginate(10);
+        } elseif (
+            $user->roles->contains(function ($role) {
+                return $role->name === 'sales';
+            })
+        ) {
+            // Sales role: Fetch only the current user's orders
+            $orders = Order::with(['seller', 'account.game'])->where('seller_id', $user->id)->paginate(10);
+        } else {
+            // Default case: If the user doesn't have the necessary role, return a 403 response or redirect
+            abort(403, 'Unauthorized action.');
+        }
 
         // Return the view with the orders data
         return view('manager.orders', compact('orders'));
@@ -36,16 +55,51 @@ class OrderController extends Controller
      */
     public function search(Request $request)
     {
+        // Get the input values
         $query = $request->input('search');
+        $startDate = $request->input('start_date');
+        $endDate = $request->input('end_date');
+        $status = $request->input('status', 'all'); // Default to 'all' if not provided
 
-        // Search orders by buyer phone
-        $orders = Order::where('buyer_phone', 'like', "%$query%")
-                        ->with(['seller', 'account.game'])
-                        ->get();
+        // Build the query to filter orders
+        $orders = Order::with(['seller', 'account.game']);
 
-        // Return the updated rows for the table
-        return view('manager.partials.order_rows', compact('orders'))->render();
+        // Filter by buyer phone if search query exists
+        if ($query) {
+            $orders->where(function ($q) use ($query) {
+                // Search by buyer phone or buyer name
+                $q->where('buyer_phone', 'like', "%$query%")
+                  ->orWhere('buyer_name', 'like', "%$query%")
+                  // Search by account email (related through account_id)
+                  ->orWhereHas('account', function ($q) use ($query) {
+                      $q->where('mail', 'like', "%$query%");
+                  })
+                  // Search by game title (related through account's game)
+                  ->orWhereHas('account.game', function ($q) use ($query) {
+                      $q->where('title', 'like', "%$query%");
+                  });
+            });
+        }
+
+        // Filter by date range if both start and end dates are provided
+        if ($startDate && $endDate) {
+            $orders->whereBetween('created_at', [$startDate, $endDate]);
+        }
+
+        // Filter by status if it's not 'all'
+        if ($status !== 'all') {
+            $orders->whereHas('reports', function ($q) use ($status) {
+                $q->where('status', $status);
+            });
+        }
+
+        // Execute the query and paginate or get the results
+        $orders = $orders->get();
+
+        // Return the updated rows for the table (assuming a partial view)
+        return view('manager.partials.order_rows', compact('orders', 'status'))->render();
     }
+
     /**
      * Export the list of orders as an Excel file.
      *
