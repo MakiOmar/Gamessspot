@@ -114,7 +114,7 @@ Route::prefix('manager')->group(function () {
 
 
 
-        Route::post('/reports/store', [ReportsController::class, 'store']);
+        Route::post('/reports/store', [ReportsController::class, 'store'])->name('manager.reports.store');
         Route::get('/reports/{order_id}', [ReportsController::class, 'getReportsForOrder']);
 
 

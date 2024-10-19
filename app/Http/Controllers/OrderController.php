@@ -44,7 +44,7 @@ class OrderController extends Controller
         }
 
         // Return the view with the orders data
-        return view('manager.orders', compact('orders'));
+        return view('manager.orders', compact('orders', 'user'));
     }
 
     /**

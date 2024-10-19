@@ -85,11 +85,18 @@
                                     </button>
                                 @elseif(isset($status) && 'solved' === $status)
                                 @else
-                                    <!-- Regular undo button -->
-                                    <button class="btn btn-danger btn-sm undo-order" data-order-id="{{ $order->id }}"
-                                        data-sold-item="{{ $order->sold_item }}">
-                                        Undo
-                                    </button>
+                                    @if(Auth::user()->roles->contains('name', 'admin'))
+                                        <!-- Regular undo button -->
+                                        <button class="btn btn-danger btn-sm undo-order" data-order-id="{{ $order->id }}" data-sold-item="{{ $order->sold_item }}">
+                                            Undo
+                                        </button>
+                                    <!-- Check if the user is sales -->
+                                    @elseif(Auth::user()->roles->contains('name', 'sales'))
+                                        <!-- Button to open report modal for sales -->
+                                        <button class="btn btn-warning btn-sm report-order" data-order-id="{{ $order->id }}" data-toggle="modal" data-target="#reportOrderModal">
+                                            Report Issue
+                                        </button>
+                                    @endif
                                 @endif
                             </td>
                         </tr>
@@ -105,6 +112,42 @@
             {{ $orders->links('vendor.pagination.bootstrap-5') }}
         </div>
     </div>
+    <!-- Report Order Modal -->
+    <div class="modal fade" id="reportOrderModal" tabindex="-1" aria-labelledby="reportOrderModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="reportOrderModalLabel">Report an Issue</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="reportForm" method="POST" action="{{ route('manager.reports.store') }}">
+                        @csrf
+                        <!-- Order ID (hidden) -->
+                        <input type="hidden" name="order_id" id="reportOrderId">
+
+                        <!-- Report Status -->
+                        <div class="mb-3">
+                            <label for="reportStatus" class="form-label">Report Status</label>
+                            <select name="status" id="reportStatus" class="form-control" required>
+                                <option value="has_problem">Has Problem</option>
+                                <option value="needs_return">Needs Return</option>
+                            </select>
+                        </div>
+
+                        <!-- Report Note -->
+                        <div class="mb-3">
+                            <label for="reportNote" class="form-label">Note</label>
+                            <textarea name="note" id="reportNote" class="form-control" rows="3" required></textarea>
+                        </div>
+
+                        <!-- Submit Button -->
+                        <button type="submit" class="btn btn-primary">Submit Report</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
 
 @endsection
 
@@ -112,6 +155,43 @@
     <!-- JavaScript for handling AJAX form submission and search -->
     <script>
         $(document).ready(function() {
+
+            // When the report-order button is clicked, populate the hidden input with the order ID
+            $(document).on('click', '.report-order', function() {
+                let orderId = $(this).data('order-id');
+                $('#reportOrderId').val(orderId);
+            });
+
+            // Handle form submission with AJAX
+            $('#reportForm').on('submit', function(e) {
+                e.preventDefault();
+                let formData = $(this).serialize();
+
+                $.ajax({
+                    url: $(this).attr('action'),
+                    method: 'POST',
+                    data: formData,
+                    success: function(response) {
+                        Swal.fire({
+                            title: 'Success!',
+                            text: 'Report submitted successfully.',
+                            icon: 'success',
+                            confirmButtonText: 'OK'
+                        }).then(() => {
+                            location.reload(); // Reload the page to reflect the changes
+                        });
+                    },
+                    error: function(xhr) {
+                        Swal.fire({
+                            title: 'Error',
+                            text: 'An error occurred while submitting the report.',
+                            icon: 'error',
+                            confirmButtonText: 'OK'
+                        });
+                    }
+                });
+            });
+
             $(document).on('click', '.solve-problem', function(e) {
                 e.preventDefault();
 
