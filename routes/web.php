@@ -62,10 +62,25 @@ Route::prefix('manager')->group(function () {
         Route::get('/orders/export', [OrderController::class, 'export'])->name('manager.orders.export');
         Route::post('/orders/undo', [OrderController::class, 'undo'])->name('manager.orders.undo');
         Route::post('/orders/store', [OrderController::class, 'store'])->name('orders.store');
+
+        Route::get(
+            '/orders/has-problem',
+            [OrderController::class, 'ordersHasProblem']
+        )->name('manager.orders.has_problem');
+
         Route::get(
             '/orders/needs-return',
             [OrderController::class, 'ordersWithNeedsReturn']
-        )->name('orders.needs_return');
+        )->name('manager.orders.needs_return');
+        Route::get(
+            '/orders/solved',
+            [OrderController::class, 'solvedOrders']
+        )->name('manager.orders.solved');
+
+        Route::post(
+            '/reports/solve-problem',
+            [ReportsController::class, 'solveProblem']
+        )->name('reports.solve_problem');
 
 
         Route::get('/users', [UserController::class, 'index'])->name('manager.users.index');

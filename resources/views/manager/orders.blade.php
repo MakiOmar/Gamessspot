@@ -57,11 +57,17 @@
                     <td>{{ $order->created_at }}</td>
                     <td>
                         <!-- Check if 'needs_return' flag is true -->
-                        @if(isset($needs_return) && $needs_return)
+                        @if(isset($status) && 'needs_return' === $status)
                             <!-- Button for orders with 'needs_return' -->
                             <button class="btn btn-danger btn-sm undo-order" data-order-id="{{ $order->id }}" data-sold-item="{{ $order->sold_item }}" data-report-id="{{ $order->reports->first()->id }}">
                                 Undo & Mark Solved
                             </button>
+                        @elseif( isset($status) && 'has_problem' === $status )
+                            <button class="btn btn-success btn-sm solve-problem" data-report-id="{{ $order->reports->first()->id }}">
+                                Mark as Solved
+                            </button>
+                        @elseif( isset($status) && 'solved' === $status )
+                            
                         @else
                             <!-- Regular undo button -->
                             <button class="btn btn-danger btn-sm undo-order" data-order-id="{{ $order->id }}" data-sold-item="{{ $order->sold_item }}">
@@ -87,6 +93,65 @@
 <!-- JavaScript for handling AJAX form submission and search -->
 <script>
     $(document).ready(function() {
+        $(document).on('click', '.solve-problem', function(e) {
+            e.preventDefault();
+
+            let reportId = $(this).data('report-id');
+
+            // Use SweetAlert2 for confirmation dialog
+            Swal.fire({
+                title: 'Are you sure?',
+                text: "Do you want to mark this problem as solved?",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Yes, mark it!',
+                cancelButtonText: 'No, cancel',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    // Make the AJAX request if confirmed
+                    $.ajax({
+                        url: "{{ route('reports.solve_problem') }}", // Route to handle the status change
+                        method: 'POST',
+                        data: {
+                            _token: "{{ csrf_token() }}",
+                            report_id: reportId
+                        },
+                        success: function(response) {
+                            if (response.success) {
+                                // Use SweetAlert2 for success notification
+                                Swal.fire({
+                                    title: 'Success!',
+                                    text: 'Report status successfully updated to solved!',
+                                    icon: 'success',
+                                    confirmButtonText: 'OK'
+                                }).then(() => {
+                                    location.reload(); // Reload the page to reflect the changes
+                                });
+                            } else {
+                                // Use SweetAlert2 for failure notification
+                                Swal.fire({
+                                    title: 'Failed',
+                                    text: 'Failed to update report status. Please try again.',
+                                    icon: 'error',
+                                    confirmButtonText: 'OK'
+                                });
+                            }
+                        },
+                        error: function(xhr) {
+                            // Use SweetAlert2 for error notification
+                            Swal.fire({
+                                title: 'Error',
+                                text: 'An error occurred while processing your request.',
+                                icon: 'error',
+                                confirmButtonText: 'OK'
+                            });
+                        }
+                    });
+                }
+            });
+        });
+
         // Handle search input for orders by phone
         $('#searchOrder').on('input', function() {
             let query = $(this).val();

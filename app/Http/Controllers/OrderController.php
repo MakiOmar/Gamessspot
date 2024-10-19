@@ -213,16 +213,30 @@ class OrderController extends Controller
         ]);
     }
 
-    public function ordersWithNeedsReturn()
+    public function ordersWithStatus($status)
     {
         // Retrieve all orders with a related report that has status 'needs_return'
         $orders = Order::with(['seller', 'account.game'])
-        ->whereHas('reports', function ($query) {
-            $query->where('status', 'needs_return');
+        ->whereHas('reports', function ($query) use ($status) {
+            $query->where('status', $status);
         })
         ->paginate(10); // Adjust pagination as needed
-        $needs_return = true;
         // Return the view with the filtered orders
-        return view('manager.orders', compact('orders', 'needs_return'));
+        return view('manager.orders', compact('orders', 'status'));
+    }
+
+    public function ordersWithNeedsReturn()
+    {
+        return $this->ordersWithStatus('needs_return');
+    }
+
+    public function ordersHasProblem()
+    {
+        return $this->ordersWithStatus('has_problem');
+    }
+
+    public function solvedOrders()
+    {
+        return $this->ordersWithStatus('solved');
     }
 }

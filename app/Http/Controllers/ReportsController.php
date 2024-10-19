@@ -58,4 +58,18 @@ class ReportsController extends Controller
 
         return response()->json($reports);
     }
+
+    public function solveProblem(Request $request)
+    {
+        // Find the report by its ID
+        $report = Report::find($request->report_id);
+
+        if ($report && $report->status === 'has_problem') {
+            // Update the status to 'solved'
+            $report->update(['status' => 'solved']);
+            return response()->json(['success' => true]);
+        }
+
+        return response()->json(['success' => false]);
+    }
 }
