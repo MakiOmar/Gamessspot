@@ -38,6 +38,18 @@ class OrderController extends Controller
         ) {
             // Sales role: Fetch only the current user's orders
             $orders = Order::with(['seller', 'account.game'])->where('seller_id', $user->id)->paginate(10);
+        } elseif (
+            $user->roles->contains(function ($role) {
+                return $role->name === 'accountant';
+            })
+            &&
+            ! empty($_GET['id'])
+        ) {
+            // Sales role: Fetch only the current user's orders
+            $orders = Order::with(['seller', 'account.game'])
+            ->where('store_profile_id', $_GET['id'])
+            ->orderBy('buyer_name', 'asc')
+            ->paginate(10);
         } else {
             // Default case: If the user doesn't have the necessary role, return a 403 response or redirect
             abort(403, 'Unauthorized action.');
@@ -212,7 +224,7 @@ class OrderController extends Controller
         // Reduce the corresponding stock by 1 for the account
         $account->decrement($sold_item, 1);
 
-        // After the order has been created, check if this was an "offline" order with only 1 stock left before decrement
+        // Check if this was an "offline" order with only 1 stock left before decrement
         $recentOrder = null;
         $message = null;
         if (
@@ -247,6 +259,7 @@ class OrderController extends Controller
         // Prepare the order data
         $order_data = [
             'seller_id' => Auth::id(),  // Get the currently authenticated user's ID
+            'store_profile_id' => $validatedData['store_profile_id'],
             'account_id' => $account->id,  // Set the matched account ID
             'buyer_phone' => $validatedData['buyer_phone'],
             'buyer_name' => $validatedData['buyer_name'],
