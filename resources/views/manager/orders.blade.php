@@ -14,10 +14,10 @@
                 <!-- Search Box -->
                 <input type="text" class="form-control" id="searchOrder" placeholder="Search orders by buyer phone">
             </div>
-            @if(Auth::user()->roles->contains('name', 'admin'))
+            @if(Auth::user()->roles->contains('name', 'admin') || Auth::user()->roles->contains('name', 'accountant'))
                 <div class="d-flex justify-content-end align-items-center">
                     <!-- Export Button -->
-                    <a href="{{ route('manager.orders.export') }}" class="d-flex -4 float-right">
+                    <a href="{{ route('manager.orders.export') }}@if( ! empty($_GET['id']) )/?id={{ $_GET['id'] }}@endif" class="d-flex -4 float-right">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="36px" height="36px">
                             <path fill="#4CAF50" d="M41,10H25v28h16c0.553,0,1-0.447,1-1V11C42,10.447,41.553,10,41,10z" />
                             <path fill="#FFF"
