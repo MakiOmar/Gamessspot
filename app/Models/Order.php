@@ -13,6 +13,7 @@ class Order extends Model
     // Define which fields are mass-assignable (fillable)
     protected $fillable = [
         'seller_id',
+        'store_profile_id',
         'account_id',
         'buyer_phone',
         'buyer_name',
