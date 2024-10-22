@@ -24,11 +24,13 @@
                 </button>
             @elseif(isset($status) && 'solved' === $status)
             @else
-                <!-- Regular undo button -->
-                <button class="btn btn-danger btn-sm undo-order" data-order-id="{{ $order->id }}"
-                    data-sold-item="{{ $order->sold_item }}">
-                    Undo
-                </button>
+                @if(Auth::user()->roles->contains('name', 'admin'))
+                    <!-- Regular undo button -->
+                    <button class="btn btn-danger btn-sm undo-order" data-order-id="{{ $order->id }}"
+                        data-sold-item="{{ $order->sold_item }}">
+                        Undo
+                    </button>
+                @endif
             @endif
         </td>
     </tr>

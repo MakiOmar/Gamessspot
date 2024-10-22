@@ -71,6 +71,7 @@ class OrderController extends Controller
         $query = $request->input('search');
         $startDate = $request->input('start_date');
         $endDate = $request->input('end_date');
+        $storeProfileId = $request->input('store_profile_id');
         $status = $request->input('status', 'all'); // Default to 'all' if not provided
 
         // Build the query to filter orders
@@ -96,6 +97,10 @@ class OrderController extends Controller
         // Filter by date range if both start and end dates are provided
         if ($startDate && $endDate) {
             $orders->whereBetween('created_at', [$startDate, $endDate]);
+        }
+
+        if ($storeProfileId != 0) {
+            $orders->where('orders.store_profile_id', $storeProfileId);
         }
 
         // Filter by status if it's not 'all'

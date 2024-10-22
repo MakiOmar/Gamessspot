@@ -13,6 +13,7 @@
                 </div>
                 <!-- Search Box -->
                 <input type="text" class="form-control" id="searchOrder" placeholder="Search orders by buyer phone">
+                <input type="hidden" id="storeId" value="@if( ! empty( $_GET['id'] ) ){{ $_GET['id'] }}@else{{0}}@endif">
             </div>
             @if(Auth::user()->roles->contains('name', 'admin') || Auth::user()->roles->contains('name', 'accountant'))
                 <div class="d-flex justify-content-end align-items-center">
@@ -113,7 +114,7 @@
             </table>
         </div>
         @if (isset($status))
-        <input type="hidden" id="reportStatus" value="{{$status}}"/>
+        <input type="hidden" id="currentReportStatus" value="{{$status}}"/>
         @endif
         <!-- Pagination links (if needed) -->
         <div class="d-flex justify-content-center mt-4">
@@ -276,7 +277,8 @@
                 let query = $('#searchOrder').val();
                 let startDate = $('#startDate').val();
                 let endDate = $('#endDate').val();
-                let status = $('#reportStatus').length > 0 ? $('#reportStatus').val() : 'all';
+                let storeProfileId = $('#storeId').val();
+                let status = $('#currentReportStatus').length > 0 ? $('#currentReportStatus').val() : 'all';
 
                 // Check if we have a valid date range or search query
                 if ((startDate && endDate) || query.length >= 3) {
@@ -288,6 +290,7 @@
                             start_date: startDate,
                             end_date: endDate,
                             status: status,
+                            store_profile_id: storeProfileId,
                         },
                         success: function(response) {
                             if (response.trim() === '') {
