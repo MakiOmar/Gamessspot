@@ -9,7 +9,7 @@
     </div>
 
     <div class="list-group list-group-flush">
-
+        @if(Auth::user()->roles->contains('name', 'admin') || Auth::user()->roles->contains('name', 'sales'))
         <!-- Games Menu -->
         <a href="#gamesMenu" class="list-group-item list-group-item-action bg-light" data-bs-toggle="collapse">
             Games <span class="float-end"><i class="fas fa-chevron-down"></i></span>
@@ -31,7 +31,7 @@
             <a href="#" class="list-group-item list-group-item-action">Card 2</a>
         </div>
         <a href="{{ route( 'manager.orders' ) }}" class="list-group-item bg-light">Sell log</a>
-
+        @endif
         @if(Auth::user()->roles->contains('name', 'admin') || Auth::user()->roles->contains('name', 'accountant'))
             @if( Auth::user()->roles->contains('name', 'admin') )
                 <a href="{{ route( 'manager.accounts' ) }}" class="list-group-item bg-light">Accounts</a>
