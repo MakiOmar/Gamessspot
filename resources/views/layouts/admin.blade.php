@@ -16,11 +16,6 @@
     <!-- Flatpickr CSS -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
     <style>
-        body {
-            font-family: 'Poppins', sans-serif;
-            background-color: #f8f9fa;
-            overflow: hidden;
-        }
         .open-modal{
             cursor: pointer;
         }
@@ -98,7 +93,7 @@
             <div class="container mt-4">
                 @yield('content') <!-- Main content will be injected here -->
             </div>
-            @include('layouts.footer') <!-- Reusable header -->
+            @include('layouts.footer') <!-- Reusable footer -->
         </div>
     </div>
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.6/dist/umd/popper.min.js"></script>

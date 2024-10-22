@@ -78,7 +78,7 @@
                                     <button class="btn btn-danger btn-sm undo-order" data-order-id="{{ $order->id }}"
                                         data-sold-item="{{ $order->sold_item }}"
                                         data-report-id="{{ $order->reports->first()->id }}">
-                                        Undo & Mark Solved
+                                        Undo
                                     </button>
                                 @elseif(isset($status) && 'has_problem' === $status)
                                     <button class="btn btn-success btn-sm solve-problem"
@@ -86,6 +86,12 @@
                                         Mark as Solved
                                     </button>
                                 @elseif(isset($status) && 'solved' === $status)
+                                    @if(Auth::user()->roles->contains('name', 'admin'))
+                                            <!-- Regular undo button -->
+                                            <button class="btn btn-danger btn-sm undo-order" data-order-id="{{ $order->id }}" data-sold-item="{{ $order->sold_item }}">
+                                                Undo
+                                            </button>
+                                    @endif
                                 @else
                                     @if(Auth::user()->roles->contains('name', 'admin'))
                                         <!-- Regular undo button -->
@@ -96,7 +102,7 @@
                                     @elseif(Auth::user()->roles->contains('name', 'sales'))
                                         <!-- Button to open report modal for sales -->
                                         <button class="btn btn-warning btn-sm report-order" data-order-id="{{ $order->id }}" data-toggle="modal" data-target="#reportOrderModal">
-                                            Report Issue
+                                            Actions
                                         </button>
                                     @endif
                                 @endif

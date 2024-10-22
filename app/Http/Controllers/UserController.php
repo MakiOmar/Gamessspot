@@ -9,19 +9,38 @@ use App\Models\Role;
 
 class UserController extends Controller
 {
-    // Method to list users with role 1 or 2
-    public function index()
+    public function users($role = 'any')
     {
-    // Fetch users who have role with id 2 (sales)
-        $users = User::whereHas('roles', function ($query) {
-            $query->where('id', 2); // Role ID 2 corresponds to 'sales'
-        })->with('storeProfile')->paginate(10);
+        if ('any' === $role) {
+            $users = User::with('storeProfile')->paginate(10);
+        } else {
+            $users = User::whereHas('roles', function ($query) use ($role) {
+                $query->where('id', intval($role));
+            })->with('storeProfile')->paginate(10);
+        }
 
         $storeProfiles = StoresProfile::all(); // Fetch all store profiles
 
         $roles = Role::all(); // Fetch all available roles
 
         return view('manager.users', compact('users', 'storeProfiles', 'roles'));
+    }
+    // Method to list users with role 1 or 2
+    public function index()
+    {
+        return $this->users();
+    }
+    public function sales()
+    {
+        return $this->users(2);
+    }
+    public function accountants()
+    {
+        return $this->users(3);
+    }
+    public function admins()
+    {
+        return $this->users(1);
     }
 
     // Method to search users based on the input

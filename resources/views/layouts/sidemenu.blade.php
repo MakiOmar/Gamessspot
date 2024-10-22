@@ -32,18 +32,28 @@
         </div>
         <a href="{{ route( 'manager.orders' ) }}" class="list-group-item bg-light">Sell log</a>
 
-        @if(Auth::user()->roles->contains('name', 'admin'))
-            <a href="{{ route( 'manager.accounts' ) }}" class="list-group-item bg-light">Accounts</a>
-            <a href="#ordersReports" class="list-group-item list-group-item-action bg-light" data-bs-toggle="collapse">
-                Reports <span class="float-end"><i class="fas fa-chevron-down"></i></span>
-            </a>
-            <div class="collapse" id="ordersReports">
-                <a href="{{ route( 'manager.orders.needs_return' ) }}" class="list-group-item bg-light">Needs return</a>
-                <a href="{{ route( 'manager.orders.has_problem' ) }}" class="list-group-item bg-light">Reported issues</a>
-                <a href="{{ route( 'manager.orders.solved' ) }}" class="list-group-item bg-light">Solved</a>
-            </div>
-
-            <a href="{{ route( 'manager.users.index' ) }}" class="list-group-item bg-light">Employees</a>
+        @if(Auth::user()->roles->contains('name', 'admin') || Auth::user()->roles->contains('name', 'accountant'))
+            @if( Auth::user()->roles->contains('name', 'admin') )
+                <a href="{{ route( 'manager.accounts' ) }}" class="list-group-item bg-light">Accounts</a>
+                <a href="#ordersReports" class="list-group-item list-group-item-action bg-light" data-bs-toggle="collapse">
+                    Reports <span class="float-end"><i class="fas fa-chevron-down"></i></span>
+                </a>
+                <div class="collapse" id="ordersReports">
+                    <a href="{{ route( 'manager.orders.needs_return' ) }}" class="list-group-item bg-light">Needs return</a>
+                    <a href="{{ route( 'manager.orders.has_problem' ) }}" class="list-group-item bg-light">Reported issues</a>
+                    <a href="{{ route( 'manager.orders.solved' ) }}" class="list-group-item bg-light">Solved</a>
+                </div>
+                <a href="#usersList" class="list-group-item list-group-item-action bg-light" data-bs-toggle="collapse">
+                    Users <span class="float-end"><i class="fas fa-chevron-down"></i></span>
+                </a>
+                <div class="collapse" id="usersList">
+                    <a href="{{ route( 'manager.users.index' ) }}" class="list-group-item bg-light">All</a>
+                    <a href="{{ route( 'manager.users.sales' ) }}" class="list-group-item bg-light">Sales</a>
+                    <a href="{{ route( 'manager.users.accountants' ) }}" class="list-group-item bg-light">Accountants</a>
+                    <a href="{{ route( 'manager.users.admins' ) }}" class="list-group-item bg-light">Admins</a>
+                </div>
+                
+                @endif
             <a href="{{ route( 'manager.storeProfiles.index' ) }}" class="list-group-item bg-light">Stores Profiles</a>
         @endif
     </div>

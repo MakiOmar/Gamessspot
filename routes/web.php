@@ -84,6 +84,9 @@ Route::prefix('manager')->group(function () {
 
 
         Route::get('/users', [UserController::class, 'index'])->name('manager.users.index');
+        Route::get('/users/sales', [UserController::class, 'sales'])->name('manager.users.sales');
+        Route::get('/users/accountants', [UserController::class, 'accountants'])->name('manager.users.accountants');
+        Route::get('/users/admins', [UserController::class, 'admins'])->name('manager.users.admins');
         Route::get('/users/search', [UserController::class, 'search'])->name('manager.users.search');
         Route::get('/users/{id}/edit', [UserController::class, 'edit'])->name('manager.users.edit');
         Route::put('/users/update/{id}', [UserController::class, 'update'])->name('manager.users.update');
