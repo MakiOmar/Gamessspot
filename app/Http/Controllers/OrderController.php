@@ -246,8 +246,6 @@ class OrderController extends Controller
             ->where('created_at', '>=', now()->subMinutes(11))
             ->latest()
             ->first();
-            Log::debug('Debugging some data.', ['data' => $check_for]);
-
             if ($recentOrder) {
                 // Fetch the seller details
                 $seller = User::find($recentOrder->seller_id);

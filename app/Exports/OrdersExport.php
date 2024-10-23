@@ -5,6 +5,7 @@ namespace App\Exports;
 use App\Models\Order;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithHeadings;
+use Illuminate\Support\Facades\Log;
 
 class OrdersExport implements FromCollection, WithHeadings
 {
@@ -15,6 +16,12 @@ class OrdersExport implements FromCollection, WithHeadings
      */
     public function collection()
     {
+        // Renamed to be more descriptive
+        $searchTerm = $_GET['searchOrder'] ?? '';
+        $startDate = $_GET['startDate'] ?? '';
+        $endDate = $_GET['endDate'] ?? '';
+        $storeId = $_GET['id'] ?? '';
+        // Building the query for fetching orders
         return Order::join('accounts', 'orders.account_id', '=', 'accounts.id')
             ->join('users', 'orders.seller_id', '=', 'users.id')
             ->join('games', 'accounts.game_id', '=', 'games.id')  // Join with the games table
@@ -31,9 +38,22 @@ class OrdersExport implements FromCollection, WithHeadings
                 'orders.notes',
                 'orders.created_at',
             ])
-            // Check if `$_GET['id']` is set and not empty, and apply the filter
-            ->when(!empty($_GET['id']), function ($query) {
-                $query->where('orders.store_profile_id', $_GET['id']);
+            // Apply store filtering if a store ID is provided
+            ->when(!empty($storeId), function ($query) use ($storeId) {
+                $query->where('orders.store_profile_id', $storeId);
+            })
+            // Filter based on the new search term if provided
+            ->when(!empty($searchTerm), function ($query) use ($searchTerm) {
+                $query->where(function ($q) use ($searchTerm) {
+                    $q->where('users.name', 'like', '%' . $searchTerm . '%')
+                    ->orWhere('accounts.mail', 'like', '%' . $searchTerm . '%')
+                    ->orWhere('orders.buyer_phone', 'like', '%' . $searchTerm . '%')
+                    ->orWhere('orders.buyer_name', 'like', '%' . $searchTerm . '%');
+                });
+            })
+            // Filter orders between start and end dates if provided
+            ->when(!empty($startDate) && !empty($endDate), function ($query) use ($startDate, $endDate) {
+                $query->whereBetween('orders.created_at', [$startDate, $endDate]);
             })
             ->get();
     }

@@ -16,7 +16,7 @@
                 <!-- Button for orders with 'needs_return' -->
                 <button class="btn btn-danger btn-sm undo-order" data-order-id="{{ $order->id }}"
                     data-sold-item="{{ $order->sold_item }}" data-report-id="{{ $order->reports->first()->id }}">
-                    Undo & Mark Solved
+                    Undo
                 </button>
             @elseif(isset($status) && 'has_problem' === $status)
                 <button class="btn btn-success btn-sm solve-problem" data-report-id="{{ $order->reports->first()->id }}">
