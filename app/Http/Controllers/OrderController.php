@@ -14,6 +14,7 @@ use App\Models\Report;
 
 class OrderController extends Controller
 {
+    protected $pagination = 10;
     /**
      * Display a listing of the orders.
      *
@@ -30,14 +31,14 @@ class OrderController extends Controller
                 return $role->name === 'admin';
             })
         ) {
-            $orders = Order::with(['seller', 'account.game'])->paginate(10);
+            $orders = Order::with(['seller', 'account.game'])->paginate($this->pagination);
         } elseif (
             $user->roles->contains(function ($role) {
                 return $role->name === 'sales';
             })
         ) {
             // Sales role: Fetch only the current user's orders
-            $orders = Order::with(['seller', 'account.game'])->where('seller_id', $user->id)->paginate(10);
+            $orders = Order::with(['seller', 'account.game'])->where('seller_id', $user->id)->paginate($this->pagination);
         } elseif (
             $user->roles->contains(function ($role) {
                 return $role->name === 'accountant';
@@ -49,7 +50,7 @@ class OrderController extends Controller
             $orders = Order::with(['seller', 'account.game'])
             ->where('store_profile_id', $_GET['id'])
             ->orderBy('buyer_name', 'asc')
-            ->paginate(10);
+            ->paginate($this->pagination);
         } else {
             // Default case: If the user doesn't have the necessary role, return a 403 response or redirect
             abort(403, 'Unauthorized action.');
@@ -290,7 +291,7 @@ class OrderController extends Controller
         ->whereHas('reports', function ($query) use ($status) {
             $query->where('status', $status);
         })
-        ->paginate(10); // Adjust pagination as needed
+        ->paginate($this->pagination); // Adjust pagination as needed
         // Return the view with the filtered orders
         return view('manager.orders', compact('orders', 'status'));
     }

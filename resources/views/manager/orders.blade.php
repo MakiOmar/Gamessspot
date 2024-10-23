@@ -10,9 +10,6 @@
                 <div class="d-flex ">
                     <!-- Add Search and Export Button -->
                     <div class="w-50 me-1">
-                        <div class="alert alert-warning" id="noResultsMessage" style="display: none;">
-                            No results found.
-                        </div>
                         <!-- Search Box -->
                         <input type="text" class="form-control" name="searchOrder" id="searchOrder" placeholder="Search orders by buyer phone">
                         <input type="hidden" id="storeId" value="@if( ! empty( $_GET['id'] ) ){{ $_GET['id'] }}@else{{0}}@endif">
@@ -126,7 +123,11 @@
         @endif
         <!-- Pagination links (if needed) -->
         <div class="d-flex justify-content-center mt-4">
-            {{ $orders->links('vendor.pagination.bootstrap-5') }}
+            @if(request()->has('id'))
+                {{ $orders->appends(['id' => request()->get('id')])->links('vendor.pagination.bootstrap-5') }}
+            @else
+                {{ $orders->links('vendor.pagination.bootstrap-5') }}
+            @endif
         </div>
     </div>
     <!-- Report Order Modal -->
@@ -302,9 +303,13 @@
                         },
                         success: function(response) {
                             if (response.trim() === '') {
-                                $('#noResultsMessage').show(); // Show 'No results' message
+                                Swal.fire({
+                                    title: 'No Results',
+                                    text: 'No orders found matching your search criteria.',
+                                    icon: 'info',
+                                    confirmButtonText: 'OK'
+                                }); // Show 'No results' message
                             } else {
-                                $('#noResultsMessage').hide(); // Hide 'No results' message
                                 $('#orderTableBody').html(
                                 response); // Replace table rows with search results
                             }
