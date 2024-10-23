@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use App\Models\Report;
+use App\Models\StoresProfile;
 
 class Order extends Model
 {
@@ -43,5 +44,12 @@ class Order extends Model
     public function reports()
     {
         return $this->hasMany(Report::class, 'order_id');
+    }
+    /**
+     * An order can have one storeProfile.
+     */
+    public function storeProfile()
+    {
+        return $this->belongsTo(StoresProfile::class, 'store_profile_id');
     }
 }

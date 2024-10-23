@@ -24,4 +24,11 @@ class StoresProfile extends Model
     {
         return $this->hasMany(User::class, 'store_profile_id');
     }
+    /**
+     * A storeProfile can have many orders.
+     */
+    public function orders()
+    {
+        return $this->hasMany(Order::class, 'store_profile_id');
+    }
 }

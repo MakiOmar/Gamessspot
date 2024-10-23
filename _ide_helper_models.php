@@ -133,6 +133,7 @@ namespace App\Models{
  * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Report> $reports
  * @property-read int|null $reports_count
  * @property-read \App\Models\User $seller
+ * @property-read \App\Models\StoresProfile|null $storeProfile
  * @method static \Database\Factories\OrderFactory factory($count = null, $state = [])
  * @method static \Illuminate\Database\Eloquent\Builder|Order newModelQuery()
  * @method static \Illuminate\Database\Eloquent\Builder|Order newQuery()
@@ -211,6 +212,8 @@ namespace App\Models{
  * @property string $phone_number
  * @property \Illuminate\Support\Carbon|null $created_at
  * @property \Illuminate\Support\Carbon|null $updated_at
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Order> $orders
+ * @property-read int|null $orders_count
  * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\User> $users
  * @property-read int|null $users_count
  * @method static \Database\Factories\StoresProfileFactory factory($count = null, $state = [])

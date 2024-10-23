@@ -9,7 +9,7 @@ class StoreProfileController extends Controller
 {
     public function index()
     {
-        $storeProfiles = StoresProfile::paginate(10);
+        $storeProfiles = StoresProfile::withCount('orders')->paginate(10);
         return view('manager.stores', compact('storeProfiles'));
     }
 

@@ -30,6 +30,7 @@
                         <th style="width: 57px;">ID</th>
                         <th style="width: 265px;">Name</th>
                         <th style="width: 170px;">Phone</th>
+                        <th style="width: 170px;">NO. Orders</th>
                         <th style="width: 120px;">Actions</th>
                     </tr>
                 </thead>
@@ -39,6 +40,7 @@
                         <td>{{ $storeProfile->id }}</td>
                         <td>{{ $storeProfile->name }}</td>
                         <td>{{ $storeProfile->phone_number }}</td>
+                        <td>{{ $storeProfile->orders_count  }}</td>
                         <td>
                             @if(Auth::user()->roles->contains('name', 'admin'))
                                 <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#editStoreProfileModal" data-id="{{ $storeProfile->id }}">Edit</button>
@@ -176,11 +178,15 @@
                 contentType: false,
                 processData: false,
                 success: function(response) {
-                    alert('Store Profile saved successfully!');
+                    Swal.fire({
+                        title: 'Success',
+                        text: 'Store Profile saved successfully!',
+                        icon: 'success',
+                        confirmButtonText: 'OK'
+                    });
                     location.reload(); // Reload the page or update the table dynamically
                 },
                 error: function(xhr) {
-                    console.log(xhr.responseText); // Log the error for debugging
                     if (xhr.status === 422) { // Handle validation errors
                         var errors = xhr.responseJSON.errors;
 
@@ -191,7 +197,12 @@
                             inputField.after('<div class="invalid-feedback">' + value[0] + '</div>');
                         });
                     } else {
-                        alert('An error occurred.');
+                        Swal.fire({
+                            title: 'Error',
+                            text: 'An error occurred.',
+                            icon: 'error',
+                            confirmButtonText: 'OK'
+                        });
                     }
                 }
             });
