@@ -170,10 +170,20 @@
 @endsection
 
 @push('scripts')
-    <!-- JavaScript for handling AJAX form submission and search -->
     <script>
         $(document).ready(function() {
+            // Initialize Flatpickr for startDate and endDate inputs
+            flatpickr("#startDate", {
+                altInput: true,
+                altFormat: "F j, Y",
+                dateFormat: "Y-m-d",
+            });
 
+            flatpickr("#endDate", {
+                altInput: true,
+                altFormat: "F j, Y",
+                dateFormat: "Y-m-d",
+            });
             // When the report-order button is clicked, populate the hidden input with the order ID
             $(document).on('click', '.report-order', function() {
                 let orderId = $(this).data('order-id');
@@ -268,18 +278,6 @@
                         });
                     }
                 });
-            });
-            // Initialize Flatpickr for startDate and endDate inputs
-            flatpickr("#startDate", {
-                altInput: true,
-                altFormat: "F j, Y",
-                dateFormat: "Y-m-d",
-            });
-
-            flatpickr("#endDate", {
-                altInput: true,
-                altFormat: "F j, Y",
-                dateFormat: "Y-m-d",
             });
             // Handle search input and date range filter
             $('#searchOrder, #startDate, #endDate').on('input change', function() {

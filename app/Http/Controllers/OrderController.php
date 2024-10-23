@@ -100,17 +100,15 @@ class OrderController extends Controller
             $orders->whereBetween('created_at', [$startDate, $endDate]);
         }
 
-        if ($storeProfileId != 0) {
-            $orders->where('orders.store_profile_id', $storeProfileId);
-        }
-
         // Filter by status if it's not 'all'
         if ($status !== 'all') {
             $orders->whereHas('reports', function ($q) use ($status) {
                 $q->where('status', $status);
             });
         }
-
+        if ($storeProfileId != 0) {
+            $orders->where('orders.store_profile_id', $storeProfileId)->orderBy('buyer_name', 'asc');
+        }
         // Execute the query and paginate or get the results
         $orders = $orders->get();
 
