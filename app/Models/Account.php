@@ -41,7 +41,7 @@ class Account extends Model
 {
     use HasFactory;
 
-    protected $fillable = [
+    protected $fillable = array(
         'mail',
         'password',
         'game_id',
@@ -55,7 +55,7 @@ class Account extends Model
         'ps5_primary_stock',
         'ps5_secondary_stock',
         'ps5_offline_stock',
-    ];
+    );
 
     /**
      * The games that belong to the account.

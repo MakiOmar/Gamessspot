@@ -35,9 +35,12 @@ class AccountController extends Controller
 
         $accounts = Account::with('game')
         ->where('mail', 'like', "%{$query}%")
-        ->orWhereHas('game', function ($q) use ($query) {
-            $q->where('title', 'like', "%{$query}%");
-        })
+        ->orWhereHas(
+            'game',
+            function ($q) use ($query) {
+                $q->where('title', 'like', "%{$query}%");
+            }
+        )
         ->get();
 
         return view('manager.partials.account_rows', compact('accounts'))->render(); // Use a partial view to render rows
@@ -45,33 +48,35 @@ class AccountController extends Controller
 
     public function store(Request $request)
     {
-    // Validate the request data
-        $request->validate([
-        'mail' => 'required|email',
-        'password' => 'required|string',
-        'game_id' => 'required|exists:games,id',
-        'region' => 'required|string|max:2',
-        'cost' => 'required|numeric',
-        'birthdate' => 'required|date',
-        'login_code' => 'required|string',
-        'ps4_primary' => 'nullable|boolean',
-        'ps4_secondary' => 'nullable|boolean',
-        'ps5_primary' => 'nullable|boolean',
-        'ps5_secondary' => 'nullable|boolean',
-        'ps4_offline1' => 'nullable|boolean',
-        'ps4_offline2' => 'nullable|boolean',
-        'ps5_offline' => 'nullable|boolean',
-        ]);
+        // Validate the request data
+        $request->validate(
+            array(
+                'mail'          => 'required|email',
+                'password'      => 'required|string',
+                'game_id'       => 'required|exists:games,id',
+                'region'        => 'required|string|max:2',
+                'cost'          => 'required|numeric',
+                'birthdate'     => 'required|date',
+                'login_code'    => 'required|string',
+                'ps4_primary'   => 'nullable|boolean',
+                'ps4_secondary' => 'nullable|boolean',
+                'ps5_primary'   => 'nullable|boolean',
+                'ps5_secondary' => 'nullable|boolean',
+                'ps4_offline1'  => 'nullable|boolean',
+                'ps4_offline2'  => 'nullable|boolean',
+                'ps5_offline'   => 'nullable|boolean',
+            )
+        );
 
-    // Default stock values
-        $ps4_primary_stock = 1;
+        // Default stock values
+        $ps4_primary_stock   = 1;
         $ps4_secondary_stock = 1;
-        $ps5_primary_stock = 1;
+        $ps5_primary_stock   = 1;
         $ps5_secondary_stock = 1;
-        $ps4_offline_stock = 2; // Default offline stock should be 2
-        $ps5_offline_stock = 1;
+        $ps4_offline_stock   = 2; // Default offline stock should be 2
+        $ps5_offline_stock   = 1;
 
-    // If any of the stocks are checked, set them to zero (except offline logic)
+        // If any of the stocks are checked, set them to zero (except offline logic)
         if ($request->has('ps4_primary')) {
             $ps4_primary_stock = 0;
         }
@@ -97,28 +102,30 @@ class AccountController extends Controller
         }
 
         // Create the new account with adjusted stock values
-        $account = Account::create([
-        'mail' => $request->mail,
-        'password' => $request->password,
-        'game_id' => $request->game_id,
-        'region' => $request->region,
-        'cost' => $request->cost,
-        'birthdate' => $request->birthdate,
-        'login_code' => $request->login_code,
-        'ps4_primary_stock' => $ps4_primary_stock,
-        'ps4_secondary_stock' => $ps4_secondary_stock,
-        'ps4_offline_stock' => $ps4_offline_stock,
-        'ps5_primary_stock' => $ps5_primary_stock,
-        'ps5_secondary_stock' => $ps5_secondary_stock,
-        'ps5_offline_stock' => $ps5_offline_stock,
-        ]);
+        $account = Account::create(
+            array(
+                'mail'                => $request->mail,
+                'password'            => $request->password,
+                'game_id'             => $request->game_id,
+                'region'              => $request->region,
+                'cost'                => $request->cost,
+                'birthdate'           => $request->birthdate,
+                'login_code'          => $request->login_code,
+                'ps4_primary_stock'   => $ps4_primary_stock,
+                'ps4_secondary_stock' => $ps4_secondary_stock,
+                'ps4_offline_stock'   => $ps4_offline_stock,
+                'ps5_primary_stock'   => $ps5_primary_stock,
+                'ps5_secondary_stock' => $ps5_secondary_stock,
+                'ps5_offline_stock'   => $ps5_offline_stock,
+            )
+        );
 
         // Check if the account was created successfully
         if ($account) {
-            return response()->json(['success' => 'Account created and game stock updated successfully!']);
+            return response()->json(array( 'success' => 'Account created and game stock updated successfully!' ));
         }
 
         // If account creation failed, return an error response
-        return response()->json(['error' => 'Failed to create account. Please try again.'], 500);
+        return response()->json(array( 'error' => 'Failed to create account. Please try again.' ), 500);
     }
 }

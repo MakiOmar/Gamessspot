@@ -40,8 +40,19 @@ class AccountsExport implements FromCollection, WithHeadings
      */
     public function headings(): array
     {
-        return [
-            'ID', 'Mail', 'Game', 'Region', 'PS4 Offline', 'PS4 Primary', 'PS4 Secondary', 'PS5 Offline', 'PS5 Primary', 'PS5 Secondary', 'Cost', 'Password'
-        ];
+        return array(
+            'ID',
+            'Mail',
+            'Game',
+            'Region',
+            'PS4 Offline',
+            'PS4 Primary',
+            'PS4 Secondary',
+            'PS5 Offline',
+            'PS5 Primary',
+            'PS5 Secondary',
+            'Cost',
+            'Password',
+        );
     }
 }

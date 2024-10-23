@@ -37,8 +37,8 @@ class ManagerController extends Controller
         $ps5GamesCount = Game::where('ps5_offline_status', true)->where('ps4_offline_status', false)->count();
 
         $paginationLimit = 10; // Assuming 10 games per page
-        $ps4TotalPages = ceil($ps4GamesCount / $paginationLimit);
-        $ps5TotalPages = ceil($ps5GamesCount / $paginationLimit);
+        $ps4TotalPages   = ceil($ps4GamesCount / $paginationLimit);
+        $ps5TotalPages   = ceil($ps5GamesCount / $paginationLimit);
 
         // Forget cache for all pages of PS4 games
         for ($page = 1; $page <= $ps4TotalPages; $page++) {
@@ -52,29 +52,31 @@ class ManagerController extends Controller
     }
     public function update(Request $request, $id)
     {
-         // Log the entire request input data
+        // Log the entire request input data
         Log::info('Update Request Data: ', $request->all());
 
         $game = Game::findOrFail($id);
 
         // Validate the request
-        $request->validate([
-            'title' => 'required|string|max:255',
-            'code' => 'required|string|max:255|unique:games,code,' . $game->id,
-            'full_price' => 'required|numeric|min:0',
-            'ps4_primary_price' => 'nullable|numeric|min:0',
-            'ps4_secondary_price' => 'nullable|numeric|min:0',
-            'ps4_offline_price' => 'nullable|numeric|min:0',
-            'ps5_primary_price' => 'nullable|numeric|min:0',
-            'ps5_offline_price' => 'nullable|numeric|min:0',
-            'ps4_image' => 'nullable|image|mimes:webp,jpeg,png,jpg,gif,svg|max:2048', // Validate image upload
-            'ps5_image' => 'nullable|image|mimes:webp,jpeg,png,jpg,gif,svg|max:2048', // Validate image upload
-            'ps4_primary_status' => 'required|boolean',
-            'ps4_secondary_status' => 'required|boolean',
-            'ps4_offline_status' => 'required|boolean',
-            'ps5_primary_status' => 'required|boolean',
-            'ps5_offline_status' => 'required|boolean',
-        ]);
+        $request->validate(
+            array(
+                'title'                => 'required|string|max:255',
+                'code'                 => 'required|string|max:255|unique:games,code,' . $game->id,
+                'full_price'           => 'required|numeric|min:0',
+                'ps4_primary_price'    => 'nullable|numeric|min:0',
+                'ps4_secondary_price'  => 'nullable|numeric|min:0',
+                'ps4_offline_price'    => 'nullable|numeric|min:0',
+                'ps5_primary_price'    => 'nullable|numeric|min:0',
+                'ps5_offline_price'    => 'nullable|numeric|min:0',
+                'ps4_image'            => 'nullable|image|mimes:webp,jpeg,png,jpg,gif,svg|max:2048', // Validate image upload
+                'ps5_image'            => 'nullable|image|mimes:webp,jpeg,png,jpg,gif,svg|max:2048', // Validate image upload
+                'ps4_primary_status'   => 'required|boolean',
+                'ps4_secondary_status' => 'required|boolean',
+                'ps4_offline_status'   => 'required|boolean',
+                'ps5_primary_status'   => 'required|boolean',
+                'ps5_offline_status'   => 'required|boolean',
+            )
+        );
         $data = $request->except('_token', 'ps4_image', 'ps5_image'); // Exclude image files from mass assignment
 
         // Handle PS4 image upload
@@ -96,29 +98,31 @@ class ManagerController extends Controller
         $game->update($data);
         // Clear the cache after updating the game
         $this->clearPaginatedGameCache();
-        return response()->json(['message' => 'Game updated successfully!']);
+        return response()->json(array( 'message' => 'Game updated successfully!' ));
     }
 
     public function store(Request $request)
     {
         // Validate and store the new game
-        $validatedData = $request->validate([
-            'title' => 'required|string|max:255',
-            'code' => 'required|string|max:255|unique:games,code',
-            'full_price' => 'required|numeric|min:0',
-            'ps4_primary_price' => 'nullable|numeric|min:0',
-            'ps4_secondary_price' => 'nullable|numeric|min:0',
-            'ps4_offline_price' => 'nullable|numeric|min:0',
-            'ps5_primary_price' => 'nullable|numeric|min:0',
-            'ps5_offline_price' => 'nullable|numeric|min:0',
-            'ps4_image' => 'nullable|image|mimes:webp,jpeg,png,jpg,gif,svg|max:2048', // Validate image upload
-            'ps5_image' => 'nullable|image|mimes:webp,jpeg,png,jpg,gif,svg|max:2048', // Validate image upload
-            'ps4_primary_status' => 'required|boolean',
-            'ps4_secondary_status' => 'required|boolean',
-            'ps4_offline_status' => 'required|boolean',
-            'ps5_primary_status' => 'required|boolean',
-            'ps5_offline_status' => 'required|boolean',
-        ]);
+        $validatedData = $request->validate(
+            array(
+                'title'                => 'required|string|max:255',
+                'code'                 => 'required|string|max:255|unique:games,code',
+                'full_price'           => 'required|numeric|min:0',
+                'ps4_primary_price'    => 'nullable|numeric|min:0',
+                'ps4_secondary_price'  => 'nullable|numeric|min:0',
+                'ps4_offline_price'    => 'nullable|numeric|min:0',
+                'ps5_primary_price'    => 'nullable|numeric|min:0',
+                'ps5_offline_price'    => 'nullable|numeric|min:0',
+                'ps4_image'            => 'nullable|image|mimes:webp,jpeg,png,jpg,gif,svg|max:2048', // Validate image upload
+                'ps5_image'            => 'nullable|image|mimes:webp,jpeg,png,jpg,gif,svg|max:2048', // Validate image upload
+                'ps4_primary_status'   => 'required|boolean',
+                'ps4_secondary_status' => 'required|boolean',
+                'ps4_offline_status'   => 'required|boolean',
+                'ps5_primary_status'   => 'required|boolean',
+                'ps5_offline_status'   => 'required|boolean',
+            )
+        );
 
         // Handle PS4 image upload
         if ($request->hasFile('ps4_image')) {
@@ -140,7 +144,7 @@ class ManagerController extends Controller
         Game::create($validatedData);
         // Clear the cache after updating the game
         $this->clearPaginatedGameCache();
-        return response()->json(['message' => 'Game created successfully!']);
+        return response()->json(array( 'message' => 'Game created successfully!' ));
     }
     /**
      * Fetch games with dynamic stock based on the $n argument.
@@ -151,8 +155,8 @@ class ManagerController extends Controller
     public function getGamesByPlatform($n)
     {
         // Determine the stock and image fields based on the $n value
-        $offline_stock = "ps{$n}_offline_stock";
-        $primary_stock = "ps{$n}_primary_stock";
+        $offline_stock   = "ps{$n}_offline_stock";
+        $primary_stock   = "ps{$n}_primary_stock";
         $secondary_stock = "ps{$n}_secondary_stock";
 
         $psGames = DB::table('accounts')

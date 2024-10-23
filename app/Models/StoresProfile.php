@@ -16,10 +16,10 @@ class StoresProfile extends Model
      *
      * @var array<int, string>
      */
-    protected $fillable = [
+    protected $fillable = array(
         'name',
         'phone_number',
-    ];
+    );
     public function users()
     {
         return $this->hasMany(User::class, 'store_profile_id');

@@ -53,33 +53,33 @@ class User extends Authenticatable
      *
      * @var array<int, string>
      */
-    protected $fillable = [
+    protected $fillable = array(
         'name',
         'email',
         'password',
         'store_profile_id',
         'phone',
-    ];
+    );
 
     /**
      * The attributes that should be hidden for serialization.
      *
      * @var array<int, string>
      */
-    protected $hidden = [
+    protected $hidden = array(
         'password',
         'remember_token',
-    ];
+    );
 
     /**
      * The attributes that should be cast.
      *
      * @var array<string, string>
      */
-    protected $casts = [
+    protected $casts = array(
         'email_verified_at' => 'datetime',
-        'password' => 'hashed',
-    ];
+        'password'          => 'hashed',
+    );
 
     public function storeProfile()
     {

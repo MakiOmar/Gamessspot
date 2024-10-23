@@ -15,15 +15,17 @@ class StoreProfileController extends Controller
 
     public function store(Request $request)
     {
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'phone' => 'nullable|string|max:20',
-        ]);
+        $validated                 = $request->validate(
+            array(
+                'name'  => 'required|string|max:255',
+                'phone' => 'nullable|string|max:20',
+            )
+        );
         $validated['phone_number'] = $validated['phone'];
         unset($validated['phone']);
         StoresProfile::create($validated);
 
-        return response()->json(['message' => 'Store Profile created successfully']);
+        return response()->json(array( 'message' => 'Store Profile created successfully' ));
     }
 
     public function edit($id)
@@ -36,15 +38,17 @@ class StoreProfileController extends Controller
     {
         $storeProfile = StoresProfile::findOrFail($id);
 
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'phone' => 'nullable|string|max:20',
-        ]);
+        $validated                 = $request->validate(
+            array(
+                'name'  => 'required|string|max:255',
+                'phone' => 'nullable|string|max:20',
+            )
+        );
         $validated['phone_number'] = $validated['phone'];
         unset($validated['phone']);
         $storeProfile->update($validated);
 
-        return response()->json(['message' => 'Store Profile updated successfully']);
+        return response()->json(array( 'message' => 'Store Profile updated successfully' ));
     }
 
     public function search(Request $request)

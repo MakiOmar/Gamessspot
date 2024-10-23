@@ -57,7 +57,7 @@ class Game extends Model
     use HasFactory;
 
     // Define the fillable fields (excluding _token)
-    protected $fillable = [
+    protected $fillable = array(
         'title',
         'code',
         'full_price',
@@ -73,7 +73,7 @@ class Game extends Model
         'ps4_offline_status',
         'ps5_primary_status',
         'ps5_offline_status',
-    ];
+    );
 
     /**
      * The accounts that belong to the game.

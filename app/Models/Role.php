@@ -9,11 +9,11 @@ class Role extends Model
 {
     use HasFactory;
 
-     // Define the table name if it's not the default 'roles'
-     protected $table = 'roles';
+    // Define the table name if it's not the default 'roles'
+    protected $table = 'roles';
 
-     // Specify the fields that are mass assignable
-     protected $fillable = ['name', 'capabilities'];
+    // Specify the fields that are mass assignable
+    protected $fillable = array( 'name', 'capabilities' );
 
 
     public function users()
@@ -28,7 +28,7 @@ class Role extends Model
      */
     public function getCapabilitiesAttribute($value): array
     {
-        return json_decode($value, true) ?? [];
+        return json_decode($value, true) ?? array();
     }
 
     /**

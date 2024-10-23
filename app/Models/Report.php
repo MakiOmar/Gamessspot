@@ -14,12 +14,12 @@ class Report extends Model
      *
      * @var array
      */
-    protected $fillable = [
+    protected $fillable = array(
         'order_id',
         'seller_id',
         'status',
         'note',
-    ];
+    );
 
     /**
      * Define the relationship between Report and Order.

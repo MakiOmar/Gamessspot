@@ -12,7 +12,7 @@ class Order extends Model
     use HasFactory;
 
     // Define which fields are mass-assignable (fillable)
-    protected $fillable = [
+    protected $fillable = array(
         'seller_id',
         'store_profile_id',
         'account_id',
@@ -20,8 +20,8 @@ class Order extends Model
         'buyer_name',
         'price',
         'notes',
-        'sold_item'
-    ];
+        'sold_item',
+    );
 
     /**
      * Get the seller associated with the order.

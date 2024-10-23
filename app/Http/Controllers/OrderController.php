@@ -27,27 +27,33 @@ class OrderController extends Controller
 
         // If the user has the 'admin' role, fetch all orders
         if (
-            $user->roles->contains(function ($role) {
-                return $role->name === 'admin';
-            })
+            $user->roles->contains(
+                function ($role) {
+                    return $role->name === 'admin';
+                }
+            )
         ) {
-            $orders = Order::with(['seller', 'account.game'])->paginate($this->pagination);
+            $orders = Order::with(array( 'seller', 'account.game' ))->paginate($this->pagination);
         } elseif (
-            $user->roles->contains(function ($role) {
-                return $role->name === 'sales';
-            })
+            $user->roles->contains(
+                function ($role) {
+                    return $role->name === 'sales';
+                }
+            )
         ) {
             // Sales role: Fetch only the current user's orders
-            $orders = Order::with(['seller', 'account.game'])->where('seller_id', $user->id)->paginate($this->pagination);
+            $orders = Order::with(array( 'seller', 'account.game' ))->where('seller_id', $user->id)->paginate($this->pagination);
         } elseif (
-            $user->roles->contains(function ($role) {
-                return $role->name === 'accountant';
-            })
+            $user->roles->contains(
+                function ($role) {
+                    return $role->name === 'accountant';
+                }
+            )
             &&
             ! empty($_GET['id'])
         ) {
             // Sales role: Fetch only the current user's orders
-            $orders = Order::with(['seller', 'account.game'])
+            $orders = Order::with(array( 'seller', 'account.game' ))
             ->where('store_profile_id', $_GET['id'])
             ->orderBy('buyer_name', 'asc')
             ->paginate($this->pagination);
@@ -69,42 +75,53 @@ class OrderController extends Controller
     public function search(Request $request)
     {
         // Get the input values
-        $query = $request->input('search');
-        $startDate = $request->input('start_date');
-        $endDate = $request->input('end_date');
+        $query          = $request->input('search');
+        $startDate      = $request->input('start_date');
+        $endDate        = $request->input('end_date');
         $storeProfileId = $request->input('store_profile_id');
-        $status = $request->input('status', 'all'); // Default to 'all' if not provided
+        $status         = $request->input('status', 'all'); // Default to 'all' if not provided
 
         // Build the query to filter orders
-        $orders = Order::with(['seller', 'account.game']);
+        $orders = Order::with(array( 'seller', 'account.game' ));
 
         // Filter by buyer phone if search query exists
         if ($query) {
-            $orders->where(function ($q) use ($query) {
-                // Search by buyer phone or buyer name
-                $q->where('buyer_phone', 'like', "%$query%")
-                  ->orWhere('buyer_name', 'like', "%$query%")
-                  // Search by account email (related through account_id)
-                  ->orWhereHas('account', function ($q) use ($query) {
-                      $q->where('mail', 'like', "%$query%");
-                  })
-                  // Search by game title (related through account's game)
-                  ->orWhereHas('account.game', function ($q) use ($query) {
-                      $q->where('title', 'like', "%$query%");
-                  });
-            });
+            $orders->where(
+                function ($q) use ($query) {
+                    // Search by buyer phone or buyer name
+                    $q->where('buyer_phone', 'like', "%$query%")
+                    ->orWhere('buyer_name', 'like', "%$query%")
+                    // Search by account email (related through account_id)
+                    ->orWhereHas(
+                        'account',
+                        function ($q) use ($query) {
+                            $q->where('mail', 'like', "%$query%");
+                        }
+                    )
+                    // Search by game title (related through account's game)
+                    ->orWhereHas(
+                        'account.game',
+                        function ($q) use ($query) {
+                            $q->where('title', 'like', "%$query%");
+                        }
+                    );
+                }
+            );
         }
 
         // Filter by date range if both start and end dates are provided
         if ($startDate && $endDate) {
-            $orders->whereBetween('created_at', [$startDate, $endDate]);
+            $orders->whereBetween('created_at', array( $startDate, $endDate ));
         }
 
         // Filter by status if it's not 'all'
         if ($status !== 'all') {
-            $orders->whereHas('reports', function ($q) use ($status) {
-                $q->where('status', $status);
-            });
+            $orders->whereHas(
+                'reports',
+                function ($q) use ($status) {
+                    $q->where('status', $status);
+                }
+            );
         }
         if ($storeProfileId != 0) {
             $orders->where('orders.store_profile_id', $storeProfileId)->orderBy('buyer_name', 'asc');
@@ -164,7 +181,7 @@ class OrderController extends Controller
                 if ($request->has('report_id')) {
                     $report = Report::find($request->report_id);
                     if ($report && $report->status == 'needs_return') {
-                        $report->update(['status' => 'solved']);
+                        $report->update(array( 'status' => 'solved' ));
                     }
                 }
                 // Delete related reports before deleting the order
@@ -172,28 +189,30 @@ class OrderController extends Controller
                 // Delete the order
                 $order->delete();
 
-                return response()->json(['success' => true]);
+                return response()->json(array( 'success' => true ));
             }
         }
 
-        return response()->json(['success' => false]);
+        return response()->json(array( 'success' => false ));
     }
     public function store(Request $request)
     {
         // Validate incoming data
-        $validatedData = $request->validate([
-        'store_profile_id' => 'required|exists:stores_profile,id',
-        'game_id' => 'required|exists:games,id',
-        'buyer_phone' => 'required|string|max:15',
-        'buyer_name' => 'required|string|max:100',
-        'price' => 'required|numeric|min:0',
-        'type' => 'required|string|max:255',
-        'platform' => 'required|string|max:255',
-        ]);
+        $validatedData = $request->validate(
+            array(
+                'store_profile_id' => 'required|exists:stores_profile,id',
+                'game_id'          => 'required|exists:games,id',
+                'buyer_phone'      => 'required|string|max:15',
+                'buyer_name'       => 'required|string|max:100',
+                'price'            => 'required|numeric|min:0',
+                'type'             => 'required|string|max:255',
+                'platform'         => 'required|string|max:255',
+            )
+        );
 
         // Determine the sold item field dynamically
-        $sold_item = "ps{$validatedData['platform']}_{$validatedData['type']}_stock";
-        $sold_item_status = "ps{$validatedData['platform']}_{$validatedData['type']}_status";
+        $sold_item         = "ps{$validatedData['platform']}_{$validatedData['type']}_stock";
+        $sold_item_status  = "ps{$validatedData['platform']}_{$validatedData['type']}_status";
         $sold_offline_item = "ps{$validatedData['platform']}_offline_stock";
 
         // Fetch the appropriate account based on type, stock availability, and game status
@@ -207,12 +226,12 @@ class OrderController extends Controller
         } elseif ($validatedData['type'] === 'primary') {
             // For primary, offline stock must be 0 and primary stock must be greater than 0
             $accountQuery->where('ps' . $validatedData['platform'] . '_offline_stock', 0)
-                     ->where($sold_item, '>', 0);
+                    ->where($sold_item, '>', 0);
         } elseif ($validatedData['type'] === 'secondary') {
             // For secondary, both offline and primary stocks must be 0, but secondary must have stock
             $accountQuery->where('ps' . $validatedData['platform'] . '_offline_stock', 0)
-                     ->where('ps' . $validatedData['platform'] . '_primary_stock', 0)
-                     ->where($sold_item, '>', 0);
+                    ->where('ps' . $validatedData['platform'] . '_primary_stock', 0)
+                    ->where($sold_item, '>', 0);
         }
 
         // Try to fetch the first matching account
@@ -220,9 +239,12 @@ class OrderController extends Controller
             $account = $accountQuery->select('accounts.*')->firstOrFail();  // Fail if no matching account is found
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             // Return an error response if no account was found
-            return response()->json([
-            'message' => 'No account found with the required stock.',
-            ], 200);
+            return response()->json(
+                array(
+                    'message' => 'No account found with the required stock.',
+                ),
+                200
+            );
         }
 
         // Reduce the corresponding stock by 1 for the account
@@ -230,12 +252,12 @@ class OrderController extends Controller
 
         // Check if this was an "offline" order with only 1 stock left before decrement
         $recentOrder = null;
-        $message = null;
+        $message     = null;
         if (
             $validatedData['platform'] == 4 &&
             (
-            ($validatedData['type'] === 'offline' && $account->$sold_item == 0) ||
-            ($validatedData['type'] === 'primary' && $account->$sold_offline_item == 0)
+            ( $validatedData['type'] === 'offline' && $account->$sold_item == 0 ) ||
+            ( $validatedData['type'] === 'primary' && $account->$sold_offline_item == 0 )
             )
         ) {
             $check_for = $validatedData['type'] === 'primary' ? $sold_offline_item : $sold_item;
@@ -259,36 +281,41 @@ class OrderController extends Controller
             }
         }
         // Prepare the order data
-        $order_data = [
-            'seller_id' => Auth::id(),  // Get the currently authenticated user's ID
+        $order_data = array(
+            'seller_id'        => Auth::id(),  // Get the currently authenticated user's ID
             'store_profile_id' => $validatedData['store_profile_id'],
-            'account_id' => $account->id,  // Set the matched account ID
-            'buyer_phone' => $validatedData['buyer_phone'],
-            'buyer_name' => $validatedData['buyer_name'],
-            'price' => $validatedData['price'],  // Set the price
-            'notes' => '',  // Optional notes
-            'sold_item' => $sold_item,  // Sold item is dynamically set
-            ];
+            'account_id'       => $account->id,  // Set the matched account ID
+            'buyer_phone'      => $validatedData['buyer_phone'],
+            'buyer_name'       => $validatedData['buyer_name'],
+            'price'            => $validatedData['price'],  // Set the price
+            'notes'            => '',  // Optional notes
+            'sold_item'        => $sold_item,  // Sold item is dynamically set
+        );
         // Create the order
         $order = Order::create($order_data);
         // Return a JSON response on success, including recent order and seller details if applicable
-        return response()->json([
-        'message' => 'Order created successfully!',
-        'account_email' => $account->mail,
-        'account_password' => $account->password,  // Ensure this is safely displayed or masked
-        'recent_order' => $recentOrder,
-        'message' => $message,
-        'order_id' => $order->id
-        ]);
+        return response()->json(
+            array(
+                'message'          => 'Order created successfully!',
+                'account_email'    => $account->mail,
+                'account_password' => $account->password,  // Ensure this is safely displayed or masked
+                'recent_order'     => $recentOrder,
+                'message'          => $message,
+                'order_id'         => $order->id,
+            )
+        );
     }
 
     public function ordersWithStatus($status)
     {
         // Retrieve all orders with a related report that has status 'needs_return'
-        $orders = Order::with(['seller', 'account.game'])
-        ->whereHas('reports', function ($query) use ($status) {
-            $query->where('status', $status);
-        })
+        $orders = Order::with(array( 'seller', 'account.game' ))
+        ->whereHas(
+            'reports',
+            function ($query) use ($status) {
+                $query->where('status', $status);
+            }
+        )
         ->paginate($this->pagination); // Adjust pagination as needed
         // Return the view with the filtered orders
         return view('manager.orders', compact('orders', 'status'));
