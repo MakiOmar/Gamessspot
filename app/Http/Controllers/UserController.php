@@ -6,6 +6,8 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use App\Models\StoresProfile;
 use App\Models\Role;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Auth;
 
 class UserController extends Controller
 {
@@ -73,11 +75,18 @@ class UserController extends Controller
     public function edit($id)
     {
         $user = User::with(['storeProfile', 'roles'])->findOrFail($id);
-        // Convert the user object to an array
-        $userArray = $user->toArray();
 
-        // Return the user data as a JSON response
-        return response()->json($userArray);
+        if (request()->expectsJson()) {
+            // Convert the user object to an array
+            $userArray = $user->toArray();
+            // Return the user data as a JSON response
+            return response()->json($userArray);
+        }
+
+        // For normal non-AJAX request, return the edit view
+        $storeProfiles = storesProfile::all()->toArray();
+        $userRoles = Role::all()->toArray();
+        return view('manager.edit-user', compact('user', 'storeProfiles', 'userRoles'));
     }
 
     public function destroy($id)
@@ -102,10 +111,14 @@ class UserController extends Controller
             'email' => 'required|email|max:255|unique:users,email,' . $user->id, // Ensure email is unique except for the current user
             'phone' => 'nullable|string|max:20', // Phone can be optional
             'store_profile_id' => 'nullable|exists:stores_profile,id',
-            'password' => 'nullable|min:8|confirmed', // Optional password field, must be at least 8 characters if filled
-            'roles' => 'required|array',
-            'roles.*' => 'exists:roles,id',
+            'password' => 'nullable|min:8|confirmed',
         ]);
+        // Check if the current authenticated user is an admin
+        if (Auth::user()->roles->contains('name', 'admin')) {
+            // If the user is an admin, make roles required
+            $validated['roles'] = 'required|array';
+            $validated['roles.*'] = 'exists:roles,id';
+        }
         // Update only if a new password is provided
         if ($request->filled('password')) {
             $validated['password'] = bcrypt($request->input('password'));
@@ -115,7 +128,10 @@ class UserController extends Controller
         // Update user
         $user->update($validated);
         $user->roles()->sync($request->input('roles')); // Sync roles
-        return response()->json(['message' => 'User updated successfully']);
+        if (request()->expectsJson()) {
+            return response()->json(['message' => 'User updated successfully']);
+        }
+        return redirect()->back()->with('success', 'User updated successfully');
     }
     public function store(Request $request)
     {

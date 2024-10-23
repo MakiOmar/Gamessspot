@@ -146,25 +146,44 @@
         // Handle delete user button click using event delegation
         $(document).on('click', '.deleteUserButton', function() {
             var userId = $(this).data('id'); // Get user ID from button data attribute
-            var confirmation = confirm('Are you sure you want to delete this user?');
+            Swal.fire({
+                title: 'Are you sure?',
+                text: 'You won\'t be able to revert this!',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#3085d6',
+                cancelButtonColor: '#d33',
+                confirmButtonText: 'Yes, delete it!',
+                cancelButtonText: 'Cancel'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    $.ajax({
+                        url: '/manager/users/delete/' + userId, // Your route to handle deletion
+                        method: 'DELETE',
+                        data: {
+                            _token: '{{ csrf_token() }}' // Pass CSRF token for security
+                        },
+                        success: function(response) {
+                            Swal.fire({
+                                title: 'Deleted!',
+                                text: 'User deleted successfully!',
+                                icon: 'success',
+                                confirmButtonText: 'OK'
+                            });
+                            location.reload(); // Reload the page or update the table dynamically
+                        },
+                        error: function(xhr) {
+                            Swal.fire({
+                                title: 'Error',
+                                text: 'An error occurred while deleting the user.',
+                                icon: 'error',
+                                confirmButtonText: 'OK'
+                            });
+                        }
+                    });
+                }
+            });
 
-            if (confirmation) {
-                $.ajax({
-                    url: '/manager/users/delete/' + userId, // Your route to handle deletion
-                    method: 'DELETE',
-                    data: {
-                        _token: '{{ csrf_token() }}' // Pass CSRF token for security
-                    },
-                    success: function(response) {
-                        alert('User deleted successfully!');
-                        location.reload(); // Reload the page or update the table dynamically
-                    },
-                    error: function(xhr) {
-                        console.log(xhr.responseText);
-                        alert('An error occurred while deleting the user.');
-                    }
-                });
-            }
         });
 
         // Handle search input
@@ -229,8 +248,12 @@
                         $('#editUserModal').modal('show');
                     },
                     error: function(xhr) {
-                        console.log(xhr.responseText);
-                        alert('An error occurred while fetching the user data.');
+                        Swal.fire({
+                            title: 'Error',
+                            text: 'An error occurred while fetching the user data.',
+                            icon: 'error',
+                            confirmButtonText: 'OK'
+                        });
                     }
                 });
             }
@@ -259,7 +282,13 @@
                 contentType: false, // Required for file uploads
                 processData: false, // Required for file uploads
                 success: function(response) {
-                    alert('User saved successfully!');
+                    Swal.fire({
+                        title: 'Success',
+                        text: 'User saved successfully!',
+                        icon: 'success',
+                        confirmButtonText: 'OK'
+                    });
+
                     location.reload(); // Reload the page or update the table dynamically
                 },
                 error: function(xhr) {
@@ -273,7 +302,12 @@
                             inputField.after('<div class="invalid-feedback">' + value[0] + '</div>');
                         });
                     } else {
-                        alert('An error occurred.');
+                        Swal.fire({
+                            title: 'Error',
+                            text: 'An error occurred.',
+                            icon: 'error',
+                            confirmButtonText: 'OK'
+                        });
                     }
                 }
             });

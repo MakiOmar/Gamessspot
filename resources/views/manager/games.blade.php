@@ -252,11 +252,16 @@
             contentType: false, // Required for file uploads
             processData: false, // Required for file uploads
             success: function(response) {
-                alert('Game saved successfully!');
+                Swal.fire({
+                    title: 'Success!',
+                    text: 'Game saved successfully!',
+                    icon: 'success',
+                    confirmButtonText: 'OK'
+                });
+
                 location.reload(); // Reload the page or update the table dynamically
             },
             error: function(xhr) {
-                console.log(xhr.responseText); // Log the error for debugging
                 if (xhr.status === 422) { // Handle validation errors
                     var errors = xhr.responseJSON.errors;
 
@@ -267,7 +272,13 @@
                         inputField.after('<div class="invalid-feedback">' + value[0] + '</div>');
                     });
                 } else {
-                    alert('An error occurred.');
+                    Swal.fire({
+                        title: 'Error',
+                        text: 'An error occurred.',
+                        icon: 'error',
+                        confirmButtonText: 'OK'
+                    });
+
                 }
             }
         });

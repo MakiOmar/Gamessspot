@@ -265,8 +265,12 @@
                     $('#accountModal').modal('show');
                 },
                 error: function(xhr) {
-                    console.log(xhr.responseText);
-                    alert('An error occurred while creating the order.');
+                    Swal.fire({
+                        title: 'Error',
+                        text: 'An error occurred while creating the order.', // Display the first error message for each field
+                        icon: 'error',
+                        confirmButtonText: 'OK'
+                    });
                 }
             });
         });

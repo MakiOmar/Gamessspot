@@ -207,14 +207,25 @@
                 success: function(response) {
                     // Handle success (close the modal, show a success message, refresh data, etc.)
                     $('#addAccountModal').modal('hide');
-                    alert('Account added successfully!');
+                    Swal.fire({
+                        title: 'Success!',
+                        text: 'Account added successfully!',
+                        icon: 'success',
+                        confirmButtonText: 'OK'
+                    });
+
                     location.reload(); // Reload the page or update the table dynamically if needed
                 },
                 error: function(xhr) {
                     // Handle error (show validation messages or other errors)
                     let errors = xhr.responseJSON.errors;
                     for (let key in errors) {
-                        alert(errors[key][0]); // You can show the error in a nicer way
+                        Swal.fire({
+                            title: 'Error',
+                            text: errors[key][0], // Display the first error message for each field
+                            icon: 'error',
+                            confirmButtonText: 'OK'
+                        }); // You can show the error in a nicer way
                     }
                 }
             });
