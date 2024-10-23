@@ -141,7 +141,7 @@
                     <!-- Seller details will be dynamically added here -->
                 </div>
                 <div id="noAccountMessage" style="display:none;">
-                    <p class="text-danger">Disabled or no Available account with the required stock.</p>
+                    <p class="text-danger">Disabled or no available account with the required stock.</p>
                 </div>
                 <!-- New report form -->
                 <form id="reportForm">
