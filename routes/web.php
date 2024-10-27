@@ -9,6 +9,7 @@ use App\Http\Controllers\UserController;
 use App\Http\Controllers\StoreProfileController;
 use App\Http\Controllers\RoleAssignmentController;
 use App\Http\Controllers\ReportsController;
+use App\Http\Controllers\SpecialPriceController;
 
 /*
 |--------------------------------------------------------------------------
@@ -119,8 +120,22 @@ Route::prefix('manager')->group(function () {
 
         Route::post('/reports/store', [ReportsController::class, 'store'])->name('manager.reports.store');
         Route::get('/reports/{order_id}', [ReportsController::class, 'getReportsForOrder']);
+        // Route to display games and special prices for a specific store profile
+        Route::get(
+            '/special-prices/{storeProfileId}',
+            [SpecialPriceController::class,'getGamesWithSpecialPrices']
+        )->name('manager.special-prices');
 
+        Route::put(
+            '/special-prices/{id}',
+            [SpecialPriceController::class, 'update']
+        )->name('special-prices.update');
 
-        Route::get('/assign-roles', [RoleAssignmentController::class, 'assignRolesBasedOnQuery']);
+        Route::get(
+            '/special-prices/{id}/edit',
+            [SpecialPriceController::class, 'edit']
+        )->name('special-prices.edit');
+
+        //Route::get('/assign-roles', [RoleAssignmentController::class, 'assignRolesBasedOnQuery']);
     });
 });

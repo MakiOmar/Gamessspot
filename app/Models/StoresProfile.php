@@ -31,4 +31,9 @@ class StoresProfile extends Model
     {
         return $this->hasMany(Order::class, 'store_profile_id');
     }
+    // In StoresProfile model
+    public function specialPrices()
+    {
+        return $this->hasMany(SpecialPrice::class);
+    }
 }

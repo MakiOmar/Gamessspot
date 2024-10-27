@@ -82,4 +82,10 @@ class Game extends Model
     {
         return $this->hasMany(Account::class);
     }
+
+    // In Game model
+    public function specialPrices()
+    {
+        return $this->hasMany(SpecialPrice::class);
+    }
 }

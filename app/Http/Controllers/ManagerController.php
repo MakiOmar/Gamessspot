@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use App\Models\StoresProfile;
+use App\Models\SpecialPrice;
 
 class ManagerController extends Controller
 {

@@ -108,6 +108,8 @@ namespace App\Models{
  * @mixin \Eloquent
  * @property string $ps5_secondary_price
  * @property int $ps5_secondary_status
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\SpecialPrice> $specialPrices
+ * @property-read int|null $special_prices_count
  * @method static \Illuminate\Database\Eloquent\Builder|Game wherePs5SecondaryPrice($value)
  * @method static \Illuminate\Database\Eloquent\Builder|Game wherePs5SecondaryStatus($value)
  */
@@ -208,12 +210,50 @@ namespace App\Models{
  * 
  *
  * @property int $id
+ * @property int $game_id
+ * @property int $store_profile_id
+ * @property string $ps4_primary_price
+ * @property string $ps4_secondary_price
+ * @property string $ps4_offline_price
+ * @property string $ps5_primary_price
+ * @property string $ps5_secondary_price
+ * @property string $ps5_offline_price
+ * @property \Illuminate\Support\Carbon|null $created_at
+ * @property \Illuminate\Support\Carbon|null $updated_at
+ * @property-read \App\Models\Game $game
+ * @property-read \App\Models\StoresProfile $storeProfile
+ * @method static \Database\Factories\SpecialPriceFactory factory($count = null, $state = [])
+ * @method static \Illuminate\Database\Eloquent\Builder|SpecialPrice newModelQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder|SpecialPrice newQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder|SpecialPrice query()
+ * @method static \Illuminate\Database\Eloquent\Builder|SpecialPrice whereCreatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder|SpecialPrice whereGameId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder|SpecialPrice whereId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder|SpecialPrice wherePs4OfflinePrice($value)
+ * @method static \Illuminate\Database\Eloquent\Builder|SpecialPrice wherePs4PrimaryPrice($value)
+ * @method static \Illuminate\Database\Eloquent\Builder|SpecialPrice wherePs4SecondaryPrice($value)
+ * @method static \Illuminate\Database\Eloquent\Builder|SpecialPrice wherePs5OfflinePrice($value)
+ * @method static \Illuminate\Database\Eloquent\Builder|SpecialPrice wherePs5PrimaryPrice($value)
+ * @method static \Illuminate\Database\Eloquent\Builder|SpecialPrice wherePs5SecondaryPrice($value)
+ * @method static \Illuminate\Database\Eloquent\Builder|SpecialPrice whereStoreProfileId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder|SpecialPrice whereUpdatedAt($value)
+ */
+	class SpecialPrice extends \Eloquent {}
+}
+
+namespace App\Models{
+/**
+ * 
+ *
+ * @property int $id
  * @property string $name
  * @property string $phone_number
  * @property \Illuminate\Support\Carbon|null $created_at
  * @property \Illuminate\Support\Carbon|null $updated_at
  * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Order> $orders
  * @property-read int|null $orders_count
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\SpecialPrice> $specialPrices
+ * @property-read int|null $special_prices_count
  * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\User> $users
  * @property-read int|null $users_count
  * @method static \Database\Factories\StoresProfileFactory factory($count = null, $state = [])
