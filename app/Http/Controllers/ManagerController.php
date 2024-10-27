@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use Illuminate\Support\Facades\Auth;
 use App\Models\Game;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -155,28 +156,48 @@ class ManagerController extends Controller
      */
     public function getGamesByPlatform($n)
     {
+        // Get the current user
+        $user = Auth::user();
+        $storeProfileId = $user->store_profile_id;
+
         // Determine the stock and image fields based on the $n value
         $offline_stock   = "ps{$n}_offline_stock";
         $primary_stock   = "ps{$n}_primary_stock";
         $secondary_stock = "ps{$n}_secondary_stock";
+        $image_url       = "ps{$n}_image_url";
 
+        // Fetch games and their special prices if the user has a store profile
         $psGames = DB::table('accounts')
-        ->select(
-            'games.*',  // Get all columns from the games table
-            DB::raw("SUM(accounts.{$offline_stock}) as {$offline_stock}"),
-            DB::raw("SUM(accounts.{$primary_stock}) as {$primary_stock}"),
-            DB::raw("SUM(accounts.{$secondary_stock}) as {$secondary_stock}")
-        )
-        ->join('games', 'accounts.game_id', '=', 'games.id')
-        ->groupBy('accounts.game_id')
-        // Fetch games where at least one stock type is greater than 0
-        ->havingRaw("SUM(accounts.{$offline_stock}) > 0 OR SUM(accounts.{$primary_stock}) > 0 OR SUM(accounts.{$secondary_stock}) > 0")
-        ->paginate(10);  // Paginate 10 results per page
+            ->select(
+                'games.id',
+                'games.title',
+                'games.code',
+                "games.{$image_url}",
+                DB::raw('COALESCE(special_prices.ps4_primary_price, games.ps4_primary_price) as ps4_primary_price'),
+                DB::raw('COALESCE(special_prices.ps4_secondary_price, games.ps4_secondary_price) as ps4_secondary_price'),
+                DB::raw('COALESCE(special_prices.ps4_offline_price, games.ps4_offline_price) as ps4_offline_price'),
+                DB::raw('COALESCE(special_prices.ps5_primary_price, games.ps5_primary_price) as ps5_primary_price'),
+                DB::raw('COALESCE(special_prices.ps5_secondary_price, games.ps5_secondary_price) as ps5_secondary_price'),
+                DB::raw('COALESCE(special_prices.ps5_offline_price, games.ps5_offline_price) as ps5_offline_price'),
+                DB::raw("SUM(accounts.{$offline_stock}) as {$offline_stock}"),
+                DB::raw("SUM(accounts.{$primary_stock}) as {$primary_stock}"),
+                DB::raw("SUM(accounts.{$secondary_stock}) as {$secondary_stock}")
+            )
+            ->join('games', 'accounts.game_id', '=', 'games.id')
+            ->leftJoin('special_prices', function ($join) use ($storeProfileId) {
+                $join->on('games.id', '=', 'special_prices.game_id')
+                    ->where('special_prices.store_profile_id', '=', $storeProfileId);
+            })
+            ->groupBy('games.id', 'games.title', 'games.code', 'special_prices.ps4_primary_price', 'special_prices.ps4_secondary_price', 'special_prices.ps4_offline_price', 'special_prices.ps5_primary_price', 'special_prices.ps5_secondary_price', 'special_prices.ps5_offline_price')
+            ->havingRaw("SUM(accounts.{$offline_stock}) > 0 OR SUM(accounts.{$primary_stock}) > 0 OR SUM(accounts.{$secondary_stock}) > 0")
+            ->paginate(10);  // Paginate 10 results per page
 
         $storeProfiles = StoresProfile::all(); // Fetch all store profiles
-        // Return the view with the games and the platform indicator $n
+
+        // Return the view with the games, platform indicator, and store profiles
         return view('manager.games_listings', compact('psGames', 'n', 'storeProfiles'));
     }
+
 
     /**
      * Show the list of PS4 games.
