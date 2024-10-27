@@ -61,6 +61,7 @@ class SpecialPriceController extends Controller
             ->join('games', 'special_prices.game_id', '=', 'games.id')
             ->select(
                 'games.title',  // Fetch game title
+                'games.id',  // Fetch game title
                 'special_prices.id',
                 'special_prices.ps4_primary_price',
                 'special_prices.ps4_secondary_price',
@@ -70,9 +71,10 @@ class SpecialPriceController extends Controller
                 'special_prices.ps5_offline_price'
             )
             ->get();
-
+        // Extract the games objects separately
+        $games = Game::all();
         // Pass both special prices and store profile to the view
-        return view('manager.store_prices', compact('specialPrices', 'storeProfile'));
+        return view('manager.store_prices', compact('specialPrices', 'storeProfile', 'games'));
     }
     public function edit($id)
     {
@@ -110,5 +112,38 @@ class SpecialPriceController extends Controller
 
         // Return success response
         return response()->json(['message' => 'Special prices updated successfully!']);
+    }
+
+    public function createSpecialPrice(Request $request)
+    {
+        // Validate the request data
+        $request->validate([
+            'store_profile_id'    => 'required|exists:stores_profile,id',
+            'game_id'             => 'required|exists:games,id',
+            'ps4_primary_price'   => 'required|numeric|min:0',
+            'ps4_secondary_price' => 'nullable|numeric|min:0',
+            'ps4_offline_price'   => 'nullable|numeric|min:0',
+            'ps5_primary_price'   => 'nullable|numeric|min:0',
+            'ps5_secondary_price' => 'nullable|numeric|min:0',
+            'ps5_offline_price'   => 'nullable|numeric|min:0',
+        ]);
+
+        // Create or update special prices
+        SpecialPrice::updateOrCreate(
+            [
+                'store_profile_id' => $request->store_profile_id,
+                'game_id' => $request->game_id
+            ],
+            $request->only([
+                'ps4_primary_price',
+                'ps4_secondary_price',
+                'ps4_offline_price',
+                'ps5_primary_price',
+                'ps5_secondary_price',
+                'ps5_offline_price'
+            ])
+        );
+
+        return response()->json(['message' => 'Special prices created successfully!']);
     }
 }

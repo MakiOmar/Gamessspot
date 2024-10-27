@@ -121,8 +121,14 @@ Route::prefix('manager')->group(function () {
         Route::post('/reports/store', [ReportsController::class, 'store'])->name('manager.reports.store');
         Route::get('/reports/{order_id}', [ReportsController::class, 'getReportsForOrder']);
         // Route to display games and special prices for a specific store profile
+
+        Route::post(
+            '/special-prices/create',
+            [SpecialPriceController::class, 'createSpecialPrice']
+        )->name('special-prices.create');
+
         Route::get(
-            '/special-prices/{storeProfileId}',
+            '/special-prices/{id}',
             [SpecialPriceController::class,'getGamesWithSpecialPrices']
         )->name('manager.special-prices');
 
