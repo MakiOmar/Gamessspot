@@ -34,6 +34,17 @@ class StoresProfile extends Model
     // In StoresProfile model
     public function specialPrices()
     {
-        return $this->hasMany(SpecialPrice::class);
+        return $this->hasMany(SpecialPrice::class, 'store_profile_id');
     }
+    // In StoreProfile model
+    public function isBlockedForGame($gameId)
+    {
+        // Correct the column name to 'store_profile_id'
+        return $this->specialPrices()
+            ->where('game_id', $gameId)
+            ->where('store_profile_id', $this->id) // Ensure correct column name here
+            ->where('is_available', false)
+            ->exists();
+    }
+
 }

@@ -18,6 +18,7 @@ class SpecialPrice extends Model
         'ps5_primary_price',
         'ps5_secondary_price',
         'ps5_offline_price',
+        'is_available',
     ];
 
     // Relation to the Game model
@@ -29,6 +30,6 @@ class SpecialPrice extends Model
     // Relation to the StoreProfile model
     public function storeProfile()
     {
-        return $this->belongsTo(StoresProfile::class);
+        return $this->belongsTo(StoresProfile::class, 'store_profile_id');
     }
 }

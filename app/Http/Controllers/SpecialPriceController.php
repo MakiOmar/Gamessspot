@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use App\Models\Game;
 use App\Models\StoresProfile;
 use App\Models\SpecialPrice;
+use Illuminate\Support\Facades\Log;
 
 class SpecialPriceController extends Controller
 {
@@ -68,7 +69,8 @@ class SpecialPriceController extends Controller
                 'special_prices.ps4_offline_price',
                 'special_prices.ps5_primary_price',
                 'special_prices.ps5_secondary_price',
-                'special_prices.ps5_offline_price'
+                'special_prices.ps5_offline_price',
+                'special_prices.is_available',
             )
             ->get();
         // Extract the games objects separately
@@ -127,7 +129,7 @@ class SpecialPriceController extends Controller
             'ps5_secondary_price' => 'nullable|numeric|min:0',
             'ps5_offline_price'   => 'nullable|numeric|min:0',
         ]);
-
+        Log::info('test', $_POST);
         // Create or update special prices
         SpecialPrice::updateOrCreate(
             [
@@ -146,4 +148,16 @@ class SpecialPriceController extends Controller
 
         return response()->json(['message' => 'Special prices created successfully!']);
     }
+    public function toggleAvailability($id)
+    {
+        $specialPrice = SpecialPrice::findOrFail($id);
+        $specialPrice->is_available = !$specialPrice->is_available;
+        $specialPrice->save();
+
+        return response()->json([
+            'message' => 'Availability status updated successfully!',
+            'new_status' => $specialPrice->is_available
+        ]);
+    }
+
 }

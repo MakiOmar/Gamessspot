@@ -218,6 +218,7 @@ namespace App\Models{
  * @property string $ps5_primary_price
  * @property string $ps5_secondary_price
  * @property string $ps5_offline_price
+ * @property int $is_available
  * @property \Illuminate\Support\Carbon|null $created_at
  * @property \Illuminate\Support\Carbon|null $updated_at
  * @property-read \App\Models\Game $game
@@ -229,6 +230,7 @@ namespace App\Models{
  * @method static \Illuminate\Database\Eloquent\Builder|SpecialPrice whereCreatedAt($value)
  * @method static \Illuminate\Database\Eloquent\Builder|SpecialPrice whereGameId($value)
  * @method static \Illuminate\Database\Eloquent\Builder|SpecialPrice whereId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder|SpecialPrice whereIsAvailable($value)
  * @method static \Illuminate\Database\Eloquent\Builder|SpecialPrice wherePs4OfflinePrice($value)
  * @method static \Illuminate\Database\Eloquent\Builder|SpecialPrice wherePs4PrimaryPrice($value)
  * @method static \Illuminate\Database\Eloquent\Builder|SpecialPrice wherePs4SecondaryPrice($value)

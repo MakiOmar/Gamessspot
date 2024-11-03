@@ -32,9 +32,15 @@
         </div>
         <a href="{{ route( 'manager.orders' ) }}" class="list-group-item bg-light">Sell log</a>
         @endif
-        @if(Auth::user()->roles->contains('name', 'admin') || Auth::user()->roles->contains('name', 'accountant'))
-            @if( Auth::user()->roles->contains('name', 'admin') )
-                <a href="{{ route( 'manager.accounts' ) }}" class="list-group-item bg-light">Accounts</a>
+        @if(Auth::guard('admin')->user()->roles->contains(function ($role) {
+            return in_array($role->name, ['admin', 'sales', 'accountant', 'account manager']);
+        }))
+                @if(Auth::guard('admin')->user()->roles->contains(function ($role) {
+                    return in_array($role->name, ['admin','account manager']);
+                }))
+                    <a href="{{ route( 'manager.accounts' ) }}" class="list-group-item bg-light">Accounts</a>
+                @endif
+                @if( Auth::user()->roles->contains('name', 'admin') )
                 <a href="#ordersReports" class="list-group-item list-group-item-action bg-light" data-bs-toggle="collapse">
                     Reports <span class="float-end"><i class="fas fa-chevron-down"></i></span>
                 </a>
@@ -54,7 +60,9 @@
                 </div>
                 
                 @endif
-            <a href="{{ route( 'manager.storeProfiles.index' ) }}" class="list-group-item bg-light">Stores Profiles</a>
+            @if ( !Auth::user()->roles->contains('name', 'account manager') )
+                <a href="{{ route( 'manager.storeProfiles.index' ) }}" class="list-group-item bg-light">Stores Profiles</a>
+            @endif
         @endif
     </div>
 </div>

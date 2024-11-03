@@ -20,7 +20,7 @@ class AdminMiddleware
         if (
             Auth::check() && Auth::user()->roles->contains(
                 function ($role) {
-                    return in_array($role->id, array( 1, 2, 3 )); // Role IDs for 'admin', 'sales', and 'accountant'
+                    return in_array($role->id, array( 1, 2, 3,4 )); // Role IDs for 'admin', 'sales', and 'accountant'
                 }
             )
         ) {

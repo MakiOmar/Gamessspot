@@ -32,33 +32,41 @@
                             $offline_price = "ps{$n}_offline_price";
                             $primary_price = "ps{$n}_primary_price";
                             $secondary_price = "ps{$n}_secondary_price";
+
+                            // Check if store profile is blocked for this game
+                            $isBlocked = auth()->user()->storeProfile ? auth()->user()->storeProfile->isBlockedForGame($game->id) : false;
                         @endphp
                         
                         <div class="card-img-top" style="background-image: url('{{ asset($game->$image_url) }}'); height: 250px; background-size: cover; background-position: center;"></div>
                 
                         <div class="card-body text-center">
                             <h5 class="card-title">{{ $game->title }}</h5>
-
-                            @foreach (['offline', 'primary', 'secondary'] as $type)
-                                @php
-                                    $stock = ${"{$type}_stock"};
-                                    $price = ${"{$type}_price"};
-                                    $backgroundColor = $type === 'offline' ? '#f64e60' : ($type === 'primary' ? '#1bc5bd' : '#ffa800');
-                                @endphp
-                                <!-- Dynamic Buttons -->
-                                <a title="{{ ucfirst($type) }}" 
-                                class="d-inline-flex justify-content-center align-items-center rounded text-light font-weight-bold m-2 {{ $game->$stock > 0 ? 'open-modal' : '' }}" 
-                                style="padding:10px;background-color: {{ $backgroundColor }};"
-                                data-game-id="{{ $game->id }}" 
-                                data-game-title="{{ $game->title }}" 
-                                data-type="{{ $type }}"
-                                data-platform="{{ $n }}">
-                                    {!! $up !!}{{ $game->$stock }} 
-                                    <span>&nbsp;|&nbsp;</span> 
-                                    {!! $moneyIcon !!}{{ $game->$price }}
-                                </a>
-
-                            @endforeach
+                            @if (!$isBlocked)
+                                @foreach (['offline', 'primary', 'secondary'] as $type)
+                                    @php
+                                        $stock = ${"{$type}_stock"};
+                                        $price = ${"{$type}_price"};
+                                        $backgroundColor = $type === 'offline' ? '#f64e60' : ($type === 'primary' ? '#1bc5bd' : '#ffa800');
+                                    @endphp
+                                        <!-- Dynamic Buttons -->
+                                        <a title="{{ ucfirst($type) }}" 
+                                        class="d-inline-flex justify-content-center align-items-center rounded text-light font-weight-bold m-2 {{ $game->$stock > 0 ? 'open-modal' : '' }}" 
+                                        style="padding:10px;background-color: {{ $backgroundColor }};"
+                                        data-game-id="{{ $game->id }}" 
+                                        data-game-title="{{ $game->title }}" 
+                                        data-type="{{ $type }}"
+                                        data-platform="{{ $n }}">
+                                            {!! $up !!}{{ $game->$stock }} 
+                                            <span>&nbsp;|&nbsp;</span> 
+                                            {!! $moneyIcon !!}{{ $game->$price }}
+                                        </a>
+                                @endforeach
+                            @else
+                                <!-- Bootstrap Alert for Blocked Game -->
+                                <div class="alert alert-warning mt-2" role="alert">
+                                    You are not allowed to sell this game due to restrictions on your store profile.
+                                </div>
+                            @endif
                         </div>
                     </div>
                 </div>

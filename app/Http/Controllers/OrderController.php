@@ -14,7 +14,7 @@ use App\Models\Report;
 
 class OrderController extends Controller
 {
-    protected $pagination = 10;
+    protected $pagination = 1;
     /**
      * Display a listing of the orders.
      *

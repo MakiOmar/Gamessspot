@@ -53,7 +53,7 @@ class AdminLoginController extends Controller
             if (
                 Auth::guard('admin')->user()->roles->contains(
                     function ($role) {
-                        return in_array($role->name, array( 'admin', 'sales', 'accountant' ));
+                        return in_array($role->name, array( 'admin', 'sales', 'accountant', 'account manager' ));
                     }
                 )
             ) {

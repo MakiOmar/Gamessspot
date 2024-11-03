@@ -38,32 +38,35 @@ Route::prefix('manager')->group(function () {
         Route::get('/dashboard', function () {
             return view('manager.dashboard');
         })->name('manager.dashboard');
-        Route::get('/', function () {
-            return view('manager.dashboard');
-        })->name('manager.dashboard');
 
         // Games management route
         Route::get('/games', [ManagerController::class, 'showGames'])->name('manager.games');
         // Route to get game data for editing
-        Route::get('/games/{id}/edit', [ManagerController::class, 'edit'])->name('manager.games.edit');
-        Route::post('/games/store', [ManagerController::class, 'store'])->name('games.store');
-        Route::put('/games/{id}', [ManagerController::class, 'update'])->name('manager.games.update');
+        Route::middleware(['checkRole:admin'])->group(function () {
+            Route::get('/games/{id}/edit', [ManagerController::class, 'edit'])->name('manager.games.edit');
+            Route::post('/games/store', [ManagerController::class, 'store'])->name('games.store');
+            Route::put('/games/{id}', [ManagerController::class, 'update'])->name('manager.games.update');
+        });
+
         Route::get('/games/ps4', [ManagerController::class, 'showPS4Games'])->name('manager.games.ps4');
         Route::get('/games/ps5', [ManagerController::class, 'showPS5Games'])->name('manager.games.ps5');
 
+        Route::middleware(['checkRole:admin,account manager'])->group(function () {
+            Route::get('/accounts', [AccountController::class, 'index'])->name('manager.accounts');
+            Route::post('/accounts/store', [AccountController::class, 'store'])->name('manager.accounts.store');
+            Route::get('/accounts/search', [AccountController::class, 'search'])->name('manager.accounts.search');
+            Route::get('/accounts/export', [AccountController::class, 'export'])->name('manager.accounts.export');
+        });
 
-        Route::get('/accounts', [AccountController::class, 'index'])->name('manager.accounts');
-        Route::post('/accounts/store', [AccountController::class, 'store'])->name('manager.accounts.store');
-        Route::get('/accounts/search', [AccountController::class, 'search'])->name('manager.accounts.search');
-        Route::get('/accounts/export', [AccountController::class, 'export'])->name('manager.accounts.export');
-
-
-        Route::get('/orders', [OrderController::class, 'index'])->name('manager.orders');
-        Route::get('/orders/search', [OrderController::class, 'search'])->name('manager.orders.search');
-        Route::get('/orders/export', [OrderController::class, 'export'])->name('manager.orders.export');
-        Route::post('/orders/undo', [OrderController::class, 'undo'])->name('manager.orders.undo');
-        Route::post('/orders/store', [OrderController::class, 'store'])->name('orders.store');
-
+        Route::middleware(['checkRole:admin,sales,accountant'])->group(function () {
+            Route::get('/orders', [OrderController::class, 'index'])->name('manager.orders');
+            Route::get('/orders/search', [OrderController::class, 'search'])->name('manager.orders.search');
+            Route::get('/orders/export', [OrderController::class, 'export'])->name('manager.orders.export');
+            Route::post('/orders/store', [OrderController::class, 'store'])->name('orders.store');
+        });
+        Route::middleware(['checkRole:admin'])->group(function () {
+            Route::post('/orders/undo', [OrderController::class, 'undo'])->name('manager.orders.undo');
+        });
         Route::get(
             '/orders/has-problem',
             [OrderController::class, 'ordersHasProblem']
@@ -122,6 +125,11 @@ Route::prefix('manager')->group(function () {
         Route::get('/reports/{order_id}', [ReportsController::class, 'getReportsForOrder']);
         // Route to display games and special prices for a specific store profile
 
+        Route::put(
+            '/special-prices/{id}/toggle-availability',
+            [SpecialPriceController::class, 'toggleAvailability']
+        );
+
         Route::post(
             '/special-prices/create',
             [SpecialPriceController::class, 'createSpecialPrice']
@@ -141,6 +149,7 @@ Route::prefix('manager')->group(function () {
             '/special-prices/{id}/edit',
             [SpecialPriceController::class, 'edit']
         )->name('special-prices.edit');
+
 
         //Route::get('/assign-roles', [RoleAssignmentController::class, 'assignRolesBasedOnQuery']);
     });

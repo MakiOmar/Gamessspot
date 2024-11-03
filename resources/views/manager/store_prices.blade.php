@@ -40,6 +40,10 @@
                                 data-bs-toggle="modal" 
                                 data-bs-target="#editSpecialPriceModal">Edit
                             </button>
+                            <button class="btn {{ $specialPrice->is_available ? 'btn-danger' : 'btn-success' }} toggle-availability"
+                                data-id="{{ $specialPrice->id }}">
+                                {{ $specialPrice->is_available ? 'Block' : 'Unblock' }}
+                            </button>
                         </td>
                     </tr>
                 @endforeach
@@ -234,6 +238,39 @@
                     Swal.fire({
                         title: 'Error',
                         text: 'An error occurred while saving the prices.',
+                        icon: 'error',
+                        confirmButtonText: 'OK'
+                    });
+                }
+            });
+        });
+
+        // Toggle availability
+        $('.toggle-availability').on('click', function() {
+            var specialPriceId = $(this).data('id');
+            var button = $(this); // Reference to the button to change its text and style
+
+            $.ajax({
+                url: '/manager/special-prices/' + specialPriceId + '/toggle-availability',
+                method: 'PUT',
+                data: {
+                    _token: '{{ csrf_token() }}'
+                },
+                success: function(response) {
+                    Swal.fire({
+                        title: 'Success',
+                        text: response.message,
+                        icon: 'success',
+                        confirmButtonText: 'OK'
+                    });
+                    // Toggle button text and class based on the new status
+                    button.toggleClass('btn-danger btn-success');
+                    button.text(response.new_status ? 'Block' : 'Unblock');
+                },
+                error: function(xhr) {
+                    Swal.fire({
+                        title: 'Error',
+                        text: 'An error occurred while changing availability status.',
                         icon: 'error',
                         confirmButtonText: 'OK'
                     });
