@@ -10,6 +10,7 @@ use App\Http\Controllers\StoreProfileController;
 use App\Http\Controllers\RoleAssignmentController;
 use App\Http\Controllers\ReportsController;
 use App\Http\Controllers\SpecialPriceController;
+use App\Http\Controllers\MasterController;
 
 /*
 |--------------------------------------------------------------------------
@@ -150,6 +151,7 @@ Route::prefix('manager')->group(function () {
             [SpecialPriceController::class, 'edit']
         )->name('special-prices.edit');
 
+        Route::resource('masters', MasterController::class);
 
         //Route::get('/assign-roles', [RoleAssignmentController::class, 'assignRolesBasedOnQuery']);
     });

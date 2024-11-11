@@ -121,6 +121,33 @@ namespace App\Models{
  * 
  *
  * @property int $id
+ * @property string $mail
+ * @property string $password
+ * @property string $region
+ * @property string|null $value
+ * @property string|null $rate
+ * @property \Illuminate\Support\Carbon|null $created_at
+ * @property \Illuminate\Support\Carbon|null $updated_at
+ * @method static \Illuminate\Database\Eloquent\Builder|Master newModelQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder|Master newQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder|Master query()
+ * @method static \Illuminate\Database\Eloquent\Builder|Master whereCreatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder|Master whereId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder|Master whereMail($value)
+ * @method static \Illuminate\Database\Eloquent\Builder|Master wherePassword($value)
+ * @method static \Illuminate\Database\Eloquent\Builder|Master whereRate($value)
+ * @method static \Illuminate\Database\Eloquent\Builder|Master whereRegion($value)
+ * @method static \Illuminate\Database\Eloquent\Builder|Master whereUpdatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder|Master whereValue($value)
+ */
+	class Master extends \Eloquent {}
+}
+
+namespace App\Models{
+/**
+ * 
+ *
+ * @property int $id
  * @property int $seller_id
  * @property int|null $store_profile_id
  * @property int $account_id
