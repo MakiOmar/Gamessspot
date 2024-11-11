@@ -11,6 +11,8 @@ use App\Http\Controllers\RoleAssignmentController;
 use App\Http\Controllers\ReportsController;
 use App\Http\Controllers\SpecialPriceController;
 use App\Http\Controllers\MasterController;
+use App\Http\Controllers\CardCategoryController;
+use App\Http\Controllers\CardController;
 
 /*
 |--------------------------------------------------------------------------
@@ -152,6 +154,8 @@ Route::prefix('manager')->group(function () {
         )->name('special-prices.edit');
 
         Route::resource('masters', MasterController::class);
+        Route::resource('card-categories', CardCategoryController::class);
+        Route::resource('cards', CardController::class);
 
         //Route::get('/assign-roles', [RoleAssignmentController::class, 'assignRolesBasedOnQuery']);
     });

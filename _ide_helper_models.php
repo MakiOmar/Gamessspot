@@ -64,6 +64,55 @@ namespace App\Models{
  * 
  *
  * @property int $id
+ * @property string $code
+ * @property string $cost
+ * @property int $card_category_id
+ * @property \Illuminate\Support\Carbon|null $created_at
+ * @property \Illuminate\Support\Carbon|null $updated_at
+ * @property-read \App\Models\CardCategory $category
+ * @method static \Illuminate\Database\Eloquent\Builder|Card newModelQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder|Card newQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder|Card query()
+ * @method static \Illuminate\Database\Eloquent\Builder|Card whereCardCategoryId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder|Card whereCode($value)
+ * @method static \Illuminate\Database\Eloquent\Builder|Card whereCost($value)
+ * @method static \Illuminate\Database\Eloquent\Builder|Card whereCreatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder|Card whereId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder|Card whereUpdatedAt($value)
+ */
+	class Card extends \Eloquent {}
+}
+
+namespace App\Models{
+/**
+ * 
+ *
+ * @property int $id
+ * @property string $name
+ * @property \Illuminate\Support\Carbon|null $created_at
+ * @property \Illuminate\Support\Carbon|null $updated_at
+ * @property string|null $poster_image
+ * @property string|null $price
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Card> $cards
+ * @property-read int|null $cards_count
+ * @method static \Illuminate\Database\Eloquent\Builder|CardCategory newModelQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder|CardCategory newQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder|CardCategory query()
+ * @method static \Illuminate\Database\Eloquent\Builder|CardCategory whereCreatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder|CardCategory whereId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder|CardCategory whereName($value)
+ * @method static \Illuminate\Database\Eloquent\Builder|CardCategory wherePosterImage($value)
+ * @method static \Illuminate\Database\Eloquent\Builder|CardCategory wherePrice($value)
+ * @method static \Illuminate\Database\Eloquent\Builder|CardCategory whereUpdatedAt($value)
+ */
+	class CardCategory extends \Eloquent {}
+}
+
+namespace App\Models{
+/**
+ * 
+ *
+ * @property int $id
  * @property string $title
  * @property string $code
  * @property string $full_price

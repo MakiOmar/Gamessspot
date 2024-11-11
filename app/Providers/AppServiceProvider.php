@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
+use App\Services\ImageUploadService;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -13,6 +14,10 @@ class AppServiceProvider extends ServiceProvider
     {
         if (app()->environment('local')) {
             $this->app->register(\Barryvdh\LaravelIdeHelper\IdeHelperServiceProvider::class);
+            // Register ImageUploadService as a singleton
+            $this->app->singleton(ImageUploadService::class, function ($app) {
+                return new ImageUploadService();
+            });
         }
     }
 

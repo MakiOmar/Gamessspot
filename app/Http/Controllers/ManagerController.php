@@ -10,9 +10,16 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use App\Models\StoresProfile;
 use App\Models\SpecialPrice;
+use App\Services\ImageUploadService;
 
 class ManagerController extends Controller
 {
+    protected $imageUploadService;
+
+    public function __construct(ImageUploadService $imageUploadService)
+    {
+        $this->imageUploadService = $imageUploadService;
+    }
     /**
      * Show the list of games in a table for managers.
      *
@@ -81,28 +88,22 @@ class ManagerController extends Controller
         );
         $data = $request->except('_token', 'ps4_image', 'ps5_image'); // Exclude image files from mass assignment
 
-        // Handle PS4 image upload
+        // Use the service for PS4 image upload
         if ($request->hasFile('ps4_image')) {
-            $imageFile = $request->file('ps4_image');
-            $imageName = $imageFile->getClientOriginalName(); // Get original file name
-            $imageFile->move(public_path('assets/uploads/ps4'), $imageName); // Move file to /public/assets/uploads/ps4
-            $data['ps4_image_url'] = 'assets/uploads/ps4/' . $imageName; // Save relative path to database
+            $validatedData['ps4_image_url'] = $this->imageUploadService->upload($request->file('ps4_image'), 'ps4');
         }
 
-        // Handle PS5 image upload
+        // Use the service for PS5 image upload
         if ($request->hasFile('ps5_image')) {
-            $imageFile = $request->file('ps5_image');
-            $imageName = $imageFile->getClientOriginalName(); // Get original file name
-            $imageFile->move(public_path('assets/uploads/ps5'), $imageName); // Move file to /public/assets/uploads/ps5
-            $data['ps5_image_url'] = 'assets/uploads/ps5/' . $imageName; // Save relative path to database
+            $validatedData['ps5_image_url'] = $this->imageUploadService->upload($request->file('ps5_image'), 'ps5');
         }
+
         // Update the game with the new data
         $game->update($data);
         // Clear the cache after updating the game
         $this->clearPaginatedGameCache();
         return response()->json(array( 'message' => 'Game updated successfully!' ));
     }
-
     public function store(Request $request)
     {
         // Validate and store the new game
@@ -126,20 +127,14 @@ class ManagerController extends Controller
             )
         );
 
-        // Handle PS4 image upload
+        // Use the service for PS4 image upload
         if ($request->hasFile('ps4_image')) {
-            $imageFile = $request->file('ps4_image');
-            $imageName = $imageFile->getClientOriginalName(); // Get original file name
-            $imageFile->move(public_path('assets/uploads/ps4'), $imageName); // Move file to /public/assets/uploads/ps4
-            $validatedData['ps4_image_url'] = 'assets/uploads/ps4/' . $imageName; // Save relative path to database
+            $validatedData['ps4_image_url'] = $this->imageUploadService->upload($request->file('ps4_image'), 'ps4');
         }
 
-        // Handle PS5 image upload
+        // Use the service for PS5 image upload
         if ($request->hasFile('ps5_image')) {
-            $imageFile = $request->file('ps5_image');
-            $imageName = $imageFile->getClientOriginalName(); // Get original file name
-            $imageFile->move(public_path('assets/uploads/ps5'), $imageName); // Move file to /public/assets/uploads/ps5
-            $validatedData['ps5_image_url'] = 'assets/uploads/ps5/' . $imageName; // Save relative path to database
+            $validatedData['ps5_image_url'] = $this->imageUploadService->upload($request->file('ps5_image'), 'ps5');
         }
 
         // Create the new game

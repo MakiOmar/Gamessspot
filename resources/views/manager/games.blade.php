@@ -237,7 +237,7 @@
 
         // If creating a new game, do not append the PUT method
         if (!gameId) {
-            var url = '/manager/store/games';
+            var url = '/manager/games/store';
             var method = 'POST';
         } else {
             var url = '/manager/games/' + gameId;

@@ -31,7 +31,7 @@
                 Cards <span class="float-end"><i class="fas fa-chevron-down"></i></span>
             </a>
             <div class="collapse" id="cardsMenu">
-                <a href="#" class="list-group-item list-group-item-action">Card 1</a>
+                <a href="{{ route( 'card-categories.index' ) }}" class="list-group-item list-group-item-action">Add/Edit Cards</a>
                 <a href="#" class="list-group-item list-group-item-action">Card 2</a>
             </div>
             @endif
