@@ -14,7 +14,7 @@ use App\Models\Report;
 
 class OrderController extends Controller
 {
-    protected $pagination = 1;
+    protected $pagination = 10;
     /**
      * Display a listing of the orders.
      *
@@ -37,7 +37,7 @@ class OrderController extends Controller
         } elseif (
             $user->roles->contains(
                 function ($role) {
-                    return $role->name === 'sales';
+                    return $role->name === 'sales' || $role->name === 'account manager';
                 }
             )
         ) {
@@ -228,6 +228,7 @@ class OrderController extends Controller
             $accountQuery->where('ps' . $validatedData['platform'] . '_offline_stock', 0)
                     ->where($sold_item, '>', 0);
         } elseif ($validatedData['type'] === 'secondary') {
+            LOG::info('xcx:', array( $sold_item ));
             // For secondary, both offline and primary stocks must be 0, but secondary must have stock
             $accountQuery->where('ps' . $validatedData['platform'] . '_offline_stock', 0)
                     ->where('ps' . $validatedData['platform'] . '_primary_stock', 0)

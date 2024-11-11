@@ -48,6 +48,11 @@ class UserController extends Controller
         return $this->users(1);
     }
 
+    public function accountManagers()
+    {
+        return $this->users(4);
+    }
+
     // Method to search users based on the input
     public function search(Request $request)
     {

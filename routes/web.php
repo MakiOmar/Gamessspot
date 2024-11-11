@@ -35,7 +35,7 @@ Route::prefix('manager')->group(function () {
     // Group routes that require 'auth:admin' middleware
     Route::middleware('auth:admin')->group(function () {
         // Manager dashboard
-        Route::get('/dashboard', function () {
+        Route::get('/', function () {
             return view('manager.dashboard');
         })->name('manager.dashboard');
 
@@ -58,12 +58,11 @@ Route::prefix('manager')->group(function () {
             Route::get('/accounts/export', [AccountController::class, 'export'])->name('manager.accounts.export');
         });
 
-        Route::middleware(['checkRole:admin,sales,accountant'])->group(function () {
-            Route::get('/orders', [OrderController::class, 'index'])->name('manager.orders');
-            Route::get('/orders/search', [OrderController::class, 'search'])->name('manager.orders.search');
-            Route::get('/orders/export', [OrderController::class, 'export'])->name('manager.orders.export');
-            Route::post('/orders/store', [OrderController::class, 'store'])->name('orders.store');
-        });
+        Route::get('/orders', [OrderController::class, 'index'])->name('manager.orders');
+        Route::get('/orders/search', [OrderController::class, 'search'])->name('manager.orders.search');
+        Route::get('/orders/export', [OrderController::class, 'export'])->name('manager.orders.export');
+        Route::post('/orders/store', [OrderController::class, 'store'])->name('orders.store');
+
         Route::middleware(['checkRole:admin'])->group(function () {
             Route::post('/orders/undo', [OrderController::class, 'undo'])->name('manager.orders.undo');
         });
@@ -91,6 +90,7 @@ Route::prefix('manager')->group(function () {
         Route::get('/users/sales', [UserController::class, 'sales'])->name('manager.users.sales');
         Route::get('/users/accountants', [UserController::class, 'accountants'])->name('manager.users.accountants');
         Route::get('/users/admins', [UserController::class, 'admins'])->name('manager.users.admins');
+        Route::get('/users/account-managers', [UserController::class, 'accountManagers'])->name('manager.users.acc.managers');
         Route::get('/users/search', [UserController::class, 'search'])->name('manager.users.search');
         Route::get('/users/{id}/edit', [UserController::class, 'edit'])->name('manager.users.edit');
         Route::put('/users/update/{id}', [UserController::class, 'update'])->name('manager.users.update');

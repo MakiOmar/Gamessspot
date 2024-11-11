@@ -91,7 +91,7 @@
                         <div class="form-group">
                             <label>Store Profile</label>
                             
-                            @if(auth()->user()->roles->contains('name', 'admin')) <!-- Check if the user has the 'admin' role -->
+                            @if(auth()->user()->roles->contains('name', 'admin') || auth()->user()->roles->contains('name', 'account manager')) <!-- Check if the user has the 'admin' role -->
                                 <select class="form-control" name="store_profile_id" required>
                                     @foreach ($storeProfiles as $profile)
                                         <option value="{{ $profile->id }}">{{ $profile->name }}</option>
