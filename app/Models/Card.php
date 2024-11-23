@@ -9,7 +9,7 @@ class Card extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['code', 'cost', 'card_category_id'];
+    protected $fillable = ['code', 'cost', 'card_category_id', 'status'];
 
     /**
      * Get the category that the card belongs to.

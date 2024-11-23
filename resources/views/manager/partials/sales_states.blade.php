@@ -165,7 +165,7 @@
                       </g>
                    </svg>
                 </span>
-                <a href="#" class="text-primary font-weight-bold font-size-h6 mt-2">New Users</a>
+                <a href="#" class="text-primary font-weight-bold font-size-h6 mt-2">{{ $totalUserCount }} User</a>
              </div>
           </div>
           <div class="row m-0">
@@ -179,7 +179,7 @@
                       </g>
                    </svg>
                 </span>
-                <a href="#" class="text-danger font-weight-bold font-size-h6 mt-2">Item Orders</a>
+                <a href="#" class="text-danger font-weight-bold font-size-h6 mt-2">{{ $uniqueBuyerPhoneCount }} Happy customer</a>
              </div>
              <div class="col bg-light-success px-6 py-8 rounded-xl">
                 <span class="svg-icon svg-icon-3x svg-icon-success d-block my-2">

@@ -138,7 +138,7 @@
                     <!-- Login Code (Textarea) -->
                     <div class="form-group mt-3">
                         <label for="login_code">Login Code</label>
-                        <textarea class="form-control" id="login_code" name="login_code" rows="3" placeholder="Enter login code" required></textarea>
+                        <textarea class="form-control" id="login_code" name="login_code" rows="3" placeholder="Enter login code"></textarea>
                     </div>
 
                     <!-- PS4 Availability -->

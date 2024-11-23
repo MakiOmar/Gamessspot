@@ -31,8 +31,9 @@
                 Cards <span class="float-end"><i class="fas fa-chevron-down"></i></span>
             </a>
             <div class="collapse" id="cardsMenu">
-                <a href="{{ route( 'card-categories.index' ) }}" class="list-group-item list-group-item-action">Add/Edit Cards</a>
-                <a href="#" class="list-group-item list-group-item-action">Card 2</a>
+                <a href="{{ route( 'card-categories.index' ) }}" class="list-group-item list-group-item-action">Categories</a>
+                <a href="{{ route( 'cards.index' ) }}" class="list-group-item list-group-item-action">Cards</a>
+                <a href="{{ route( 'manager.sell-cards' ) }}" class="list-group-item list-group-item-action">Sell cards</a>
             </div>
             @endif
             <a href="{{ route( 'manager.orders' ) }}" class="list-group-item bg-light">Sell log</a>

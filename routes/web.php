@@ -13,6 +13,7 @@ use App\Http\Controllers\SpecialPriceController;
 use App\Http\Controllers\MasterController;
 use App\Http\Controllers\CardCategoryController;
 use App\Http\Controllers\CardController;
+use App\Http\Controllers\DashboardController;
 
 /*
 |--------------------------------------------------------------------------
@@ -38,9 +39,7 @@ Route::prefix('manager')->group(function () {
     // Group routes that require 'auth:admin' middleware
     Route::middleware('auth:admin')->group(function () {
         // Manager dashboard
-        Route::get('/', function () {
-            return view('manager.dashboard');
-        })->name('manager.dashboard');
+        Route::get('/', [DashboardController::class, 'dashboard'])->name('manager.dashboard');
 
         // Games management route
         Route::get('/games', [ManagerController::class, 'showGames'])->name('manager.games');
@@ -65,6 +64,7 @@ Route::prefix('manager')->group(function () {
         Route::get('/orders/search', [OrderController::class, 'search'])->name('manager.orders.search');
         Route::get('/orders/export', [OrderController::class, 'export'])->name('manager.orders.export');
         Route::post('/orders/store', [OrderController::class, 'store'])->name('orders.store');
+        Route::post('/orders/sell-card', [OrderController::class, 'sellCard'])->name('manager.orders.sell.card');
 
         Route::middleware(['checkRole:admin'])->group(function () {
             Route::post('/orders/undo', [OrderController::class, 'undo'])->name('manager.orders.undo');
@@ -154,8 +154,15 @@ Route::prefix('manager')->group(function () {
         )->name('special-prices.edit');
 
         Route::resource('masters', MasterController::class);
+
         Route::resource('card-categories', CardCategoryController::class);
+        Route::get(
+            '/cards/sell',
+            [CardCategoryController::class,'sell']
+        )->name('manager.sell-cards');
+
         Route::resource('cards', CardController::class);
+
 
         //Route::get('/assign-roles', [RoleAssignmentController::class, 'assignRolesBasedOnQuery']);
     });

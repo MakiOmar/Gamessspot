@@ -21,6 +21,7 @@ class Order extends Model
         'price',
         'notes',
         'sold_item',
+        'card_id',
     );
 
     /**
@@ -51,5 +52,14 @@ class Order extends Model
     public function storeProfile()
     {
         return $this->belongsTo(StoresProfile::class, 'store_profile_id');
+    }
+
+    public function card()
+    {
+        return $this->belongsTo(Card::class, 'card_id');
+    }
+    public function game()
+    {
+        return $this->belongsTo(Game::class, 'game_id');
     }
 }

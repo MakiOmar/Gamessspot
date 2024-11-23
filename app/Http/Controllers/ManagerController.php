@@ -61,31 +61,30 @@ class ManagerController extends Controller
     }
     public function update(Request $request, $id)
     {
-        // Log the entire request input data
-        Log::info('Update Request Data: ', $request->all());
 
         $game = Game::findOrFail($id);
 
         // Validate the request
-        $request->validate(
-            array(
-                'title'                => 'required|string|max:255',
-                'code'                 => 'required|string|max:255|unique:games,code,' . $game->id,
-                'full_price'           => 'required|numeric|min:0',
-                'ps4_primary_price'    => 'nullable|numeric|min:0',
-                'ps4_secondary_price'  => 'nullable|numeric|min:0',
-                'ps4_offline_price'    => 'nullable|numeric|min:0',
-                'ps5_primary_price'    => 'nullable|numeric|min:0',
-                'ps5_offline_price'    => 'nullable|numeric|min:0',
-                'ps4_image'            => 'nullable|image|mimes:webp,jpeg,png,jpg,gif,svg|max:2048', // Validate image upload
-                'ps5_image'            => 'nullable|image|mimes:webp,jpeg,png,jpg,gif,svg|max:2048', // Validate image upload
-                'ps4_primary_status'   => 'required|boolean',
-                'ps4_secondary_status' => 'required|boolean',
-                'ps4_offline_status'   => 'required|boolean',
-                'ps5_primary_status'   => 'required|boolean',
-                'ps5_offline_status'   => 'required|boolean',
-            )
-        );
+        $request->validate([
+            'title'                => 'required|string|max:255',
+            'code'                 => 'required|string|max:255|unique:games,code,' . $game->id,
+            'full_price'           => 'required|numeric|min:0',
+            'ps4_primary_price'    => 'nullable|numeric|min:0',
+            'ps4_secondary_price'  => 'nullable|numeric|min:0',
+            'ps4_offline_price'    => 'nullable|numeric|min:0',
+            'ps5_primary_price'    => 'nullable|numeric|min:0',
+            'ps5_secondary_price'  => 'nullable|numeric|min:0', // New field
+            'ps5_offline_price'    => 'nullable|numeric|min:0',
+            'ps4_image'            => 'nullable|image|mimes:webp,jpeg,png,jpg,gif,svg|max:2048',
+            'ps5_image'            => 'nullable|image|mimes:webp,jpeg,png,jpg,gif,svg|max:2048',
+            'ps4_primary_status'   => 'required|boolean',
+            'ps4_secondary_status' => 'required|boolean',
+            'ps4_offline_status'   => 'required|boolean',
+            'ps5_primary_status'   => 'required|boolean',
+            'ps5_secondary_status' => 'required|boolean', // New field
+            'ps5_offline_status'   => 'required|boolean',
+        ]);
+
         $data = $request->except('_token', 'ps4_image', 'ps5_image'); // Exclude image files from mass assignment
 
         // Use the service for PS4 image upload
@@ -107,25 +106,25 @@ class ManagerController extends Controller
     public function store(Request $request)
     {
         // Validate and store the new game
-        $validatedData = $request->validate(
-            array(
-                'title'                => 'required|string|max:255',
-                'code'                 => 'required|string|max:255|unique:games,code',
-                'full_price'           => 'required|numeric|min:0',
-                'ps4_primary_price'    => 'nullable|numeric|min:0',
-                'ps4_secondary_price'  => 'nullable|numeric|min:0',
-                'ps4_offline_price'    => 'nullable|numeric|min:0',
-                'ps5_primary_price'    => 'nullable|numeric|min:0',
-                'ps5_offline_price'    => 'nullable|numeric|min:0',
-                'ps4_image'            => 'nullable|image|mimes:webp,jpeg,png,jpg,gif,svg|max:2048', // Validate image upload
-                'ps5_image'            => 'nullable|image|mimes:webp,jpeg,png,jpg,gif,svg|max:2048', // Validate image upload
-                'ps4_primary_status'   => 'required|boolean',
-                'ps4_secondary_status' => 'required|boolean',
-                'ps4_offline_status'   => 'required|boolean',
-                'ps5_primary_status'   => 'required|boolean',
-                'ps5_offline_status'   => 'required|boolean',
-            )
-        );
+        $validatedData = $request->validate([
+            'title'                => 'required|string|max:255',
+            'code'                 => 'required|string|max:255|unique:games,code',
+            'full_price'           => 'required|numeric|min:0',
+            'ps4_primary_price'    => 'nullable|numeric|min:0',
+            'ps4_secondary_price'  => 'nullable|numeric|min:0',
+            'ps4_offline_price'    => 'nullable|numeric|min:0',
+            'ps5_primary_price'    => 'nullable|numeric|min:0',
+            'ps5_secondary_price'  => 'nullable|numeric|min:0',
+            'ps5_offline_price'    => 'nullable|numeric|min:0',
+            'ps4_image'            => 'nullable|image|mimes:webp,jpeg,png,jpg,gif,svg|max:2048',
+            'ps5_image'            => 'nullable|image|mimes:webp,jpeg,png,jpg,gif,svg|max:2048',
+            'ps4_primary_status'   => 'required|boolean',
+            'ps4_secondary_status' => 'required|boolean',
+            'ps4_offline_status'   => 'required|boolean',
+            'ps5_primary_status'   => 'required|boolean',
+            'ps5_secondary_status' => 'required|boolean',
+            'ps5_offline_status'   => 'required|boolean',
+        ]);
 
         // Use the service for PS4 image upload
         if ($request->hasFile('ps4_image')) {

@@ -8,6 +8,7 @@ use App\Models\StoresProfile;
 use App\Models\Role;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 
 class UserController extends Controller
 {
@@ -111,7 +112,7 @@ class UserController extends Controller
 
         // Delete the user
         $user->delete();
-
+        Cache::forget('total_user_count'); // Clear the cache
         // Return a success response
         return response()->json(array( 'message' => 'User deleted successfully!' ));
     }
@@ -168,6 +169,7 @@ class UserController extends Controller
         $validated['password'] = bcrypt($request->input('password')); // Hash the password
 
         $user = User::create($validated);
+        Cache::forget('total_user_count'); // Clear the cache
         $user->roles()->sync($request->input('roles')); // Sync roles
         return response()->json(array( 'message' => 'User created successfully' ));
     }

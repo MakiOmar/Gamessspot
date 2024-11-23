@@ -123,6 +123,18 @@
                             <option value="0">Not Available</option>
                         </select>
 
+                        <!-- PS5 Secondary Price -->
+                        <label for="ps5SecondaryPrice" class="mt-3">PS5 Secondary Price</label>
+                        <input type="number" id="ps5SecondaryPrice" name="ps5_secondary_price" class="form-control" style="border-radius: 10px;">
+
+                        <!-- PS5 Secondary Status -->
+                        <label for="ps5SecondaryStatus" class="mt-3">PS5 Secondary Status</label>
+                        <select id="ps5SecondaryStatus" name="ps5_secondary_status" class="form-control" style="border-radius: 10px;">
+                            <option value="1">Available</option>
+                            <option value="0">Not Available</option>
+                        </select>
+
+
                         <!-- PS4 Image Upload -->
                         <a href="#" id="ps4ImageLink" target="_blank">
                             <img id="ps4ImagePreview" class="img-thumbnail" style="max-width: 150px; display:none;">
@@ -206,6 +218,8 @@
                 $('#ps5PrimaryStatus').val(response.ps5_primary_status);
                 $('#ps5OfflinePrice').val(response.ps5_offline_price);
                 $('#ps5OfflineStatus').val(response.ps5_offline_status);
+                $('#ps5SecondaryPrice').val(response.ps5_secondary_price);
+                $('#ps5SecondaryStatus').val(response.ps5_secondary_status);
 
                 // Generate preview for the PS4 image
                 if (response.ps4_image_url) {

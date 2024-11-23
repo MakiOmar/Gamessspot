@@ -11,6 +11,9 @@ use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use App\Models\Report;
+use App\Models\Card;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Cache;
 
 class OrderController extends Controller
 {
@@ -33,7 +36,13 @@ class OrderController extends Controller
                 }
             )
         ) {
-            $orders = Order::with(array( 'seller', 'account.game' ))->paginate($this->pagination);
+            $orders = Order::with([
+                'seller',
+                'account' => function ($query) {
+                    $query->with('game'); // Load game only if account is not null
+                },
+                'card' // Load card if card_id is not null
+            ])->paginate($this->pagination);
         } elseif (
             $user->roles->contains(
                 function ($role) {
@@ -41,8 +50,14 @@ class OrderController extends Controller
                 }
             )
         ) {
-            // Sales role: Fetch only the current user's orders
-            $orders = Order::with(array( 'seller', 'account.game' ))->where('seller_id', $user->id)->paginate($this->pagination);
+            $orders = Order::with([
+                'seller',
+                'account' => function ($query) {
+                    $query->with('game');  // Load game only if account exists
+                },
+                'card'  // Load card only if card_id is not null
+            ])->where('seller_id', $user->id)
+              ->paginate($this->pagination);
         } elseif (
             $user->roles->contains(
                 function ($role) {
@@ -53,7 +68,13 @@ class OrderController extends Controller
             ! empty($_GET['id'])
         ) {
             // Sales role: Fetch only the current user's orders
-            $orders = Order::with(array( 'seller', 'account.game' ))
+            $orders = Order::with([
+                'seller',
+                'account' => function ($query) {
+                    $query->with('game');  // Load game only if account exists
+                },
+                'card'  // Load card only if card_id is not null
+            ])
             ->where('store_profile_id', $_GET['id'])
             ->orderBy('buyer_name', 'asc')
             ->paginate($this->pagination);
@@ -147,68 +168,102 @@ class OrderController extends Controller
      */
     public function undo(Request $request)
     {
-        $order = Order::find($request->order_id);
+        DB::beginTransaction();
 
-        if ($order) {
-            // Increment the corresponding stock based on sold_item
-            $account = Account::find($order->account_id);
+        try {
+            $order = Order::find($request->order_id);
 
-            if ($account) {
-                switch ($order->sold_item) {
-                    case 'ps4_offline_stock':
-                        $account->ps4_offline_stock += 1;
-                        break;
-                    case 'ps4_primary_stock':
-                        $account->ps4_primary_stock += 1;
-                        break;
-                    case 'ps4_secondary_stock':
-                        $account->ps4_secondary_stock += 1;
-                        break;
-                    case 'ps5_offline_stock':
-                        $account->ps5_offline_stock += 1;
-                        break;
-                    case 'ps5_primary_stock':
-                        $account->ps5_primary_stock += 1;
-                        break;
-                    case 'ps5_secondary_stock':
-                        $account->ps5_secondary_stock += 1;
-                        break;
+            if ($order) {
+                if ($order->card_id) {
+                    $this->updateCardStatus($order->card_id);
+                } else {
+                    $this->incrementAccountStock($order);
                 }
 
-                // Save the updated account stock
-                $account->save();
-                // If the report_id is provided, update the report status to 'solved'
                 if ($request->has('report_id')) {
-                    $report = Report::find($request->report_id);
-                    if ($report && $report->status == 'needs_return') {
-                        $report->update(array( 'status' => 'solved' ));
-                    }
+                    $this->updateReportStatus($request->report_id);
                 }
-                // Delete related reports before deleting the order
-                $order->reports()->delete();
-                // Delete the order
-                $order->delete();
 
-                return response()->json(array( 'success' => true ));
+                $this->deleteOrderAndReports($order);
+
+                DB::commit();
+                return response()->json(['success' => true]);
             }
-        }
 
-        return response()->json(array( 'success' => false ));
+            DB::rollBack();
+            Cache::forget('unique_buyer_phone_count'); // Clear the cache
+            return response()->json(['success' => false]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json(['success' => false, 'error' => $e->getMessage()]);
+        }
     }
+
+    // Helper method to update card status
+    private function updateCardStatus($cardId)
+    {
+        $card = Card::find($cardId);
+        if ($card) {
+            $card->status = true;
+            $card->save();
+        }
+    }
+
+    // Helper method to increment account stock based on sold item
+    private function incrementAccountStock($order)
+    {
+        $account = Account::find($order->account_id);
+
+        if ($account) {
+            $stockField = $this->getStockField($order->sold_item);
+            $account->$stockField += 1;
+            $account->save();
+        }
+    }
+
+    // Helper method to get the stock field based on sold item
+    private function getStockField($soldItem)
+    {
+        return match ($soldItem) {
+            'ps4_offline_stock' => 'ps4_offline_stock',
+            'ps4_primary_stock' => 'ps4_primary_stock',
+            'ps4_secondary_stock' => 'ps4_secondary_stock',
+            'ps5_offline_stock' => 'ps5_offline_stock',
+            'ps5_primary_stock' => 'ps5_primary_stock',
+            'ps5_secondary_stock' => 'ps5_secondary_stock',
+            default => null,
+        };
+    }
+
+    // Helper method to update report status
+    private function updateReportStatus($reportId)
+    {
+        $report = Report::find($reportId);
+        if ($report && $report->status === 'needs_return') {
+            $report->update(['status' => 'solved']);
+        }
+    }
+
+    // Helper method to delete order and related reports
+    private function deleteOrderAndReports($order)
+    {
+        $order->reports()->delete();
+        $order->delete();
+    }
+
+
     public function store(Request $request)
     {
         // Validate incoming data
-        $validatedData = $request->validate(
-            array(
-                'store_profile_id' => 'required|exists:stores_profile,id',
-                'game_id'          => 'required|exists:games,id',
-                'buyer_phone'      => 'required|string|max:15',
-                'buyer_name'       => 'required|string|max:100',
-                'price'            => 'required|numeric|min:0',
-                'type'             => 'required|string|max:255',
-                'platform'         => 'required|string|max:255',
-            )
-        );
+        $validatedData = $request->validate([
+        'store_profile_id' => 'required|exists:stores_profile,id',
+        'game_id'          => 'required|exists:games,id',
+        'buyer_phone'      => 'required|string|max:15',
+        'buyer_name'       => 'required|string|max:100',
+        'price'            => 'required|numeric|min:0',
+        'type'             => 'required|string|max:255',
+        'platform'         => 'required|string|max:255',
+        ]);
 
         // Determine the sold item field dynamically
         $sold_item         = "ps{$validatedData['platform']}_{$validatedData['type']}_stock";
@@ -221,91 +276,160 @@ class OrderController extends Controller
         ->where("games.{$sold_item_status}", true); // Ensure the game's status is true
 
         if ($validatedData['type'] === 'offline') {
-            // For offline, just check the corresponding stock field has available stock
             $accountQuery->where($sold_item, '>', 0);
         } elseif ($validatedData['type'] === 'primary') {
-            // For primary, offline stock must be 0 and primary stock must be greater than 0
-            $accountQuery->where('ps' . $validatedData['platform'] . '_offline_stock', 0)
-                    ->where($sold_item, '>', 0);
+            $accountQuery->where($sold_offline_item, 0)->where($sold_item, '>', 0);
         } elseif ($validatedData['type'] === 'secondary') {
-            LOG::info('xcx:', array( $sold_item ));
-            // For secondary, both offline and primary stocks must be 0, but secondary must have stock
-            $accountQuery->where('ps' . $validatedData['platform'] . '_offline_stock', 0)
+            $accountQuery->where($sold_offline_item, 0)
                     ->where('ps' . $validatedData['platform'] . '_primary_stock', 0)
                     ->where($sold_item, '>', 0);
         }
 
-        // Try to fetch the first matching account
         try {
-            $account = $accountQuery->select('accounts.*')->firstOrFail();  // Fail if no matching account is found
-        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
-            // Return an error response if no account was found
-            return response()->json(
-                array(
-                    'message' => 'No account found with the required stock.',
-                ),
-                200
-            );
-        }
+            DB::beginTransaction();
 
-        // Reduce the corresponding stock by 1 for the account
-        $account->decrement($sold_item, 1);
+            // Fetch the first matching account or fail
+            $account = $accountQuery->select('accounts.*')->firstOrFail();
 
-        // Check if this was an "offline" order with only 1 stock left before decrement
-        $recentOrder = null;
-        $message     = null;
-        if (
-            $validatedData['platform'] == 4 &&
-            (
-            ( $validatedData['type'] === 'offline' && $account->$sold_item == 0 ) ||
-            ( $validatedData['type'] === 'primary' && $account->$sold_offline_item == 0 )
-            )
-        ) {
-            $check_for = $validatedData['type'] === 'primary' ? $sold_offline_item : $sold_item;
-            // Fetch the recent order for this account and item within the last 11 minutes
-            $recentOrder = Order::where('account_id', $account->id)
-            ->where('sold_item', $check_for)
-            ->where('created_at', '>=', now()->subMinutes(11))
-            ->latest()
-            ->first();
-            if ($recentOrder) {
-                // Fetch the seller details
-                $seller = User::find($recentOrder->seller_id);
-                if ($seller) {
-                    if ($validatedData['type'] === 'offline') {
-                        $sold = 'one offline';
-                    } else {
-                        $sold = 'the latest offline';
+            // Reduce the corresponding stock by 1 for the account
+            $account->decrement($sold_item, 1);
+
+            // Check if this was an "offline" order with only 1 stock left before decrement
+            $recentOrder = null;
+            $message     = null;
+            if (
+                $validatedData['platform'] == 4 &&
+                (
+                ($validatedData['type'] === 'offline' && $account->$sold_item == 0) ||
+                ($validatedData['type'] === 'primary' && $account->$sold_offline_item == 0)
+                )
+            ) {
+                $check_for = $validatedData['type'] === 'primary' ? $sold_offline_item : $sold_item;
+
+                // Fetch the recent order for this account and item within the last 11 minutes
+                $recentOrder = Order::where('account_id', $account->id)
+                ->where('sold_item', $check_for)
+                ->where('created_at', '>=', now()->subMinutes(11))
+                ->latest()
+                ->first();
+
+                if ($recentOrder) {
+                    $seller = User::find($recentOrder->seller_id);
+                    if ($seller) {
+                        $sold = $validatedData['type'] === 'offline' ? 'one offline' : 'the latest offline';
+                        $message = $seller->name . ' has sold ' . $sold . ' from this account. Please contact him on ' . $seller->phone;
                     }
-                    $message = $seller->name . ' has sold ' . $sold . ' from this account.Please contact him on ' . $seller->phone;
                 }
             }
-        }
-        // Prepare the order data
-        $order_data = array(
-            'seller_id'        => Auth::id(),  // Get the currently authenticated user's ID
+
+            // Prepare the order data
+            $order_data = [
+            'seller_id'        => Auth::id(),
             'store_profile_id' => $validatedData['store_profile_id'],
-            'account_id'       => $account->id,  // Set the matched account ID
+            'account_id'       => $account->id,
             'buyer_phone'      => $validatedData['buyer_phone'],
             'buyer_name'       => $validatedData['buyer_name'],
-            'price'            => $validatedData['price'],  // Set the price
-            'notes'            => '',  // Optional notes
-            'sold_item'        => $sold_item,  // Sold item is dynamically set
-        );
-        // Create the order
-        $order = Order::create($order_data);
-        // Return a JSON response on success, including recent order and seller details if applicable
-        return response()->json(
-            array(
-                'message'          => 'Order created successfully!',
-                'account_email'    => $account->mail,
-                'account_password' => $account->password,  // Ensure this is safely displayed or masked
-                'recent_order'     => $recentOrder,
-                'message'          => $message,
-                'order_id'         => $order->id,
-            )
-        );
+            'price'            => $validatedData['price'],
+            'notes'            => '',
+            'sold_item'        => $sold_item,
+            ];
+
+            // Create the order
+            $order = Order::create($order_data);
+
+            // Commit the transaction if everything succeeds
+            DB::commit();
+            Cache::forget('unique_buyer_phone_count'); // Clear the cache
+            // Return a JSON response on success, including recent order and seller details if applicable
+            return response()->json([
+            'message'          => 'Order created successfully!',
+            'account_email'    => $account->mail,
+            'account_password' => $account->password, // Be cautious with sensitive data
+            'recent_order'     => $recentOrder,
+            'additional_message' => $message,
+            'order_id'         => $order->id,
+            ]);
+        } catch (\Exception $e) {
+            // Rollback the transaction in case of any error
+            DB::rollBack();
+
+            // Return an error response
+            return response()->json([
+            'message' => 'Failed to create order. Please try again.',
+            'error'   => $e->getMessage(),
+            ], 500);
+        }
     }
+
+
+    public function sellCard(Request $request)
+    {
+        // Validate incoming data
+        $validatedData = $request->validate([
+        'card_category_id' => 'required|exists:card_categories,id',
+        'store_profile_id' => 'required|exists:stores_profile,id',
+        'buyer_phone'      => 'required|string|max:15',
+        'buyer_name'       => 'required|string|max:100',
+        'price'            => 'required|numeric|min:0',
+        ]);
+
+        // Find an available card with status = true
+        $card = Card::where('card_category_id', $validatedData['card_category_id'])
+                ->where('status', true)
+                ->first();
+
+        if (!$card) {
+            return response()->json([
+            'success' => false,
+            'message' => 'No active code found for this category.'
+            ], 200);
+        }
+
+        // Prepare the order data
+        $orderData = [
+        'seller_id'        => Auth::id(),
+        'store_profile_id' => $validatedData['store_profile_id'],
+        'account_id'       => null,
+        'buyer_phone'      => $validatedData['buyer_phone'],
+        'buyer_name'       => $validatedData['buyer_name'],
+        'price'            => $validatedData['price'],
+        'notes'            => '',
+        'sold_item'        => 'card',
+        'card_id'          => $card->id,
+        ];
+
+        // Start a transaction
+        DB::beginTransaction();
+
+        try {
+            // Create the order
+            $order = Order::create($orderData);
+
+            // Mark the card as sold
+            $card->update(['status' => false]);
+
+            // Commit the transaction if both operations succeed
+            DB::commit();
+
+            return response()->json([
+            'success'  => true,
+            'message'  => 'Order created successfully!',
+            'code'     => $card->code,
+            'order_id' => $order->id,
+            ]);
+        } catch (\Exception $e) {
+            // Rollback the transaction in case of an error
+            DB::rollBack();
+
+            return response()->json([
+            'success' => false,
+            'message' => 'Failed to create order. Please try again.',
+            'error'   => $e->getMessage()
+            ], 500);
+        }
+    }
+
+
 
     public function ordersWithStatus($status)
     {

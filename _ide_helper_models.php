@@ -66,6 +66,7 @@ namespace App\Models{
  * @property int $id
  * @property string $code
  * @property string $cost
+ * @property int $status
  * @property int $card_category_id
  * @property \Illuminate\Support\Carbon|null $created_at
  * @property \Illuminate\Support\Carbon|null $updated_at
@@ -78,6 +79,7 @@ namespace App\Models{
  * @method static \Illuminate\Database\Eloquent\Builder|Card whereCost($value)
  * @method static \Illuminate\Database\Eloquent\Builder|Card whereCreatedAt($value)
  * @method static \Illuminate\Database\Eloquent\Builder|Card whereId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder|Card whereStatus($value)
  * @method static \Illuminate\Database\Eloquent\Builder|Card whereUpdatedAt($value)
  */
 	class Card extends \Eloquent {}
@@ -199,15 +201,18 @@ namespace App\Models{
  * @property int $id
  * @property int $seller_id
  * @property int|null $store_profile_id
- * @property int $account_id
+ * @property int|null $account_id
  * @property string $buyer_phone
  * @property string $buyer_name
  * @property string $price
  * @property string|null $notes
  * @property string $sold_item
+ * @property int|null $card_id
  * @property \Illuminate\Support\Carbon|null $created_at
  * @property \Illuminate\Support\Carbon|null $updated_at
- * @property-read \App\Models\Account $account
+ * @property-read \App\Models\Account|null $account
+ * @property-read \App\Models\Card|null $card
+ * @property-read \App\Models\Game|null $game
  * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Report> $reports
  * @property-read int|null $reports_count
  * @property-read \App\Models\User $seller
@@ -219,6 +224,7 @@ namespace App\Models{
  * @method static \Illuminate\Database\Eloquent\Builder|Order whereAccountId($value)
  * @method static \Illuminate\Database\Eloquent\Builder|Order whereBuyerName($value)
  * @method static \Illuminate\Database\Eloquent\Builder|Order whereBuyerPhone($value)
+ * @method static \Illuminate\Database\Eloquent\Builder|Order whereCardId($value)
  * @method static \Illuminate\Database\Eloquent\Builder|Order whereCreatedAt($value)
  * @method static \Illuminate\Database\Eloquent\Builder|Order whereId($value)
  * @method static \Illuminate\Database\Eloquent\Builder|Order whereNotes($value)

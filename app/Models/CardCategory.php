@@ -9,6 +9,8 @@ class CardCategory extends Model
 {
     use HasFactory;
 
+    protected $table = 'card_categories';
+
     protected $fillable = ['name', 'price', 'poster_image'];
 
     /**

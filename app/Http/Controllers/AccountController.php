@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use App\Models\Game;
 use App\Exports\AccountsExport;
 use Maatwebsite\Excel\Facades\Excel;
+use Illuminate\Support\Facades\Cache;
 
 class AccountController extends Controller
 {
@@ -46,12 +47,20 @@ class AccountController extends Controller
         return view('manager.partials.account_rows', compact('accounts'))->render(); // Use a partial view to render rows
     }
 
+    public function getTotalAccountCost()
+    {
+        $totalCost = Cache::remember('total_account_cost', 600, function () {
+            return Account::sum('cost'); // Sum the costs if not already cached
+        });
+
+        return response()->json(['total_cost' => $totalCost]);
+    }
     public function store(Request $request)
     {
         // Validate the request data
         $request->validate(
-            array(
-                'mail'          => 'required|email',
+            [
+                'mail'          => 'required|email|unique:accounts,mail',
                 'password'      => 'required|string',
                 'game_id'       => 'required|exists:games,id',
                 'region'        => 'required|string|max:2',
@@ -65,7 +74,12 @@ class AccountController extends Controller
                 'ps4_offline1'  => 'nullable|boolean',
                 'ps4_offline2'  => 'nullable|boolean',
                 'ps5_offline'   => 'nullable|boolean',
-            )
+            ],
+            [
+                'mail.required' => 'The email field is required.',
+                'mail.email' => 'Please provide a valid email address.',
+                'mail.unique' => 'This email address is already in use.',
+            ]
         );
 
         // Default stock values
@@ -122,6 +136,7 @@ class AccountController extends Controller
 
         // Check if the account was created successfully
         if ($account) {
+            Cache::forget('total_account_cost'); // Clear the cache
             return response()->json(array( 'success' => 'Account created and game stock updated successfully!' ));
         }
 

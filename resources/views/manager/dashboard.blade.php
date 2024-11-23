@@ -205,6 +205,23 @@
 
 @section('content')
     <div class="container-fluid">
+        <h4>System Assets</h4>
+        <table class="table table-dark">
+            <thead>
+              <tr>
+                <th scope="col">Mails Assets</th>
+                <th scope="col">Codes Assets</th>
+                <th scope="col">Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>{{ number_format($accountsCost, 2) }} EGP</td>
+                <td>{{ number_format($totalCodeCost, 2) }} EGP</td>
+                <td>{{ number_format($total, 2) }} EGP</td>
+              </tr>
+            </tbody>
+          </table>
         <div class="row mt-4">
             <!-- Sales Stat Card -->
             <div class="sales-states col-lg-4">
@@ -242,72 +259,112 @@
             <div class="col-lg-4">
                 <div class="card">
                     <div class="card-body">
-                        <h5>PS4 Games</h5>
-                        <img src="ps4.png" class="img-fluid" alt="PS4">
+                        <h5>Top selling games</h5>
+                        @if($topSellingGames->isEmpty())
+                            <p>No top selling games available.</p>
+                        @else
+                            <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>Rank</th>
+                                        <th>Game Title</th>
+                                        <th>Total Sales</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach($topSellingGames as $index => $gameData)
+                                        <tr>
+                                            <td>{{ $index + 1 }}</td>
+                                            <td>{{ $gameData->game->title ?? 'Unknown Game' }}</td>
+                                            <td>{{ $gameData->total_sales }}</td>
+                                        </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        @endif
                     </div>
                 </div>
             </div>
             <div class="col-lg-4">
                 <div class="card">
                     <div class="card-body">
-                        <h5>PS5 Games</h5>
-                        <img src="ps5.png" class="img-fluid" alt="PS5">
+                        <h5>Top buyers</h5>
+                        @if($topBuyers->isEmpty())
+                            <p>No buyers found.</p>
+                        @else
+                            <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>Rank</th>
+                                        <th>Buyer Phone</th>
+                                        <th>Buyer name</th>
+                                        <th>Total Orders</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach($topBuyers as $index => $buyer)
+                                        <tr>
+                                            <td>{{ $index + 1 }}</td>
+                                            <td>{{ $buyer->buyer_phone }}</td>
+                                            <td>{{ $buyer->buyer_name }}</td>
+                                            <td>{{ $buyer->total_orders }}</td>
+                                        </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        @endif
                     </div>
                 </div>
             </div>
         </div>
 
         <div class="row mt-4">
-            <!-- Top Buyers -->
-            <div class="col-lg-4">
-                <div class="card">
-                    <div class="card-body">
-                        <h5>Top Buyers</h5>
-                        <ul class="list-unstyled">
-                            <li>Ricky Hunt - $200,000</li>
-                            <!-- Add more buyers... -->
-                        </ul>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Low Stock Items -->
-            <div class="col-lg-4">
-                <div class="card">
-                    <div class="card-body">
-                        <h5>Low Stock Items</h5>
-                        <ul class="list-unstyled">
-                            <li>Item 1 - Due in 2 days</li>
-                            <!-- Add more items... -->
-                        </ul>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Agents Stats -->
-            <div class="col-lg-4">
-                <div class="card">
-                    <div class="card-body">
-                        <h5>Agents Stats</h5>
-                        <table class="table">
-                            <thead>
+            <div class="container">
+                <h2>Stock Levels for Games</h2>
+            
+                <h3>Low Stock (PS4/PS5 Primary and Offline)</h3>
+                @if($lowStockGames->isEmpty())
+                    <p>No games with low stock.</p>
+                @else
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Game Title</th>
+                                <th>Total Stock</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach($lowStockGames as $game)
                                 <tr>
-                                    <th>Agent</th>
-                                    <th>Earnings</th>
-                                    <th>Commission</th>
+                                    <td>{{ $game->title }}</td>
+                                    <td>{{ $game->total_stock }}</td>
                                 </tr>
-                            </thead>
-                            <tbody>
+                            @endforeach
+                        </tbody>
+                    </table>
+                @endif
+            
+                <h3>High Stock (PS4/PS5 Secondary)</h3>
+                @if($highStockGames->isEmpty())
+                    <p>No games with high stock.</p>
+                @else
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Game Title</th>
+                                <th>Total Stock</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach($highStockGames as $game)
                                 <tr>
-                                    <td>Brad Simmons</td>
-                                    <td>$8,000,000</td>
-                                    <td>$520</td>
+                                    <td>{{ $game->title }}</td>
+                                    <td>{{ $game->total_stock }}</td>
                                 </tr>
-                                <!-- Add more agents... -->
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
+                            @endforeach
+                        </tbody>
+                    </table>
+                @endif
             </div>
         </div>
     </div>

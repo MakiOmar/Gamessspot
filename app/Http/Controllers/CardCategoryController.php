@@ -5,7 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\CardCategory;
 use Illuminate\Http\Request;
 use App\Services\ImageUploadService;
-use Illuminate\Support\Facades\Log;
+use App\Models\StoresProfile;
 
 class CardCategoryController extends Controller
 {
@@ -26,6 +26,20 @@ class CardCategoryController extends Controller
         $categories = CardCategory::all();
         return view('manager.card-categories', compact('categories'));
     }
+    public function sell()
+    {
+        $categories = CardCategory::whereHas('cards', function ($query) {
+            $query->where('status', true); // Only include categories with active cards
+        })
+        ->with(['cards' => function ($query) {
+            $query->where('status', true); // Load only active cards
+        }])
+        ->get();
+        $storeProfiles = StoresProfile::all();
+
+        return view('manager.sell-cards', compact('categories', 'storeProfiles'));
+    }
+
 
     /**
      * Show the form for creating a new card category.
@@ -118,7 +132,6 @@ class CardCategoryController extends Controller
      */
     public function update(Request $request, CardCategory $cardCategory)
     {
-        LOG::info('sdds', [$request->all()]);
         $this->validatation($request, $cardCategory->id);
 
         $data = $request->only('name', 'price');

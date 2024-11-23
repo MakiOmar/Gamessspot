@@ -51,7 +51,7 @@
                     <tr role="row">
                         <th>ID</th>
                         <th>Seller</th>
-                        <th>Game</th>
+                        <th>Product</th>
                         <th>Account</th>
                         <th>Password</th>
                         <th>Buyer Phone</th>
@@ -68,9 +68,16 @@
                         <tr id="orderRow-{{ $order->id }}">
                             <td>{{ $order->id }}</td>
                             <td>{{ $order->seller->name }}</td>
-                            <td>{{ $order->account->game->title }}</td>
-                            <td>{{ $order->account->mail }}</td>
-                            <td>{{ $order->account->password }}</td>
+                            @if($order->account)
+                                <td>{{ $order->account->game->title }}</td>
+                                <td>{{ $order->account->mail }}</td>
+                                <td>{{ $order->account->password }}</td>
+                            @elseif($order->card)
+                                <td>{{ $order->card->category->name }}</td>
+                                <td>{{ $order->card->code }}</td>
+                                <td>--</td>
+                            @endif
+                            
                             <td>{{ $order->buyer_phone }}</td>
                             <td>{{ $order->buyer_name }}</td>
                             <td>{{ $order->price }}</td>

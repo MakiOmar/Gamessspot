@@ -73,6 +73,8 @@ class Game extends Model
         'ps4_offline_status',
         'ps5_primary_status',
         'ps5_offline_status',
+        'ps5_secondary_price',
+        'ps5_secondary_status',
     );
 
     /**

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Card;
 use App\Models\CardCategory;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 
 class CardController extends Controller
 {
@@ -16,9 +17,10 @@ class CardController extends Controller
     public function index()
     {
         $cards = Card::with('category')->get();
-        return view('cards.index', compact('cards'));
-    }
+        $categories = CardCategory::all(); // Retrieve all categories
 
+        return view('manager.cards', compact('cards', 'categories'));
+    }
     /**
      * Show the form for creating a new card.
      *
@@ -26,8 +28,7 @@ class CardController extends Controller
      */
     public function create()
     {
-        $categories = CardCategory::all();
-        return view('cards.create', compact('categories'));
+        return;
     }
 
     /**
@@ -38,16 +39,21 @@ class CardController extends Controller
      */
     public function store(Request $request)
     {
-        $request->validate([
+        $validatedData = $request->validate([
             'code' => 'required|string|unique:cards,code',
             'cost' => 'required|numeric',
             'card_category_id' => 'required|exists:card_categories,id',
         ]);
 
-        Card::create($request->only('code', 'cost', 'card_category_id'));
-
-        return redirect()->route('cards.index')->with('success', 'Card created successfully.');
+        $card = Card::create($validatedData);
+        Cache::forget('total_code_cost'); // Clear the cache
+        return response()->json([
+            'success' => true,
+            'message' => 'Card created successfully.',
+            'data' => $card,
+        ], 201); // 201 Created status code
     }
+
 
     /**
      * Show the specified card.
@@ -57,7 +63,7 @@ class CardController extends Controller
      */
     public function show(Card $card)
     {
-        return view('cards.show', compact('card'));
+        return;
     }
 
     /**
@@ -68,9 +74,9 @@ class CardController extends Controller
      */
     public function edit(Card $card)
     {
-        $categories = CardCategory::all();
-        return view('cards.edit', compact('card', 'categories'));
+        return;
     }
+
 
     /**
      * Update the specified card in storage.
@@ -81,16 +87,21 @@ class CardController extends Controller
      */
     public function update(Request $request, Card $card)
     {
-        $request->validate([
-            'code' => 'required|string|unique:cards,code,' . $card->id,
-            'cost' => 'required|numeric',
-            'card_category_id' => 'required|exists:card_categories,id',
+        $validatedData = $request->validate([
+        'code' => 'required|string|unique:cards,code,' . $card->id,
+        'cost' => 'required|numeric',
+        'card_category_id' => 'required|exists:card_categories,id',
         ]);
 
-        $card->update($request->only('code', 'cost', 'card_category_id'));
+        $card->update($validatedData);
 
-        return redirect()->route('cards.index')->with('success', 'Card updated successfully.');
+        return response()->json([
+        'success' => true,
+        'message' => 'Card updated successfully.',
+        'data' => $card,
+        ], 200); // 200 OK status code
     }
+
 
     /**
      * Remove the specified card from storage.
