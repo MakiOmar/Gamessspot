@@ -4,7 +4,13 @@
 
 @section('content')
     <div class="container mt-5">
-        <h1 class="text-center mb-4">Orders Management</h1>
+        <h1 class="text-center mb-4">
+            @if (! isset($status))
+            Orders Management
+            @else
+            Reports Management
+            @endif
+        </h1>
         <div>
             <form action="{{ route('manager.orders.export') }}" method="GET">
                 <div class="d-flex ">
@@ -56,11 +62,15 @@
                         <th>Product</th>
                         <th>Account</th>
                         <th>Password</th>
+                        @if (! isset($status))
                         <th>Buyer Phone</th>
                         <th>Buyer Name</th>
+                        @endif
                         <th>Price</th>
                         <th>Sold Item</th>
+                        @if (! isset($status))
                         <th>Notes</th>
+                        @endif
                         <th>Date</th>
                         <th>Action</th>
                     </tr>
@@ -79,12 +89,15 @@
                                 <td>{{ $order->card->code }}</td>
                                 <td>--</td>
                             @endif
-                            
+                            @if (! isset($status))
                             <td>{{ $order->buyer_phone }}</td>
                             <td>{{ $order->buyer_name }}</td>
+                            @endif
                             <td>{{ $order->price }}</td>
                             <td>{{ $order->sold_item }}</td>
+                            @if (! isset($status))
                             <td>{{ $order->notes }}</td>
+                            @endif
                             <td>{{ $order->created_at }}</td>
                             <td>
                                 <!-- Check if 'needs_return' flag is true -->
