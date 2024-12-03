@@ -123,6 +123,10 @@ class OrderController extends Controller
                     // Search by buyer phone or buyer name
                     $q->where('buyer_phone', 'like', "%$query%")
                     ->orWhere('buyer_name', 'like', "%$query%")
+                    // Search by seller name
+                    ->orWhereHas('seller', function ($q) use ($query) {
+                        $q->where('name', 'like', "%$query%");
+                    })
                     // Search by account email (related through account_id)
                     ->orWhereHas(
                         'account',
