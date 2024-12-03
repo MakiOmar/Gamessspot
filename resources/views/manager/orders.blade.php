@@ -178,7 +178,7 @@
 
 @push('scripts')
     <script>
-        $(document).ready(function() {
+        jQuery(document).ready(function($) {
             // Initialize Flatpickr for startDate and endDate inputs
             flatpickr("#startDate", {
                 altInput: true,
@@ -339,65 +339,69 @@
 
 @push('scripts')
     <script>
-        $(document).on('click', '.undo-order', function(e) {
-            e.preventDefault();
+        jQuery(document).ready(
+            function($) {
+                $(document).on('click', '.undo-order', function(e) {
+                    e.preventDefault();
 
-            let orderId = $(this).data('order-id');
-            let soldItem = $(this).data('sold-item');
-            let reportId = $(this).data('report-id'); // Get the report_id if available
+                    let orderId = $(this).data('order-id');
+                    let soldItem = $(this).data('sold-item');
+                    let reportId = $(this).data('report-id'); // Get the report_id if available
 
-            // Use SweetAlert2 for confirmation dialog
-            Swal.fire({
-                title: 'Are you sure?',
-                text: "Do you really want to undo this order?",
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonText: 'Yes, undo it!',
-                cancelButtonText: 'No, keep it'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    // Make the AJAX request if confirmed
-                    $.ajax({
-                        url: "{{ route('manager.orders.undo') }}", // Route to handle the undo action
-                        method: 'POST',
-                        data: {
-                            _token: "{{ csrf_token() }}",
-                            order_id: orderId,
-                            sold_item: soldItem,
-                            report_id: reportId // Pass the report_id only if available
-                        },
-                        success: function(response) {
-                            if (response.success) {
-                                // Success alert with SweetAlert2
-                                Swal.fire({
-                                    title: 'Success!',
-                                    text: 'Order successfully undone and stock updated!',
-                                    icon: 'success',
-                                    confirmButtonText: 'OK'
-                                }).then(() => {
-                                    $('#orderRow-' + orderId)
-                                .remove(); // Remove the row from the table
-                                });
-                            } else {
-                                Swal.fire({
-                                    title: 'Failed',
-                                    text: 'Failed to undo order. Please try again.',
-                                    icon: 'error',
-                                    confirmButtonText: 'OK'
-                                });
-                            }
-                        },
-                        error: function(xhr) {
-                            Swal.fire({
-                                title: 'Error',
-                                text: 'An error occurred while processing your request.',
-                                icon: 'error',
-                                confirmButtonText: 'OK'
+                    // Use SweetAlert2 for confirmation dialog
+                    Swal.fire({
+                        title: 'Are you sure?',
+                        text: "Do you really want to undo this order?",
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonText: 'Yes, undo it!',
+                        cancelButtonText: 'No, keep it'
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            // Make the AJAX request if confirmed
+                            $.ajax({
+                                url: "{{ route('manager.orders.undo') }}", // Route to handle the undo action
+                                method: 'POST',
+                                data: {
+                                    _token: "{{ csrf_token() }}",
+                                    order_id: orderId,
+                                    sold_item: soldItem,
+                                    report_id: reportId // Pass the report_id only if available
+                                },
+                                success: function(response) {
+                                    if (response.success) {
+                                        // Success alert with SweetAlert2
+                                        Swal.fire({
+                                            title: 'Success!',
+                                            text: 'Order successfully undone and stock updated!',
+                                            icon: 'success',
+                                            confirmButtonText: 'OK'
+                                        }).then(() => {
+                                            $('#orderRow-' + orderId)
+                                        .remove(); // Remove the row from the table
+                                        });
+                                    } else {
+                                        Swal.fire({
+                                            title: 'Failed',
+                                            text: 'Failed to undo order. Please try again.',
+                                            icon: 'error',
+                                            confirmButtonText: 'OK'
+                                        });
+                                    }
+                                },
+                                error: function(xhr) {
+                                    Swal.fire({
+                                        title: 'Error',
+                                        text: 'An error occurred while processing your request.',
+                                        icon: 'error',
+                                        confirmButtonText: 'OK'
+                                    });
+                                }
                             });
                         }
                     });
-                }
-            });
-        });
+                });
+            }
+        );
     </script>
 @endpush

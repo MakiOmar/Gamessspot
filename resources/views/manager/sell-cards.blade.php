@@ -1,6 +1,6 @@
 @extends('layouts.admin')
 @push('styles')
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/17.0.8/css/intlTelInput.min.css">
+<link rel="stylesheet" href="{{ asset('assets/css/intlTelInput.min.css') }}">
 <style>
     label{
         display:block
@@ -95,82 +95,122 @@
             </div>
         </div>
     </div>
+
+    <!-- Code details -->
+    <div class="modal fade" id="codeDetails" tabindex="-1" aria-labelledby="codeDetailsLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="codeDetailsLabel">Order Created!</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Copy the code below:</p>
+                    <input type="text" id="orderCodeInput" class="form-control" readonly>
+                    <button id="copyOrderCodeBtn" class="btn btn-primary mt-3">Copy Code</button>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-danger" data-bs-dismiss="modal" id="closeOrderModalBtn">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
 @endsection
 
 @push('scripts')
-<script src="https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/17.0.8/js/intlTelInput.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/17.0.8/js/utils.js"></script>
-<script>
-    const input = document.querySelector("#buyer_phone");
-    const iti = window.intlTelInput(input, {
-        initialCountry: "auto", // Automatically detect the user's country
-        separateDialCode: true, // Show country code separately
-        geoIpLookup: function(success, failure) {
-            // Automatically detect the user's country using an API
-            fetch("https://ipinfo.io/json", {mode: "cors"})
-            .then(response => response.json())
-            .then((response) => {
-                const countryCode = (response && response.country) ? response.country : "eg";
-                success(countryCode);
-            })
-            .catch(() => failure());
+    <script src="{{ asset('assets/js/intlTelInput.min.js') }}"></script>
+    <script src="{{ asset('assets/js/utils.js') }}"></script>
+    <script>
+        const input = document.querySelector("#buyer_phone");
+        const iti = window.intlTelInput(input, {
+            initialCountry: "auto", // Automatically detect the user's country
+            separateDialCode: true, // Show country code separately
+            geoIpLookup: function(success, failure) {
+                // Automatically detect the user's country using an API
+                fetch("https://ipinfo.io/json", {mode: "cors"})
+                .then(response => response.json())
+                .then((response) => {
+                    const countryCode = (response && response.country) ? response.country : "eg";
+                    success(countryCode);
+                })
+                .catch(() => failure());
+            }
+        });
+        window.iti = iti;
+        function openOrderForm(categoryId, categoryName) {
+            document.getElementById('card_category_id').value = categoryId;
+            document.getElementById('categoryName').textContent = categoryName;
+            document.getElementById('orderForm').reset();
+            jQuery('#orderModal').modal('show');
         }
-    });
-    window.iti = iti;
-    function openOrderForm(categoryId, categoryName) {
-        document.getElementById('card_category_id').value = categoryId;
-        document.getElementById('categoryName').textContent = categoryName;
-        document.getElementById('orderForm').reset();
-        $('#orderModal').modal('show');
-    }
+        function showOrderModal(code) {
+            // Set the code in the input field
+            const inputField = document.getElementById('orderCodeInput');
+            inputField.value = code;
 
-    function submitOrder() {
-        let formData = new FormData(document.getElementById('orderForm'));
-        if (iti.isValidNumber()) {
-            $.ajax({
-                url: "{{ route('manager.orders.sell.card') }}",
-                type: 'POST',
-                data: formData,
-                processData: false,
-                contentType: false,
-                success: function(data) {
-                    if (data.success) {
-                        document.getElementById('orderSuccessMessage').textContent = data.message + ' Code: ' + data.code;
-                        document.getElementById('orderSuccessMessage').classList.remove('d-none');
-                        Swal.fire({
-                            icon: 'success',
-                            title: 'Order Created!',
-                            text: `Code: ${data.code} (copied)`,
-                            showConfirmButton: true,
-                        });
-                        navigator.clipboard.writeText(data.code); // Copy code to clipboard
-                        $('#orderModal').modal('hide');
-                    } else {
+            // Show the modal
+            jQuery('#codeDetails').modal('show');
+
+            // Handle the copy button click
+            document.getElementById('copyOrderCodeBtn').addEventListener('click', () => {
+                navigator.clipboard.writeText(code).then(() => {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Copied!',
+                        text: 'The code has been copied to your clipboard.',
+                        timer: 2000,
+                        showConfirmButton: false,
+                    });
+                });
+            });
+
+            // Add a listener for when the modal is closed
+            document.getElementById('closeOrderModalBtn').addEventListener('click', () => {
+                jQuery('#codeDetails').modal('hide');
+            });
+        }
+        function submitOrder() {
+            let formData = new FormData(document.getElementById('orderForm'));
+            if (iti.isValidNumber()) {
+                jQuery.ajax({
+                    url: "{{ route('manager.orders.sell.card') }}",
+                    type: 'POST',
+                    data: formData,
+                    processData: false,
+                    contentType: false,
+                    success: function(data) {
+                        if (data.success) {
+                            document.getElementById('orderSuccessMessage').textContent = data.message + ' Code: ' + data.code;
+                            document.getElementById('orderSuccessMessage').classList.remove('d-none');
+                            showOrderModal(data.code);
+                            jQuery('#orderModal').modal('hide');
+                        } else {
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Error',
+                                text: data.message
+                            });
+                        }
+                    },
+                    error: function(xhr, status, error) {
                         Swal.fire({
                             icon: 'error',
-                            title: 'Error',
-                            text: data.message
+                            title: 'Error!',
+                            text: 'An unexpected error occurred. Please try again later.'
                         });
+                        console.error('Error:', error);
                     }
-                },
-                error: function(xhr, status, error) {
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Error!',
-                        text: 'An unexpected error occurred. Please try again later.'
-                    });
-                    console.error('Error:', error);
-                }
-            });
-        } else {
-            Swal.fire({
-                title: 'Invalid Phone Number',
-                text: 'Please enter a valid phone number.',
-                icon: 'error',
-                confirmButtonText: 'OK'
-            });
+                });
+            } else {
+                Swal.fire({
+                    title: 'Invalid Phone Number',
+                    text: 'Please enter a valid phone number.',
+                    icon: 'error',
+                    confirmButtonText: 'OK'
+                });
+            }
+            
         }
-        
-    }
-</script>
+    </script>
 @endpush

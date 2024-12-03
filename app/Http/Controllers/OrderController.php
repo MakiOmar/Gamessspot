@@ -273,7 +273,9 @@ class OrderController extends Controller
         // Fetch the appropriate account based on type, stock availability, and game status
         $accountQuery = Account::where('game_id', $validatedData['game_id'])
         ->join('games', 'accounts.game_id', '=', 'games.id')
-        ->where("games.{$sold_item_status}", true); // Ensure the game's status is true
+        ->where("games.{$sold_item_status}", true) // Ensure the game's status is true
+        ->orderBy('accounts.created_at', 'asc'); // Order by the oldest date
+
 
         if ($validatedData['type'] === 'offline') {
             $accountQuery->where($sold_item, '>', 0);
@@ -281,7 +283,7 @@ class OrderController extends Controller
             $accountQuery->where($sold_offline_item, 0)->where($sold_item, '>', 0);
         } elseif ($validatedData['type'] === 'secondary') {
             $accountQuery->where($sold_offline_item, 0)
-                    ->where('ps' . $validatedData['platform'] . '_primary_stock', 0)
+                    /*->where('ps' . $validatedData['platform'] . '_primary_stock', 0)*/
                     ->where($sold_item, '>', 0);
         }
 
@@ -355,7 +357,7 @@ class OrderController extends Controller
 
             // Return an error response
             return response()->json([
-            'message' => 'Failed to create order. Please try again.',
+            'message' => 'Not possible to create the order. Please try again later.',
             'error'   => $e->getMessage(),
             ], 500);
         }

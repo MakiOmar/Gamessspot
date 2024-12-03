@@ -142,7 +142,7 @@
 @push('scripts')
 <!-- JavaScript for handling modal edit functionality -->
 <script>
-    $(document).ready(function() {
+    jQuery(document).ready(function($) {
         // Handle delete user button click using event delegation
         $(document).on('click', '.deleteUserButton', function() {
             var userId = $(this).data('id'); // Get user ID from button data attribute

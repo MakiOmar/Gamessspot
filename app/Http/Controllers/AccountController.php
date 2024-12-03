@@ -15,7 +15,7 @@ class AccountController extends Controller
     public function index()
     {
         // Assuming you want paginated accounts
-        $accounts = Account::paginate(10); // Adjust pagination as needed
+        $accounts = Account::orderBy('created_at', 'asc')->paginate(10);
 
         $games = Game::all(); // Fetch all games
 
@@ -42,6 +42,7 @@ class AccountController extends Controller
                 $q->where('title', 'like', "%{$query}%");
             }
         )
+        ->orderBy('created_at', 'asc') // Order by the oldest date
         ->get();
 
         return view('manager.partials.account_rows', compact('accounts'))->render(); // Use a partial view to render rows

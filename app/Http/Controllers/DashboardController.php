@@ -38,8 +38,8 @@ class DashboardController extends Controller
         $topBuyers = $this->topBuyers();
 
         $StockLevels = $this->getStockLevels();
-        $lowStockGames = $StockLevels[0];
-        $highStockGames = $StockLevels[1];
+        $lowStockGames = $StockLevels[0] ?? collect([]);
+        $highStockGames = $StockLevels[1] ?? collect([]);
 
         $total = $totalCodeCost + $accountsCost;
         return view(
@@ -80,26 +80,54 @@ class DashboardController extends Controller
     }
     public function getStockLevels()
     {
-    // Low stock for PS4 primary and offline, PS5 primary and offline (stock < 20)
-        $lowStockGames = Game::select(
-            'games.*',
-            DB::raw('COALESCE(SUM(accounts.ps4_primary_stock), 0) + COALESCE(SUM(accounts.ps4_offline_stock), 0) + COALESCE(SUM(accounts.ps5_primary_stock), 0) + COALESCE(SUM(accounts.ps5_offline_stock), 0) as total_primary_offline_stock')
-        )
-        ->join('accounts', 'games.id', '=', 'accounts.game_id')
-        ->groupBy('games.id')
-        ->having('total_primary_offline_stock', '<', 20)
-        ->get();
+        $stocks = [
+            'lowStock' => [
+                'columns' => ['ps4_primary_stock', 'ps4_offline_stock', 'ps5_primary_stock', 'ps5_offline_stock'],
+                'condition' => '<',
+                'threshold' => 20,
+            ],
+            'highStock' => [
+                'columns' => ['ps4_secondary_stock', 'ps5_secondary_stock'],
+                'condition' => '>',
+                'threshold' => 200,
+            ],
+        ];
 
-    // High stock for PS4 and PS5 secondary (stock > 200)
-        $highStockGames = Game::select(
-            'games.*',
-            DB::raw('COALESCE(SUM(accounts.ps4_secondary_stock), 0) + COALESCE(SUM(accounts.ps5_secondary_stock), 0) as total_secondary_stock')
-        )
-        ->join('accounts', 'games.id', '=', 'accounts.game_id')
-        ->groupBy('games.id')
-        ->having('total_secondary_stock', '>', 200)
-        ->get();
+        $results = [];
 
-        return  array($lowStockGames, $highStockGames);
+        foreach ($stocks as $key => $stock) {
+            // Validate columns
+            if (empty($stock['columns']) || !is_array($stock['columns'])) {
+                $results[$key] = collect(); // Return an empty collection if invalid
+                continue;
+            }
+
+            // Generate stock aggregation logic dynamically
+            $stockColumns = array_map(fn($col) => "COALESCE(SUM(accounts.$col), 0)", $stock['columns']);
+            $stockExpression = implode(' + ', $stockColumns);
+
+            $results[$key] = Game::select(
+                'games.id',
+                'games.title',
+                'games.code',
+                'games.full_price',
+                'games.ps4_image_url',
+                'games.ps5_image_url',
+                DB::raw("$stockExpression as total_stock")
+            )
+            ->join('accounts', 'games.id', '=', 'accounts.game_id')
+            ->groupBy(
+                'games.id',
+                'games.title',
+                'games.code',
+                'games.full_price',
+                'games.ps4_image_url',
+                'games.ps5_image_url'
+            )
+            ->having('total_stock', $stock['condition'], $stock['threshold'])
+            ->get();
+        }
+
+        return $results;
     }
 }

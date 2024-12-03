@@ -165,139 +165,139 @@
 @push('scripts')
 <script>
     jQuery(document).ready(function($) {
-    // Set up AJAX to include CSRF token in every request
-    $.ajaxSetup({
-        headers: {
-            'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
-        }
-    });
-
-    // When the "Create Game" button is clicked
-    $('#createGameBtn').on('click', function() {
-        // Reset the form fields for creating a new game
-        $('#editGameForm').find('input, select').val(''); // Reset all input fields and selects
-        $('#editGameForm').find('.is-invalid').removeClass('is-invalid'); // Remove validation classes
-        $('#editGameForm').find('.invalid-feedback').remove(); // Remove previous error messages
-        $('#editGameModalLabel').text('Create New Game'); // Update modal title
-
-        // Hide image previews for new game
-        $('#ps4ImagePreview, #ps4ImageLink').hide();
-        $('#ps5ImagePreview, #ps5ImageLink').hide();
-
-        // Remove any game ID for the new game
-        $('#gameId').val('');
-    });
-
-    // When the "Edit" button is clicked
-    $('.edit-game').on('click', function() {
-        var gameId = $(this).data('id');
-
-        // Clear any previous error messages or inputs
-        $('#editGameForm').find('input, select').val(''); // Reset all input fields to blank
-        $('#editGameForm').find('.is-invalid').removeClass('is-invalid'); // Remove previous validation errors
-        $('#editGameForm').find('.invalid-feedback').remove(); // Remove previous error messages
-        $('#editGameModalLabel').text('Edit Game'); // Update modal title
-
-        // Use AJAX to fetch the game data
-        $.ajax({
-            url: '/manager/games/' + gameId + '/edit',
-            method: 'GET',
-            success: function(response) {
-                // Populate the form fields with the game data
-                $('#gameId').val(response.id);
-                $('#gameName').val(response.title);
-                $('#gameCode').val(response.code);
-                $('#fullPrice').val(response.full_price);
-                $('#ps4PrimaryPrice').val(response.ps4_primary_price);
-                $('#ps4PrimaryStatus').val(response.ps4_primary_status);
-                $('#ps4SecondaryPrice').val(response.ps4_secondary_price);
-                $('#ps4SecondaryStatus').val(response.ps4_secondary_status);
-                $('#ps4OfflinePrice').val(response.ps4_offline_price);
-                $('#ps4OfflineStatus').val(response.ps4_offline_status);
-                $('#ps5PrimaryPrice').val(response.ps5_primary_price);
-                $('#ps5PrimaryStatus').val(response.ps5_primary_status);
-                $('#ps5OfflinePrice').val(response.ps5_offline_price);
-                $('#ps5OfflineStatus').val(response.ps5_offline_status);
-                $('#ps5SecondaryPrice').val(response.ps5_secondary_price);
-                $('#ps5SecondaryStatus').val(response.ps5_secondary_status);
-
-                // Generate preview for the PS4 image
-                if (response.ps4_image_url) {
-                    $('#ps4ImagePreview').attr('src', '/' + response.ps4_image_url).show();
-                    $('#ps4ImageLink').attr('href', '/' + response.ps4_image_url).show();
-                } else {
-                    $('#ps4ImagePreview').hide(); // Hide if no image available
-                    $('#ps4ImageLink').hide();
-                }
-
-                // Generate preview for the PS5 image
-                if (response.ps5_image_url) {
-                    $('#ps5ImagePreview').attr('src', '/' + response.ps5_image_url).show();
-                    $('#ps5ImageLink').attr('href', '/' + response.ps5_image_url).show();
-                } else {
-                    $('#ps5ImagePreview').hide(); // Hide if no image available
-                    $('#ps5ImageLink').hide();
-                }
+        // Set up AJAX to include CSRF token in every request
+        $.ajaxSetup({
+            headers: {
+                'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
             }
         });
-    });
 
-    // Handle form submission via AJAX (for both Create and Edit)
-    $('#editGameForm').on('submit', function(e) {
-        e.preventDefault();
+        // When the "Create Game" button is clicked
+        $('#createGameBtn').on('click', function() {
+            // Reset the form fields for creating a new game
+            $('#editGameForm').find('input, select').val(''); // Reset all input fields and selects
+            $('#editGameForm').find('.is-invalid').removeClass('is-invalid'); // Remove validation classes
+            $('#editGameForm').find('.invalid-feedback').remove(); // Remove previous error messages
+            $('#editGameModalLabel').text('Create New Game'); // Update modal title
 
-        var gameId = $('#gameId').val();
-        var formData = new FormData(this);
+            // Hide image previews for new game
+            $('#ps4ImagePreview, #ps4ImageLink').hide();
+            $('#ps5ImagePreview, #ps5ImageLink').hide();
 
-        // If creating a new game, do not append the PUT method
-        if (!gameId) {
-            var url = '/manager/games/store';
-            var method = 'POST';
-        } else {
-            var url = '/manager/games/' + gameId;
-            var method = 'POST';
-            formData.append('_method', 'PUT'); // Append method for updating
-        }
+            // Remove any game ID for the new game
+            $('#gameId').val('');
+        });
 
-        $.ajax({
-            url: url,
-            method: method,
-            data: formData,
-            contentType: false, // Required for file uploads
-            processData: false, // Required for file uploads
-            success: function(response) {
-                Swal.fire({
-                    title: 'Success!',
-                    text: 'Game saved successfully!',
-                    icon: 'success',
-                    confirmButtonText: 'OK'
-                });
+        // When the "Edit" button is clicked
+        $('.edit-game').on('click', function() {
+            var gameId = $(this).data('id');
 
-                location.reload(); // Reload the page or update the table dynamically
-            },
-            error: function(xhr) {
-                if (xhr.status === 422) { // Handle validation errors
-                    var errors = xhr.responseJSON.errors;
+            // Clear any previous error messages or inputs
+            $('#editGameForm').find('input, select').val(''); // Reset all input fields to blank
+            $('#editGameForm').find('.is-invalid').removeClass('is-invalid'); // Remove previous validation errors
+            $('#editGameForm').find('.invalid-feedback').remove(); // Remove previous error messages
+            $('#editGameModalLabel').text('Edit Game'); // Update modal title
 
-                    // Loop through validation errors and display them
-                    $.each(errors, function(key, value) {
-                        var inputField = $('#' + key);
-                        inputField.addClass('is-invalid');
-                        inputField.after('<div class="invalid-feedback">' + value[0] + '</div>');
-                    });
-                } else {
+            // Use AJAX to fetch the game data
+            $.ajax({
+                url: '/manager/games/' + gameId + '/edit',
+                method: 'GET',
+                success: function(response) {
+                    // Populate the form fields with the game data
+                    $('#gameId').val(response.id);
+                    $('#gameName').val(response.title);
+                    $('#gameCode').val(response.code);
+                    $('#fullPrice').val(response.full_price);
+                    $('#ps4PrimaryPrice').val(response.ps4_primary_price);
+                    $('#ps4PrimaryStatus').val(response.ps4_primary_status);
+                    $('#ps4SecondaryPrice').val(response.ps4_secondary_price);
+                    $('#ps4SecondaryStatus').val(response.ps4_secondary_status);
+                    $('#ps4OfflinePrice').val(response.ps4_offline_price);
+                    $('#ps4OfflineStatus').val(response.ps4_offline_status);
+                    $('#ps5PrimaryPrice').val(response.ps5_primary_price);
+                    $('#ps5PrimaryStatus').val(response.ps5_primary_status);
+                    $('#ps5OfflinePrice').val(response.ps5_offline_price);
+                    $('#ps5OfflineStatus').val(response.ps5_offline_status);
+                    $('#ps5SecondaryPrice').val(response.ps5_secondary_price);
+                    $('#ps5SecondaryStatus').val(response.ps5_secondary_status);
+
+                    // Generate preview for the PS4 image
+                    if (response.ps4_image_url) {
+                        $('#ps4ImagePreview').attr('src', '/' + response.ps4_image_url).show();
+                        $('#ps4ImageLink').attr('href', '/' + response.ps4_image_url).show();
+                    } else {
+                        $('#ps4ImagePreview').hide(); // Hide if no image available
+                        $('#ps4ImageLink').hide();
+                    }
+
+                    // Generate preview for the PS5 image
+                    if (response.ps5_image_url) {
+                        $('#ps5ImagePreview').attr('src', '/' + response.ps5_image_url).show();
+                        $('#ps5ImageLink').attr('href', '/' + response.ps5_image_url).show();
+                    } else {
+                        $('#ps5ImagePreview').hide(); // Hide if no image available
+                        $('#ps5ImageLink').hide();
+                    }
+                }
+            });
+        });
+
+        // Handle form submission via AJAX (for both Create and Edit)
+        $('#editGameForm').on('submit', function(e) {
+            e.preventDefault();
+
+            var gameId = $('#gameId').val();
+            var formData = new FormData(this);
+
+            // If creating a new game, do not append the PUT method
+            if (!gameId) {
+                var url = '/manager/games/store';
+                var method = 'POST';
+            } else {
+                var url = '/manager/games/' + gameId;
+                var method = 'POST';
+                formData.append('_method', 'PUT'); // Append method for updating
+            }
+
+            $.ajax({
+                url: url,
+                method: method,
+                data: formData,
+                contentType: false, // Required for file uploads
+                processData: false, // Required for file uploads
+                success: function(response) {
                     Swal.fire({
-                        title: 'Error',
-                        text: 'An error occurred.',
-                        icon: 'error',
+                        title: 'Success!',
+                        text: 'Game saved successfully!',
+                        icon: 'success',
                         confirmButtonText: 'OK'
                     });
 
+                    location.reload(); // Reload the page or update the table dynamically
+                },
+                error: function(xhr) {
+                    if (xhr.status === 422) { // Handle validation errors
+                        var errors = xhr.responseJSON.errors;
+
+                        // Loop through validation errors and display them
+                        $.each(errors, function(key, value) {
+                            var inputField = $('#' + key);
+                            inputField.addClass('is-invalid');
+                            inputField.after('<div class="invalid-feedback">' + value[0] + '</div>');
+                        });
+                    } else {
+                        Swal.fire({
+                            title: 'Error',
+                            text: 'An error occurred.',
+                            icon: 'error',
+                            confirmButtonText: 'OK'
+                        });
+
+                    }
                 }
-            }
+            });
         });
     });
-});
 
 </script>
 @endpush

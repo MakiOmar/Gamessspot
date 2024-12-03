@@ -6,15 +6,15 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
     <title>@yield('title', 'Manager Dashboard')</title>
-    <!-- Include Bootstrap CSS -->
-    @vite(['resources/sass/app.scss', 'resources/js/app.js'])
     @stack('styles')
     <!-- jQuery CDN -->
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="{{ asset('assets/js/jquery.js') }}"></script>
+    <script src="{{ asset('build/assets/app-CrG75o6_.js') }}"></script>
     <!-- SweetAlert2 -->
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="{{ asset('assets/js/sweetalert2.js') }}"></script>
     <!-- Flatpickr CSS -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <link rel="stylesheet" href="{{ asset('assets/css/flatpickr.css') }}">
+    <link rel="stylesheet" href="{{ asset('build/assets/app-DqME6eCz.css') }}">
     <style>
         .open-modal{
             cursor: pointer;
@@ -96,12 +96,10 @@
             @include('layouts.footer') <!-- Reusable footer -->
         </div>
     </div>
-    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.6/dist/umd/popper.min.js"></script>
-    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.bundle.min.js"></script>
-    <!-- Flatpickr JS -->
-    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
-    <!-- FontAwesome for icons -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/js/all.min.js"></script>
+    <script src="{{ asset('assets/js/popperjs.js') }}"></script>
+    <script src="{{ asset('assets/js/bootstrap.bundle.min.js') }}"></script>
+    <script src="{{ asset('assets/js/flatpickr.js') }}"></script>
+    <script src="{{ asset('assets/js/fontawesome-all.js') }}"></script>
     <script>
         document.getElementById("menu-toggle").addEventListener("click", function(e) {
             e.preventDefault();

@@ -196,7 +196,7 @@
 @push('scripts')
 <!-- JavaScript for handling AJAX form submission -->
 <script>
-    $(document).ready(function() {
+    jQuery(document).ready(function($) {
         // Handle form submission
         $('#addAccountForm').on('submit', function(e) {
             e.preventDefault();

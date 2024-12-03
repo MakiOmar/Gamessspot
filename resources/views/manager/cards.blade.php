@@ -85,7 +85,7 @@
     function submitCardForm() {
         let formData = new FormData(document.getElementById('addCardForm'));
 
-        $.ajax({
+        jQuery.ajax({
             url: "{{ route('cards.store') }}", // Adjust route as needed
             type: 'POST',
             data: formData,
@@ -103,7 +103,7 @@
                         showConfirmButton: false,
                         timer: 1500
                     });
-                    $('#addCardModal').modal('hide'); // Close the modal
+                    jQuery('#addCardModal').modal('hide'); // Close the modal
                     location.reload(); // Refresh the page to update the table (you could also update the DOM without a reload)
                 } else {
                     Swal.fire({

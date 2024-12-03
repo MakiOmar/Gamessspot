@@ -28,12 +28,12 @@
             }))
             <!-- Cards Menu -->
             <a href="#cardsMenu" class="list-group-item list-group-item-action bg-light" data-bs-toggle="collapse">
-                Cards <span class="float-end"><i class="fas fa-chevron-down"></i></span>
+                Gift Cards <span class="float-end"><i class="fas fa-chevron-down"></i></span>
             </a>
             <div class="collapse" id="cardsMenu">
                 <a href="{{ route( 'card-categories.index' ) }}" class="list-group-item list-group-item-action">Categories</a>
-                <a href="{{ route( 'cards.index' ) }}" class="list-group-item list-group-item-action">Cards</a>
-                <a href="{{ route( 'manager.sell-cards' ) }}" class="list-group-item list-group-item-action">Sell cards</a>
+                <a href="{{ route( 'cards.index' ) }}" class="list-group-item list-group-item-action">Gift cards list/add</a>
+                <a href="{{ route( 'manager.sell-cards' ) }}" class="list-group-item list-group-item-action">Sell gift cards</a>
             </div>
             @endif
             <a href="{{ route( 'manager.orders' ) }}" class="list-group-item bg-light">Sell log</a>

@@ -102,7 +102,7 @@
 
 @push('scripts')
 <script>
-    $(document).ready(function() {
+    jQuery(document).ready(function($) {
         // Handle search input
         $('#searchStoreProfile').on('input', function() {
             let query = $(this).val();

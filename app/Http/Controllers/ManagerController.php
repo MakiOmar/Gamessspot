@@ -158,6 +158,9 @@ class ManagerController extends Controller
         $offline_stock   = "ps{$n}_offline_stock";
         $primary_stock   = "ps{$n}_primary_stock";
         $secondary_stock = "ps{$n}_secondary_stock";
+        $offline_status   = "ps{$n}_offline_status";
+        $primary_status   = "ps{$n}_primary_status";
+        $secondary_status = "ps{$n}_secondary_status";
         $image_url       = "ps{$n}_image_url";
 
         // Fetch games and their special prices if the user has a store profile
@@ -167,6 +170,9 @@ class ManagerController extends Controller
                 'games.title',
                 'games.code',
                 "games.{$image_url}",
+                "games.{$offline_status}",
+                "games.{$primary_status}",
+                "games.{$secondary_status}",
                 DB::raw('COALESCE(special_prices.ps4_primary_price, games.ps4_primary_price) as ps4_primary_price'),
                 DB::raw('COALESCE(special_prices.ps4_secondary_price, games.ps4_secondary_price) as ps4_secondary_price'),
                 DB::raw('COALESCE(special_prices.ps4_offline_price, games.ps4_offline_price) as ps4_offline_price'),
@@ -186,11 +192,30 @@ class ManagerController extends Controller
             ->havingRaw("SUM(accounts.{$offline_stock}) > 0 OR SUM(accounts.{$primary_stock}) > 0 OR SUM(accounts.{$secondary_stock}) > 0")
             ->paginate(10);  // Paginate 10 results per page
 
+        // Determine if the primary stock is active
+        foreach ($psGames as $game) {
+            $oldestAccount = DB::table('accounts')
+                ->where('game_id', $game->id)
+                ->where($primary_stock, '>', 0)
+                ->orderBy('created_at', 'asc')
+                ->first();
+
+            $game->is_primary_active = false;
+
+            if ($oldestAccount) {
+                // Check if offline stock is 0 for the oldest account
+                if ($oldestAccount->$offline_stock == 0) {
+                    $game->is_primary_active = true;
+                }
+            }
+        }
+
         $storeProfiles = StoresProfile::all(); // Fetch all store profiles
 
         // Return the view with the games, platform indicator, and store profiles
         return view('manager.games_listings', compact('psGames', 'n', 'storeProfiles'));
     }
+
 
 
     /**

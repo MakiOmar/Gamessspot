@@ -1,13 +1,20 @@
 @extends('layouts.admin')
 
 @push('styles')
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/17.0.8/css/intlTelInput.min.css">
+<link rel="stylesheet" href="{{ asset('assets/css/intlTelInput.min.css') }}">
 <style>
     label{
         display:block
     }
     div.iti{
         width: 100%
+    }
+    .disabled{
+        opacity: 0.4;
+    }
+    .game-card .card-body{
+        padding: 5px;
+        margin-bottom: 20px;
     }
 </style>
 @endpush
@@ -22,7 +29,7 @@
             @endphp
 
             @foreach($psGames as $game)
-                <div class="col-md-4 mb-4">
+                <div class="col-md-4 mb-4 game-card">
                     <div class="card">
                         @php
                             $image_url = "ps{$n}_image_url";
@@ -47,11 +54,16 @@
                                         $stock = ${"{$type}_stock"};
                                         $price = ${"{$type}_price"};
                                         $backgroundColor = $type === 'offline' ? '#f64e60' : ($type === 'primary' ? '#1bc5bd' : '#ffa800');
+                                        $status = "ps{$n}_{$type}_status";
+                                        $active = 'open-modal';
+                                        if ( ! $game->$status || $game->$stock < 1 || ( 'primary' === $type && ! $game->is_primary_active ) ) {
+                                            $active = 'disabled';
+                                        }                                        
                                     @endphp
                                         <!-- Dynamic Buttons -->
                                         <a title="{{ ucfirst($type) }}" 
-                                        class="d-inline-flex justify-content-center align-items-center rounded text-light font-weight-bold m-2 {{ $game->$stock > 0 ? 'open-modal' : '' }}" 
-                                        style="padding:10px;background-color: {{ $backgroundColor }};"
+                                        class="d-inline-flex justify-content-center align-items-center rounded text-light font-weight-bold {{ $active }}" 
+                                        style="padding:5px;margin:3px;background-color: {{ $backgroundColor }};"
                                         data-game-id="{{ $game->id }}" 
                                         data-game-title="{{ $game->title }}" 
                                         data-type="{{ $type }}"
@@ -189,14 +201,17 @@
 @endsection
 
 @push('scripts')
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/17.0.8/js/intlTelInput.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/17.0.8/js/utils.js"></script>
+    <script src="{{ asset('assets/js/intlTelInput.min.js') }}"></script>
+    <script src="{{ asset('assets/js/utils.js') }}"></script>
     <script>
         jQuery(document).ready(function($) {
             const input = document.querySelector("#buyer_phone");
             const iti = window.intlTelInput(input, {
                 initialCountry: "auto", // Automatically detect the user's country
                 separateDialCode: true, // Show country code separately
+                countrySearch: true, // Show country code separately
+                preferredCountries: ["us", "gb", "eg"],
+                allowDropdown: true,
                 geoIpLookup: function(success, failure) {
                     // Automatically detect the user's country using an API
                     fetch("https://ipinfo.io/json", {mode: "cors"})
@@ -255,7 +270,7 @@
                 $('#game_platform').val(platform);
 
                 // Show the modal
-                gameModal.show();
+                $('#gameModal').modal('show');
             });
 
             // Handle form submission with AJAX
@@ -358,6 +373,6 @@
                 });
             });
 
-    });
+        });
     </script>
 @endpush
