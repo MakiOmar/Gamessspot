@@ -14,6 +14,7 @@ use App\Models\Report;
 use App\Models\Card;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Cache;
+use Carbon\Carbon;
 
 class OrderController extends Controller
 {
@@ -56,8 +57,10 @@ class OrderController extends Controller
                     $query->with('game');  // Load game only if account exists
                 },
                 'card'  // Load card only if card_id is not null
-            ])->where('seller_id', $user->id)
-              ->paginate($this->pagination);
+            ])
+            ->where('seller_id', $user->id)
+            ->whereDate('created_at', Carbon::today()) // Filter by today's date
+            ->paginate($this->pagination);
         } elseif (
             $user->roles->contains(
                 function ($role) {
@@ -104,6 +107,14 @@ class OrderController extends Controller
 
         // Build the query to filter orders
         $orders = Order::with(array( 'seller', 'account.game' ));
+        // Check if the user is an admin
+        $user = Auth::user();
+        $isAdmin = $user->roles->contains('name', 'admin');
+
+        // If the user is not an admin, filter by seller_id
+        if (!$isAdmin) {
+            $orders->where('seller_id', $user->id);
+        }
 
         // Filter by buyer phone if search query exists
         if ($query) {
