@@ -208,7 +208,7 @@
         
         @if ( Auth::user()->roles->contains('name', 'admin') )
         @include('manager.dashboard-admin')
-        @elseif(Auth::user()->roles->contains('name', 'sales'))
+        @elseif(Auth::user()->roles->contains('name', 'sales') || Auth::user()->roles->contains('name', 'account manager'))
         @include('manager.dashboard-sales')
         @endif
     </div>

@@ -14,12 +14,14 @@
                         <input type="text" class="form-control" name="searchOrder" id="searchOrder" placeholder="Search orders by buyer phone">
                         <input type="hidden" id="storeId" value="@if( ! empty( $_GET['id'] ) ){{ $_GET['id'] }}@else{{0}}@endif">
                     </div>
+                    @if( ! Auth::user()->roles->contains('name', 'sales') )
                     <div class="w-50 d-flex align-items-center mb-2">
                         <!-- Start Date -->
                         <input type="date" class="form-control me-2" id="startDate" name="startDate" placeholder="Start Date">
                         <!-- End Date -->
                         <input type="date" class="form-control" id="endDate" name="endDate" placeholder="End Date">
                     </div>
+                    @endif
                 </div>
                 @if(Auth::user()->roles->contains('name', 'admin') || Auth::user()->roles->contains('name', 'accountant'))
                     <div class="d-flex justify-content-end align-items-center">
@@ -106,11 +108,13 @@
                                             </button>
                                     @endif
                                 @else
-                                    @if(Auth::user()->roles->contains('name', 'admin')  || Auth::user()->roles->contains('name', 'sales'))
+                                    @if(! Auth::user()->roles->contains('name', 'accountant') )
+                                        @if ( Auth::user()->roles->contains('name', 'admin') )
                                         <!-- Regular undo button -->
                                         <button class="btn btn-danger btn-sm undo-order" data-order-id="{{ $order->id }}" data-sold-item="{{ $order->sold_item }}">
                                             Undo
                                         </button>
+                                        @endif
                                         <!-- Button to open report modal for sales -->
                                         <button class="btn btn-warning btn-sm report-order" data-order-id="{{ $order->id }}" data-toggle="modal" data-target="#reportOrderModal">
                                             Actions
