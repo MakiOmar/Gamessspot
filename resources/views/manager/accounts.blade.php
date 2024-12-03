@@ -16,7 +16,7 @@
         </div>
         <div class="d-flex justify-content-end align-items-center">
             <!-- Add Account Button -->
-            <a type="button" data-bs-toggle="modal" data-bs-target="#addAccountModal">
+            <a type="button" id="addAccountButton" data-bs-toggle="modal" data-bs-target="#accountModal">
                 <svg xmlns="http://www.w3.org/2000/svg"  viewBox="0 0 512 512" width="32px" height="32px"><path fill="#32BEA6" d="M7.9,256C7.9,119,119,7.9,256,7.9C393,7.9,504.1,119,504.1,256c0,137-111.1,248.1-248.1,248.1C119,504.1,7.9,393,7.9,256z"/><path fill="#FFF" d="M391.5,214.5H297v-93.9c0-4-3.2-7.2-7.2-7.2h-68.1c-4,0-7.2,3.2-7.2,7.2v93.9h-93.9c-4,0-7.2,3.2-7.2,7.2v69.2c0,4,3.2,7.2,7.2,7.2h93.9v93.4c0,4,3.2,7.2,7.2,7.2h68.1c4,0,7.2-3.2,7.2-7.2v-93.4h94.5c4,0,7.2-3.2,7.2-7.2v-69.2C398.7,217.7,395.4,214.5,391.5,214.5z"/></svg>
             </a>
             @if( Auth::user()->roles->contains('name', 'admin') )
@@ -50,6 +50,7 @@
                     <th style="width: 114px;">Secondary (PS5)</th>
                     <th style="width: 99px;">Cost</th>
                     <th style="width: 120px;">Password</th>
+                    <th style="width: 150px;">Actions</th>
                 </tr>
             </thead>
             <tbody id="accountTableBody">
@@ -67,6 +68,28 @@
                     <td>{{ $account->ps5_secondary_stock }}</td>
                     <td>{{ $account->cost }}</td>
                     <td>{{ $account->password }}</td>
+                    <td>
+                        <!-- Edit Button -->
+                        <button type="button" class="btn btn-warning btn-sm editAccount" 
+                            data-id="{{ $account->id }}"
+                            data-mail="{{ $account->mail }}"
+                            data-password="{{ $account->password }}"
+                            data-game_id="{{ $account->game_id }}"
+                            data-region="{{ $account->region }}"
+                            data-cost="{{ $account->cost }}"
+                            data-birthdate="{{ $account->birthdate }}"
+                            data-login_code="{{ $account->login_code }}"
+                            data-ps4_primary="{{ $account->ps4_primary_stock }}"
+                            data-ps4_secondary="{{ $account->ps4_secondary_stock }}"
+                            data-ps4_offline="{{ $account->ps4_offline_stock }}"
+                            data-ps5_primary="{{ $account->ps5_primary_stock }}"
+                            data-ps5_secondary="{{ $account->ps5_secondary_stock }}"
+                            data-ps5_offline="{{ $account->ps5_offline_stock }}"
+                            data-bs-toggle="modal" 
+                            data-bs-target="#accountModal">
+                            Edit
+                        </button>
+                    </td>
                 </tr>
                 @endforeach
             </tbody>
@@ -79,30 +102,32 @@
     </div>
 </div>
 <!-- Bootstrap 5 Modal for Adding New Account -->
-<div class="modal fade" id="addAccountModal" tabindex="-1" aria-labelledby="addAccountModalLabel" aria-hidden="true">
+<div class="modal fade" id="accountModal" tabindex="-1" aria-labelledby="accountModalLabel" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
-            <!-- Form for Adding Account -->
-            <form id="addAccountForm" method="POST">
+            <form id="accountForm" method="POST">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="addAccountModalLabel">Add New Account</h5>
+                    <h5 class="modal-title" id="accountModalLabel">Manage Account</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
                     @csrf
+                    <!-- Hidden field for Account ID -->
+                    <input type="hidden" id="accountId" name="id">
+
                     <!-- Mail -->
                     <div class="form-group">
                         <label for="mail">Mail</label>
-                        <input type="email" class="form-control" id="mail" name="mail" placeholder="Enter email" required>
+                        <input type="email" class="form-control" id="mail" name="mail" required>
                     </div>
-                    
+
                     <!-- Password -->
                     <div class="form-group">
                         <label for="password">Password</label>
-                        <input type="text" class="form-control" id="password" name="password" placeholder="Enter password" required>
+                        <input type="text" class="form-control" id="password" name="password" required>
                     </div>
 
-                    <!-- Game Dropdown (Dynamically Generated) -->
+                    <!-- Game Dropdown -->
                     <div class="form-group">
                         <label for="game">Game</label>
                         <select class="form-control" id="game" name="game_id" required>
@@ -126,7 +151,7 @@
                     <!-- Cost -->
                     <div class="form-group">
                         <label for="cost">Cost</label>
-                        <input type="number" class="form-control" id="cost" name="cost" placeholder="Enter cost" required>
+                        <input type="number" class="form-control" id="cost" name="cost" required>
                     </div>
 
                     <!-- Birth Date -->
@@ -135,13 +160,15 @@
                         <input type="date" class="form-control" id="birthdate" name="birthdate" required>
                     </div>
 
-                    <!-- Login Code (Textarea) -->
-                    <div class="form-group mt-3">
+                    <!-- Login Code -->
+                    <div class="form-group">
                         <label for="login_code">Login Code</label>
-                        <textarea class="form-control" id="login_code" name="login_code" rows="3" placeholder="Enter login code"></textarea>
+                        <textarea class="form-control" id="login_code" name="login_code" rows="3"></textarea>
                     </div>
 
-                    <!-- PS4 Availability -->
+                    <!-- PS4 and PS5 Stock Fields -->
+                    <div id="stock-availability">
+                        <!-- PS4 Availability -->
                     <div class="form-group">
                         <label for="ps4Availability">PS4 Availability</label>
                         <div class="checkbox-inline">
@@ -182,6 +209,7 @@
                             </label>
                         </div>
                     </div>
+                    </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
@@ -192,42 +220,70 @@
     </div>
 </div>
 
+
+
 @endsection
 @push('scripts')
 <!-- JavaScript for handling AJAX form submission -->
 <script>
     jQuery(document).ready(function($) {
-        // Handle form submission
-        $('#addAccountForm').on('submit', function(e) {
-            e.preventDefault();
+        // Handle Add Account Button
+        $('#addAccountButton').on('click', function() {
+            $('#accountModalLabel').text('Add New Account');
+            $('#accountForm').attr('action', "{{ route('manager.accounts.store') }}").attr('method', 'POST');
+            $('#accountForm')[0].reset(); // Reset the form
+            $('#stock-availability').show();
+        });
 
-            let formData = $(this).serialize(); // Get all the form data
+        // Handle Edit Account Button
+        $('.editAccount').on('click', function() {
+            $('#stock-availability').hide();
+            $('#accountModalLabel').text('Edit Account');
+            $('#accountForm').attr('action', `/manager/accounts/${$(this).data('id')}`).attr('data-method', 'PUT');
+
+            // Populate form fields with account data
+            $('#accountId').val($(this).data('id'));
+            $('#mail').val($(this).data('mail'));
+            $('#password').val($(this).data('password'));
+            $('#game').val($(this).data('game_id'));
+            $('#region').val($(this).data('region'));
+            $('#cost').val($(this).data('cost'));
+            $('#birthdate').val($(this).data('birthdate'));
+            $('#login_code').val($(this).data('login_code'));
+        });
+        // Handle form submission
+        $('#accountForm').on('submit', function(e) {
+            e.preventDefault();
+            var formData = new FormData(this);
+            let formAction = $(this).attr('action');
+            if ( $(this).data('method') === 'PUT' ) {
+                formData.append('_method', 'PUT');
+            }
             $.ajax({
-                url: "{{ route('manager.accounts.store') }}", // Your store route
+                url: formAction,
                 method: 'POST',
                 data: formData,
+                contentType: false, // Required for FormData
+                processData: false, // Required for FormData
                 success: function(response) {
-                    // Handle success (close the modal, show a success message, refresh data, etc.)
-                    $('#addAccountModal').modal('hide');
+                    $('#accountModal').modal('hide');
                     Swal.fire({
                         title: 'Success!',
-                        text: 'Account added successfully!',
+                        text: response.success,
                         icon: 'success',
                         confirmButtonText: 'OK'
                     });
-
-                    location.reload(); // Reload the page or update the table dynamically if needed
+                    location.reload(); // Reload to reflect changes
                 },
                 error: function(xhr) {
-                    // Handle error (show validation messages or other errors)
                     let errors = xhr.responseJSON.errors;
                     for (let key in errors) {
                         Swal.fire({
                             title: 'Error',
-                            text: errors[key][0], // Display the first error message for each field
+                            text: errors[key][0],
                             icon: 'error',
                             confirmButtonText: 'OK'
-                        }); // You can show the error in a nicer way
+                        });
                     }
                 }
             });

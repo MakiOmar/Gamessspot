@@ -144,4 +144,29 @@ class AccountController extends Controller
         // If account creation failed, return an error response
         return response()->json(array( 'error' => 'Failed to create account. Please try again.' ), 500);
     }
+
+    public function edit($id)
+    {
+        $account = Account::findOrFail($id);
+        return response()->json($account);
+    }
+
+    public function update(Request $request, $id)
+    {
+        $account = Account::findOrFail($id);
+
+        $request->validate([
+            'mail' => 'required|email|unique:accounts,mail,' . $id,
+            'password' => 'required|string',
+            'game_id' => 'required|exists:games,id',
+            'region' => 'required|string|max:2',
+            'cost' => 'required|numeric',
+            'birthdate' => 'required|date',
+            'login_code' => 'required|string',
+        ]);
+
+        $account->update($request->all());
+
+        return response()->json(['success' => 'Account updated successfully!']);
+    }
 }
