@@ -29,7 +29,16 @@ class ReportsController extends Controller
         // Check if the authenticated user is allowed to report on this order
         $order = Order::find($validatedData['order_id']);
         if (! $order) {
-            return response()->json(array( 'message' => 'Order not found' ), 404);
+            return response()->json(array('message' => 'Order not found'), 404);
+        }
+
+        // Check if a report already exists for this order ID with this status
+        $existingReport = Report::where('order_id', $validatedData['order_id'])
+            ->where('status', $validatedData['status'])
+            ->exists();
+
+        if ($existingReport) {
+            return response()->json(array('message' => 'A report with this status already exists for the given order'), 409);
         }
 
         // Create a new report
@@ -43,8 +52,9 @@ class ReportsController extends Controller
         );
 
         // Return a success response
-        return response()->json(array( 'message' => 'Report created successfully!' ), 201);
+        return response()->json(array('message' => 'Report created successfully!'), 201);
     }
+
 
     /**
      * Optionally: Fetch all reports for a specific order.
