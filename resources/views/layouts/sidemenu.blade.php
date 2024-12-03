@@ -31,8 +31,10 @@
                 Gift Cards <span class="float-end"><i class="fas fa-chevron-down"></i></span>
             </a>
             <div class="collapse" id="cardsMenu">
-                <a href="{{ route( 'card-categories.index' ) }}" class="list-group-item list-group-item-action">Categories</a>
-                <a href="{{ route( 'cards.index' ) }}" class="list-group-item list-group-item-action">Gift cards list/add</a>
+                @if ( Auth::user()->roles->contains('name', 'admin') )
+                    <a href="{{ route( 'card-categories.index' ) }}" class="list-group-item list-group-item-action">Categories</a>
+                    <a href="{{ route( 'cards.index' ) }}" class="list-group-item list-group-item-action">Gift cards list/add</a>
+                @endif
                 <a href="{{ route( 'manager.sell-cards' ) }}" class="list-group-item list-group-item-action">Sell gift cards</a>
             </div>
             @endif
@@ -67,7 +69,7 @@
                 </div>
                 
                 @endif
-            @if ( !Auth::user()->roles->contains('name', 'account manager') )
+            @if ( !Auth::user()->roles->contains('name', 'account manager') && !Auth::user()->roles->contains('name', 'sales') )
                 <a href="{{ route( 'manager.storeProfiles.index' ) }}" class="list-group-item bg-light">Stores Profiles</a>
             @endif
         @endif
