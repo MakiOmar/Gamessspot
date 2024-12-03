@@ -61,16 +61,16 @@
                         <th>Seller</th>
                         <th>Product</th>
                         <th>Account</th>
+                        @if(! Auth::user()->roles->contains('name', 'accountant') )
                         <th>Password</th>
+                        @endif
                         @if (! isset($status))
                         <th>Buyer Phone</th>
                         <th>Buyer Name</th>
                         @endif
                         <th>Price</th>
                         <th>Sold Item</th>
-                        @if (! isset($status))
                         <th>Notes</th>
-                        @endif
                         <th>Date</th>
                         <th>Action</th>
                     </tr>
@@ -83,10 +83,14 @@
                             @if($order->account)
                                 <td>{{ $order->account->game->title }}</td>
                                 <td>{{ $order->account->mail }}</td>
+                                @if(! Auth::user()->roles->contains('name', 'accountant') )
                                 <td>{{ $order->account->password }}</td>
+                                @endif
                             @elseif($order->card)
                                 <td>{{ $order->card->category->name }}</td>
+                                @if(! Auth::user()->roles->contains('name', 'accountant') )
                                 <td>{{ $order->card->code }}</td>
+                                @endif
                                 <td>--</td>
                             @endif
                             @if (! isset($status))
@@ -95,9 +99,13 @@
                             @endif
                             <td>{{ $order->price }}</td>
                             <td>{{ $order->sold_item }}</td>
-                            @if (! isset($status))
-                            <td>{{ $order->notes }}</td>
-                            @endif
+                            <td>
+                                @if (! isset($status))
+                                    {{ $order->notes }}
+                                @else
+                                {{ $order->reports->first()->note }}
+                                @endif
+                            </td>
                             <td>{{ $order->created_at }}</td>
                             <td>
                                 <!-- Check if 'needs_return' flag is true -->
