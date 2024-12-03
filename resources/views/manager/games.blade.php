@@ -75,7 +75,7 @@
                         <!-- PS4 Primary Status -->
                         <label for="ps4PrimaryStatus" class="mt-3">PS4 Primary Status</label>
                         <select id="ps4PrimaryStatus" name="ps4_primary_status" class="form-control" style="border-radius: 10px;">
-                            <option value="1">Available</option>
+                            <option value="1" selected>Available</option>
                             <option value="0">Not Available</option>
                         </select>
 
@@ -86,7 +86,7 @@
                         <!-- PS4 Secondary Status -->
                         <label for="ps4SecondaryStatus" class="mt-3">PS4 Secondary Status</label>
                         <select id="ps4SecondaryStatus" name="ps4_secondary_status" class="form-control" style="border-radius: 10px;">
-                            <option value="1">Available</option>
+                            <option value="1" selected>Available</option>
                             <option value="0">Not Available</option>
                         </select>
 
@@ -97,7 +97,7 @@
                         <!-- PS4 Offline Status -->
                         <label for="ps4OfflineStatus" class="mt-3">PS4 Offline Status</label>
                         <select id="ps4OfflineStatus" name="ps4_offline_status" class="form-control" style="border-radius: 10px;">
-                            <option value="1">Available</option>
+                            <option value="1" selected>Available</option>
                             <option value="0">Not Available</option>
                         </select>
 
@@ -108,7 +108,7 @@
                         <!-- PS5 Primary Status -->
                         <label for="ps5PrimaryStatus" class="mt-3">PS5 Primary Status</label>
                         <select id="ps5PrimaryStatus" name="ps5_primary_status" class="form-control" style="border-radius: 10px;">
-                            <option value="1">Available</option>
+                            <option value="1" selected>Available</option>
                             <option value="0">Not Available</option>
                         </select>
 
@@ -119,7 +119,7 @@
                         <!-- PS5 Offline Status -->
                         <label for="ps5OfflineStatus" class="mt-3">PS5 Offline Status</label>
                         <select id="ps5OfflineStatus" name="ps5_offline_status" class="form-control" style="border-radius: 10px;">
-                            <option value="1">Available</option>
+                            <option value="1" selected>Available</option>
                             <option value="0">Not Available</option>
                         </select>
 
@@ -130,7 +130,7 @@
                         <!-- PS5 Secondary Status -->
                         <label for="ps5SecondaryStatus" class="mt-3">PS5 Secondary Status</label>
                         <select id="ps5SecondaryStatus" name="ps5_secondary_status" class="form-control" style="border-radius: 10px;">
-                            <option value="1">Available</option>
+                            <option value="1" selected>Available</option>
                             <option value="0">Not Available</option>
                         </select>
 
@@ -175,7 +175,8 @@
         // When the "Create Game" button is clicked
         $('#createGameBtn').on('click', function() {
             // Reset the form fields for creating a new game
-            $('#editGameForm').find('input, select').val(''); // Reset all input fields and selects
+            $('#editGameForm').find('input').val(''); // Reset all input fields
+            $('#editGameForm').find('select').val('1'); // Reset all input fields
             $('#editGameForm').find('.is-invalid').removeClass('is-invalid'); // Remove validation classes
             $('#editGameForm').find('.invalid-feedback').remove(); // Remove previous error messages
             $('#editGameModalLabel').text('Create New Game'); // Update modal title
