@@ -158,9 +158,15 @@ class ManagerController extends Controller
         $offline_stock   = "ps{$n}_offline_stock";
         $primary_stock   = "ps{$n}_primary_stock";
         $secondary_stock = "ps{$n}_secondary_stock";
+
         $offline_status   = "ps{$n}_offline_status";
         $primary_status   = "ps{$n}_primary_status";
         $secondary_status = "ps{$n}_secondary_status";
+
+        $offline_price   = "ps{$n}_offline_price";
+        $primary_price   = "ps{$n}_primary_price";
+        $secondary_price = "ps{$n}_secondary_price";
+
         $image_url       = "ps{$n}_image_url";
 
         // Fetch games and their special prices if the user has a store profile
@@ -173,12 +179,9 @@ class ManagerController extends Controller
                 "games.{$offline_status}",
                 "games.{$primary_status}",
                 "games.{$secondary_status}",
-                DB::raw('COALESCE(special_prices.ps4_primary_price, games.ps4_primary_price) as ps4_primary_price'),
-                DB::raw('COALESCE(special_prices.ps4_secondary_price, games.ps4_secondary_price) as ps4_secondary_price'),
-                DB::raw('COALESCE(special_prices.ps4_offline_price, games.ps4_offline_price) as ps4_offline_price'),
-                DB::raw('COALESCE(special_prices.ps5_primary_price, games.ps5_primary_price) as ps5_primary_price'),
-                DB::raw('COALESCE(special_prices.ps5_secondary_price, games.ps5_secondary_price) as ps5_secondary_price'),
-                DB::raw('COALESCE(special_prices.ps5_offline_price, games.ps5_offline_price) as ps5_offline_price'),
+                DB::raw("COALESCE(special_prices.ps{$n}_primary_price, games.ps{$n}_primary_price) as ps{$n}_primary_price"),
+                DB::raw("COALESCE(special_prices.ps{$n}_secondary_price, games.ps{$n}_secondary_price) as ps{$n}_secondary_price"),
+                DB::raw("COALESCE(special_prices.ps{$n}_offline_price, games.ps{$n}_offline_price) as ps{$n}_offline_price"),
                 DB::raw("SUM(accounts.{$offline_stock}) as {$offline_stock}"),
                 DB::raw("SUM(accounts.{$primary_stock}) as {$primary_stock}"),
                 DB::raw("SUM(accounts.{$secondary_stock}) as {$secondary_stock}")
@@ -188,7 +191,21 @@ class ManagerController extends Controller
                 $join->on('games.id', '=', 'special_prices.game_id')
                     ->where('special_prices.store_profile_id', '=', $storeProfileId);
             })
-            ->groupBy('games.id', 'games.title', 'games.code', 'special_prices.ps4_primary_price', 'special_prices.ps4_secondary_price', 'special_prices.ps4_offline_price', 'special_prices.ps5_primary_price', 'special_prices.ps5_secondary_price', 'special_prices.ps5_offline_price')
+            ->groupBy(
+                'games.id',
+                'games.title',
+                'games.code',
+                "games.{$image_url}",
+                "games.{$offline_status}",
+                "games.{$primary_status}",
+                "games.{$secondary_status}",
+                "games.{$offline_price}",
+                "games.{$primary_price}",
+                "games.{$secondary_price}",
+                "special_prices.ps{$n}_primary_price",
+                "special_prices.ps{$n}_secondary_price",
+                "special_prices.ps{$n}_offline_price",
+            )
             ->havingRaw("SUM(accounts.{$offline_stock}) > 0 OR SUM(accounts.{$primary_stock}) > 0 OR SUM(accounts.{$secondary_stock}) > 0")
             ->paginate(10);  // Paginate 10 results per page
 
