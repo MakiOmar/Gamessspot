@@ -187,31 +187,36 @@ class OrderController extends Controller
         if (!$isAdmin) {
             $orders->where('seller_id', $user->id);
         }
-        $searchingFor = 'account';
+        $buyer   = false;
+        $account = false;
     // Determine the type of query
         if (filter_var($query, FILTER_VALIDATE_EMAIL)) {
             // If query is a valid email, search in account email
             $orders->whereHas('account', function ($q) use ($query) {
                 $q->where('mail', 'like', "%$query%");
             });
+            $account = true;
         } elseif (preg_match('/^\+?\d+$/', $query)) {
             // If query is a phone number (with or without '+'), search in buyer_phone
             $orders->where('buyer_phone', 'like', "%$query%");
-            $searchingFor = 'buyer';
+            $buyer   = true;
         } else {
             // Otherwise, search in buyer_name or buyer_phone
             $orders->where(function ($q) use ($query) {
                 $q->where('buyer_name', 'like', "%$query%")
                   ->orWhere('buyer_phone', 'like', "%$query%");
             });
-            $searchingFor = 'buyer';
+            $buyer   = true;
         }
 
         // Execute the query and get results
         $orders = $orders->paginate(1);
+        if ($buyer && $orders && !empty($orders)) {
+            $buyer = $orders[0];
+        }
 
         // Return the updated rows for the table (assuming a partial view)
-        return view('manager.orders-quick', compact('orders'))->render();
+        return view('manager.orders-quick', compact('orders', 'buyer'))->render();
     }
 
 
