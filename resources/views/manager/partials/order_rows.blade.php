@@ -2,9 +2,21 @@
     <tr>
         <td>{{ $order->id }}</td>
         <td>{{ $order->seller->name }}</td>
-        <td>{{ $order->account->game->title }}</td>
-        <td>{{ $order->account->mail }}</td>
-        <td>{{ $order->account->password }}</td>
+
+        @if($order->account)
+            <td>{{ $order->account->game->title }}</td>
+            <td>{{ $order->account->mail }}</td>
+            @if(! Auth::user()->roles->contains('name', 'accountant') )
+            <td>{{ $order->account->password }}</td>
+            @endif
+        @elseif($order->card)
+            <td>{{ $order->card->category->name }}</td>
+            @if(! Auth::user()->roles->contains('name', 'accountant') )
+            <td>{{ $order->card->code }}</td>
+            @endif
+            <td>--</td>
+        @endif
+
         <td>{{ $order->buyer_phone }}</td>
         <td>{{ $order->buyer_name }}</td>
         <td>{{ $order->price }}</td>
