@@ -208,7 +208,7 @@ class OrderController extends Controller
         }
 
         // Execute the query and get results
-        $orders = $orders->paginate(10);
+        $orders = $orders->paginate(1);
 
         // Return the updated rows for the table (assuming a partial view)
         return view('manager.orders-quick', compact('orders'))->render();
