@@ -28,6 +28,12 @@
                             </svg>
                     </a>
                 </li>
+                <!-- Search Icon -->
+                <li class="nav-item">
+                    <a class="nav-link" href="#" data-bs-toggle="modal" data-bs-target="#searchModal" title="Search">
+                        <i class="fa-solid fa-magnifying-glass" style="font-size: 20px; color: #1C274C;"></i>
+                    </a>
+                </li>
             </ul>
         </div>
     </div>
@@ -36,3 +42,26 @@
 <form id="logout-form" action="{{ route('manager.logout') }}" method="POST" style="display: none;">
     @csrf
 </form>
+<!-- Search Modal -->
+<div class="modal fade" id="searchModal" tabindex="-1" aria-labelledby="searchModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="searchModalLabel">Search Orders</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form action="{{ route('manager.orders.qsearch') }}" method="GET">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="search-query">Search Query</label>
+                        <input type="text" class="form-control" id="search-query" name="search" placeholder="Enter email, phone, or name" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Search</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

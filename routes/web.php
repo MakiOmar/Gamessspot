@@ -64,6 +64,7 @@ Route::prefix('manager')->group(function () {
 
         Route::get('/orders', [OrderController::class, 'index'])->name('manager.orders');
         Route::get('/orders/search', [OrderController::class, 'search'])->name('manager.orders.search');
+        Route::get('/orders/quick-search', [OrderController::class, 'quickSearch'])->name('manager.orders.qsearch');
         Route::get('/orders/export', [OrderController::class, 'export'])->name('manager.orders.export');
         Route::post('/orders/store', [OrderController::class, 'store'])->name('orders.store');
         Route::post('/orders/sell-card', [OrderController::class, 'sellCard'])->name('manager.orders.sell.card');

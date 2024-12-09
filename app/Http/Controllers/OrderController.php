@@ -169,6 +169,52 @@ class OrderController extends Controller
         return view('manager.partials.order_rows', compact('orders', 'status'))->render();
     }
 
+    public function quickSearch(Request $request)
+    {
+    // Get the search query input
+        $query = $request->input('search');
+        if (empty($query)) {
+            $query = $_GET['search'];
+        }
+    // Build the query to filter orders
+        $orders = Order::with(['seller', 'account.game']);
+
+    // Check if the user is an admin
+        $user = Auth::user();
+        $isAdmin = $user->roles->contains('name', 'admin');
+
+    // If the user is not an admin, filter by seller_id
+        if (!$isAdmin) {
+            $orders->where('seller_id', $user->id);
+        }
+        $searchingFor = 'account';
+    // Determine the type of query
+        if (filter_var($query, FILTER_VALIDATE_EMAIL)) {
+            // If query is a valid email, search in account email
+            $orders->whereHas('account', function ($q) use ($query) {
+                $q->where('mail', 'like', "%$query%");
+            });
+        } elseif (preg_match('/^\+?\d+$/', $query)) {
+            // If query is a phone number (with or without '+'), search in buyer_phone
+            $orders->where('buyer_phone', 'like', "%$query%");
+            $searchingFor = 'buyer';
+        } else {
+            // Otherwise, search in buyer_name or buyer_phone
+            $orders->where(function ($q) use ($query) {
+                $q->where('buyer_name', 'like', "%$query%")
+                  ->orWhere('buyer_phone', 'like', "%$query%");
+            });
+            $searchingFor = 'buyer';
+        }
+
+        // Execute the query and get results
+        $orders = $orders->paginate(10);
+
+        // Return the updated rows for the table (assuming a partial view)
+        return view('manager.orders-quick', compact('orders'))->render();
+    }
+
+
     /**
      * Export the list of orders as an Excel file.
      *
