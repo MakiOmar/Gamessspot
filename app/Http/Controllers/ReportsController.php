@@ -19,12 +19,21 @@ class ReportsController extends Controller
     {
         // Validate the incoming request
         $validatedData = $request->validate(
-            array(
+            [
                 'order_id' => 'required|exists:orders,id',
                 'status'   => 'required|in:has_problem,needs_return',
-                'note'     => 'required|string|max:1000',
-            )
+                'note'     => ['nullable', 'string', 'max:1000'], // Set note as optional by default
+            ]
         );
+
+        // Add conditional validation for the note field
+        if ($request->status === 'has_problem') {
+            $request->validate(
+                [
+                    'note' => 'required|string|max:1000',
+                ]
+            );
+        }
 
         // Check if the authenticated user is allowed to report on this order
         $order = Order::find($validatedData['order_id']);

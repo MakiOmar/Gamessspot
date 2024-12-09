@@ -185,7 +185,7 @@
                         </div>
                         <div class="form-group">
                             <label for="note">Note:</label>
-                            <textarea class="form-control" name="note" rows="3" placeholder="Describe the issue" required></textarea>
+                            <textarea class="form-control" name="note" rows="3" placeholder="Describe the issue"></textarea>
                         </div>
                         <input type="hidden" name="order_id" id="reportOrderId">
                         <button type="submit" class="btn btn-primary">Submit Report</button>
@@ -203,6 +203,25 @@
 @push('scripts')
     <script src="{{ asset('assets/js/intlTelInput.min.js') }}"></script>
     <script src="{{ asset('assets/js/utils.js') }}"></script>
+    <script>
+        jQuery(document).ready(function ($) {
+            // Monitor changes in the report status radio buttons
+            $('input[name="status"]').on('change', function () {
+                // Check the selected value
+                if ($(this).val() === 'has_problem') {
+                    // Make the note field required
+                    $('textarea[name="note"]').prop('required', true);
+                } else {
+                    // Make the note field optional
+                    $('textarea[name="note"]').prop('required', false);
+                }
+            });
+
+            // Trigger the change event on page load to handle default state
+            $('input[name="status"]:checked').trigger('change');
+        });
+
+    </script>
     <script>
         jQuery(document).ready(function($) {
             const input = document.querySelector("#buyer_phone");
