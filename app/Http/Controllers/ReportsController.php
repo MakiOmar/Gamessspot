@@ -18,51 +18,43 @@ class ReportsController extends Controller
     public function store(Request $request)
     {
         // Validate the incoming request
-        $validatedData = $request->validate(
-            [
-                'order_id' => 'required|exists:orders,id',
-                'status'   => 'required|in:has_problem,needs_return',
-                'note'     => ['nullable', 'string', 'max:1000'], // Set note as optional by default
-            ]
-        );
+        $validatedData = $request->validate([
+        'order_id' => 'required|exists:orders,id',
+        'status'   => 'required|in:has_problem,needs_return',
+        'note'     => ['nullable', 'string', 'max:1000'], // Note is optional by default
+        ]);
 
         // Add conditional validation for the note field
         if ($request->status === 'has_problem') {
-            $request->validate(
-                [
-                    'note' => 'required|string|max:1000',
-                ]
-            );
+            $request->validate([
+            'note' => 'required|string|max:1000',
+            ]);
         }
 
-        // Check if the authenticated user is allowed to report on this order
-        $order = Order::find($validatedData['order_id']);
-        if (! $order) {
-            return response()->json(array('message' => 'Order not found'), 404);
-        }
-
-        // Check if a report already exists for this order ID with this status
-        $existingReport = Report::where('order_id', $validatedData['order_id'])
-            ->where('status', $validatedData['status'])
-            ->exists();
+        // Check if the order ID already exists in the reports table
+        $existingReport = Report::where('order_id', $validatedData['order_id'])->exists();
 
         if ($existingReport) {
-            return response()->json(array('message' => 'A report with this status already exists for the given order'), 409);
+            return response()->json([
+            'message' => 'A report already exists for the given order ID',
+            ], 409);
         }
 
         // Create a new report
-        $report = Report::create(
-            array(
-                'order_id'  => $validatedData['order_id'],
-                'seller_id' => Auth::id(), // Current authenticated seller
-                'status'    => $validatedData['status'],
-                'note'      => $validatedData['note'],
-            )
-        );
+        $report = Report::create([
+        'order_id'  => $validatedData['order_id'],
+        'seller_id' => Auth::id(), // Current authenticated seller
+        'status'    => $validatedData['status'],
+        'note'      => $validatedData['note'],
+        ]);
 
         // Return a success response
-        return response()->json(array('message' => 'Report created successfully!'), 201);
+        return response()->json([
+        'message' => 'Report created successfully!',
+        'report'  => $report,
+        ], 201);
     }
+
 
 
     /**
