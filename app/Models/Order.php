@@ -44,7 +44,7 @@ class Order extends Model
      */
     public function reports()
     {
-        return $this->hasMany(Report::class, 'order_id');
+        return $this->hasOne(Report::class, 'order_id');
     }
     /**
      * An order can have one storeProfile.
