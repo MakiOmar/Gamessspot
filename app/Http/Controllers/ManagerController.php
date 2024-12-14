@@ -28,7 +28,7 @@ class ManagerController extends Controller
     public function showGames()
     {
         // Retrieve all games from the database
-        $games = Game::paginate(5);
+        $games = Game::paginate(10);
 
         // Return the view with the games data
         return view('manager.games', compact('games'));
@@ -233,8 +233,6 @@ class ManagerController extends Controller
         return view('manager.games_listings', compact('psGames', 'n', 'storeProfiles'));
     }
 
-
-
     /**
      * Show the list of PS4 games.
      *
@@ -270,5 +268,104 @@ class ManagerController extends Controller
 
         $storeProfiles = StoresProfile::all(); // Fetch all store profiles
         return view('manager.games_listings', compact('psGames', 'storeProfiles'));
+    }
+    public function searchPS4Games(Request $request)
+    {
+        $query = $request->get('query', '');
+        $n = 4; // Define the platform as PS4
+        $psGames = $this->filterGames($n, $query);
+        $image_url       = "ps{$n}_image_url";
+        return view('manager.partials.games_list', compact('psGames', 'n'))->render();
+    }
+
+    public function searchPS5Games(Request $request)
+    {
+        $query = $request->get('query', '');
+        $n = 5; // Define the platform as PS5
+        $psGames = $this->filterGames($n, $query);
+        $image_url       = "ps{$n}_image_url";
+
+        return view('manager.partials.games_list', compact('psGames', 'n'))->render();
+    }
+    private function filterGames($platform, $query)
+    {
+        $user = Auth::user();
+        $storeProfileId = $user->store_profile_id;
+
+        $image_url = "ps{$platform}_image_url";
+
+        $offline_stock   = "ps{$platform}_offline_stock";
+        $primary_stock   = "ps{$platform}_primary_stock";
+        $secondary_stock = "ps{$platform}_secondary_stock";
+
+        $offline_status   = "ps{$platform}_offline_status";
+        $primary_status   = "ps{$platform}_primary_status";
+        $secondary_status = "ps{$platform}_secondary_status";
+
+        $offline_price   = "ps{$platform}_offline_price";
+        $primary_price   = "ps{$platform}_primary_price";
+        $secondary_price = "ps{$platform}_secondary_price";
+        // Fetch games and their special prices if the user has a store profile
+        $psGames = DB::table('accounts')
+            ->select(
+                'games.id',
+                'games.title',
+                'games.code',
+                "games.{$image_url}",
+                "games.{$offline_status}",
+                "games.{$primary_status}",
+                "games.{$secondary_status}",
+                DB::raw("COALESCE(special_prices.ps{$platform}_primary_price, games.ps{$platform}_primary_price) as ps{$platform}_primary_price"),
+                DB::raw("COALESCE(special_prices.ps{$platform}_secondary_price, games.ps{$platform}_secondary_price) as ps{$platform}_secondary_price"),
+                DB::raw("COALESCE(special_prices.ps{$platform}_offline_price, games.ps{$platform}_offline_price) as ps{$platform}_offline_price"),
+                DB::raw("SUM(accounts.{$offline_stock}) as {$offline_stock}"),
+                DB::raw("SUM(accounts.{$primary_stock}) as {$primary_stock}"),
+                DB::raw("SUM(accounts.{$secondary_stock}) as {$secondary_stock}")
+            )
+            ->join('games', 'accounts.game_id', '=', 'games.id')
+            ->leftJoin('special_prices', function ($join) use ($storeProfileId) {
+                $join->on('games.id', '=', 'special_prices.game_id')
+                    ->where('special_prices.store_profile_id', '=', $storeProfileId);
+            })
+            ->where(function ($queryBuilder) use ($query) {
+                // Apply search filter
+                $queryBuilder->where('games.title', 'LIKE', "%{$query}%")
+                             ->orWhere('games.code', 'LIKE', "%{$query}%");
+            })
+            ->groupBy(
+                'games.id',
+                'games.title',
+                'games.code',
+                "games.{$image_url}",
+                "games.{$offline_status}",
+                "games.{$primary_status}",
+                "games.{$secondary_status}",
+                "games.{$offline_price}",
+                "games.{$primary_price}",
+                "games.{$secondary_price}",
+                "special_prices.ps{$platform}_primary_price",
+                "special_prices.ps{$platform}_secondary_price",
+                "special_prices.ps{$platform}_offline_price",
+            )
+            ->havingRaw("SUM(accounts.{$offline_stock}) > 0 OR SUM(accounts.{$primary_stock}) > 0 OR SUM(accounts.{$secondary_stock}) > 0")
+            ->paginate(10);  // Paginate 10 results per page
+        // Determine if the primary stock is active
+        foreach ($psGames as $game) {
+            $oldestAccount = DB::table('accounts')
+                ->where('game_id', $game->id)
+                ->where($primary_stock, '>', 0)
+                ->orderBy('created_at', 'asc')
+                ->first();
+
+            $game->is_primary_active = false;
+
+            if ($oldestAccount) {
+                // Check if offline stock is 0 for the oldest account
+                if ($oldestAccount->$offline_stock == 0) {
+                    $game->is_primary_active = true;
+                }
+            }
+        }
+        return $psGames;
     }
 }

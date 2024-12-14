@@ -52,6 +52,10 @@ Route::prefix('manager')->group(function () {
 
         Route::get('/games/ps4', [ManagerController::class, 'showPS4Games'])->name('manager.games.ps4');
         Route::get('/games/ps5', [ManagerController::class, 'showPS5Games'])->name('manager.games.ps5');
+        // In your routes file
+        Route::get('/games/search/ps4', [ManagerController::class, 'searchPS4Games'])->name('manager.games.search.ps4');
+        Route::get('/games/search/ps5', [ManagerController::class, 'searchPS5Games'])->name('manager.games.search.ps5');
+
 
         Route::middleware(['checkRole:admin,account manager'])->group(function () {
             Route::get('/accounts', [AccountController::class, 'index'])->name('manager.accounts');
