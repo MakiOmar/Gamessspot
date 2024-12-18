@@ -201,15 +201,34 @@
     </style>
 @endpush
 
-@section('title', 'Manager Dashboard')
+{{-- Customize layout sections --}}
 
-@section('content')
+@section('subtitle', 'Manager')
+@section('content_header_title', 'Dashboard')
+@section('content_header_subtitle', 'Welcome')
+
+{{-- Content body: main page content --}}
+
+@section('content_body')
     <div class="container-fluid">
-        
+            
         @if ( Auth::user()->roles->contains('name', 'admin') )
         @include('manager.dashboard-admin')
         @elseif(Auth::user()->roles->contains('name', 'sales') || Auth::user()->roles->contains('name', 'account manager'))
         @include('manager.dashboard-sales')
         @endif
     </div>
-@endsection
+@stop
+
+{{-- Push extra CSS --}}
+
+@push('css')
+    {{-- Add here extra stylesheets --}}
+    {{-- <link rel="stylesheet" href="/css/admin_custom.css"> --}}
+@endpush
+
+{{-- Push extra scripts --}}
+
+@push('js')
+    <script> console.log("Hi, I'm using the Laravel-AdminLTE package!"); </script>
+@endpush
