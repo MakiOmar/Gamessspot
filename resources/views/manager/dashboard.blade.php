@@ -209,15 +209,12 @@
 
 {{-- Content body: main page content --}}
 
-@section('content_body')
-    <div class="container-fluid">
-            
-        @if ( Auth::user()->roles->contains('name', 'admin') )
-        @include('manager.dashboard-admin')
-        @elseif(Auth::user()->roles->contains('name', 'sales') || Auth::user()->roles->contains('name', 'account manager'))
-        @include('manager.dashboard-sales')
-        @endif
-    </div>
+@section('content_body')     
+    @if ( Auth::user()->roles->contains('name', 'admin') )
+    @include('manager.dashboard-admin')
+    @elseif(Auth::user()->roles->contains('name', 'sales') || Auth::user()->roles->contains('name', 'account manager'))
+    @include('manager.dashboard-sales')
+    @endif
 @stop
 
 {{-- Push extra CSS --}}

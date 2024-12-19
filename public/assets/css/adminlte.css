@@ -704,7 +704,7 @@ progress {
   color: #6c757d;
 }
 .blockquote-footer::before {
-  content: "— ";
+  content: "— ";
 }
 
 .img-fluid {
@@ -13246,7 +13246,7 @@ textarea.form-control-lg {
 }
 
 .brand-link.logo-switch::before {
-  content: " ";
+  content: " ";
 }
 
 .sidebar-mini.sidebar-collapse .app-sidebar {
