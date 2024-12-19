@@ -342,12 +342,13 @@ return [
                     'text' => 'Categories',
                     'route' => 'card-categories.index',
                     'icon' => 'bi bi-circle',
-                    'can' => 'manage-categories',
+                    'can' => 'manage-options',
                 ],
                 [
                     'text' => 'Gift Cards List/Add',
                     'route' => 'cards.index',
                     'icon' => 'bi bi-circle',
+                    'can' => 'manage-options',
                 ],
                 [
                     'text' => 'Sell Gift Cards',
@@ -377,7 +378,7 @@ return [
         [
             'text' => 'Reports',
             'icon' => 'bi bi-clipboard-fill',
-            'can' => 'view-reports',
+            'can' => 'manage-options',
             'submenu' => [
                 [
                     'text' => 'Needs Return',
@@ -401,7 +402,7 @@ return [
         [
             'text' => 'Users',
             'icon' => 'bi bi-clipboard-fill',
-            'can' => 'manage-users',
+            'can' => 'manage-options',
             'submenu' => [
                 [
                     'text' => 'All',

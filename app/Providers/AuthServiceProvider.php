@@ -21,15 +21,11 @@ class AuthServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Gate::define('access-dashboard', function ($user) {
-            return $user->hasRole(['admin', 'sales', 'account manager']);
+            return $user->hasRole(['admin', 'sales', 'account manager', 'accountant']);
         });
 
         Gate::define('manage-games', function ($user) {
-            return $user->hasRole(['admin', 'sales']);
-        });
-
-        Gate::define('edit-games', function ($user) {
-            return $user->hasRole('admin');
+            return $user->hasRole(['admin', 'sales', 'account manager']);
         });
 
         Gate::define('manage-gift-cards', function ($user) {
@@ -37,14 +33,26 @@ class AuthServiceProvider extends ServiceProvider
         });
 
         Gate::define('view-sell-log', function ($user) {
-            return $user->hasRole(['admin', 'sales']);
+            return $user->hasRole(['admin', 'sales', 'account manager']);
         });
 
         Gate::define('manage-accounts', function ($user) {
             return $user->hasRole(['admin', 'account manager']);
         });
 
+        Gate::define('manage-options', function ($user) {
+            return $user->hasRole('admin');
+        });
         Gate::define('view-reports', function ($user) {
+            return $user->hasRole('admin');
+        });
+
+        Gate::define('manage-categories', function ($user) {
+            return $user->hasRole('admin');
+        });
+
+
+        Gate::define('edit-games', function ($user) {
             return $user->hasRole('admin');
         });
 
