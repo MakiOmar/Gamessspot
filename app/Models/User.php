@@ -89,4 +89,21 @@ class User extends Authenticatable
     {
         return $this->belongsToMany(Role::class, 'role_user', 'user_id', 'role_id');
     }
+    /**
+     * Check if the user has one or more roles by their names.
+     *
+     * @param array|string $roles Role names to check (can be a single name or an array of names).
+     * @return bool
+     */
+    public function hasRole($roles)
+    {
+        // Ensure roles is always an array
+        $roles = is_array($roles) ? $roles : [$roles];
+
+        // Check if the user's roles contain any of the specified role names
+        return $this->roles->contains(function ($role) use ($roles) {
+            return in_array($role->name, $roles);
+        });
+    }
+
 }

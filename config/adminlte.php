@@ -299,100 +299,147 @@ return [
     */
 
     'menu' => [
-        // Navbar items:
+        // Dashboard
         [
-            'type' => 'navbar-search',
-            'text' => 'search',
-            'topnav_right' => true,
-        ],
-        [
-            'type' => 'fullscreen-widget',
-            'topnav_right' => true,
+            'text' => 'Dashboard',
+            'route' => 'manager.dashboard',
+            'icon' => 'bi bi-palette',
+            'can' => 'access-dashboard',
         ],
 
-        // Sidebar items:
+        // Games
         [
-            'type' => 'sidebar-menu-search',
-            'text' => 'search',
-        ],
-        [
-            'text' => 'blog',
-            'url' => 'admin/blog',
-            'can' => 'manage-blog',
-        ],
-        [
-            'text' => 'pages',
-            'url' => 'admin/pages',
-            'icon' => 'far fa-fw fa-file',
-            'label' => 4,
-            'label_color' => 'success',
-        ],
-        ['header' => 'account_settings'],
-        [
-            'text' => 'profile',
-            'url' => 'admin/settings',
-            'icon' => 'fas fa-fw fa-user',
-        ],
-        [
-            'text' => 'change_password',
-            'url' => 'admin/settings',
-            'icon' => 'fas fa-fw fa-lock',
-        ],
-        [
-            'text' => 'multilevel',
-            'icon' => 'fas fa-fw fa-share',
+            'text' => 'Games',
+            'icon' => 'bi bi-speedometer',
+            'can' => 'manage-games',
             'submenu' => [
                 [
-                    'text' => 'level_one',
-                    'url' => '#',
+                    'text' => 'Edit/Add Games',
+                    'route' => 'manager.games',
+                    'icon' => 'bi bi-circle',
+                    'can' => 'edit-games',
                 ],
                 [
-                    'text' => 'level_one',
-                    'url' => '#',
-                    'submenu' => [
-                        [
-                            'text' => 'level_two',
-                            'url' => '#',
-                        ],
-                        [
-                            'text' => 'level_two',
-                            'url' => '#',
-                            'submenu' => [
-                                [
-                                    'text' => 'level_three',
-                                    'url' => '#',
-                                ],
-                                [
-                                    'text' => 'level_three',
-                                    'url' => '#',
-                                ],
-                            ],
-                        ],
-                    ],
+                    'text' => 'PS4 Games',
+                    'route' => 'manager.games.ps4',
+                    'icon' => 'bi bi-circle',
                 ],
                 [
-                    'text' => 'level_one',
-                    'url' => '#',
+                    'text' => 'PS5 Games',
+                    'route' => 'manager.games.ps5',
+                    'icon' => 'bi bi-circle',
                 ],
             ],
         ],
-        ['header' => 'labels'],
+
+        // Gift Cards
         [
-            'text' => 'important',
-            'icon_color' => 'red',
-            'url' => '#',
+            'text' => 'Gift Cards',
+            'icon' => 'bi bi-box-seam-fill',
+            'can' => 'manage-gift-cards',
+            'submenu' => [
+                [
+                    'text' => 'Categories',
+                    'route' => 'card-categories.index',
+                    'icon' => 'bi bi-circle',
+                    'can' => 'manage-categories',
+                ],
+                [
+                    'text' => 'Gift Cards List/Add',
+                    'route' => 'cards.index',
+                    'icon' => 'bi bi-circle',
+                ],
+                [
+                    'text' => 'Sell Gift Cards',
+                    'route' => 'manager.sell-cards',
+                    'icon' => 'bi bi-circle',
+                ],
+            ],
         ],
+
+        // Sell Log
         [
-            'text' => 'warning',
-            'icon_color' => 'yellow',
-            'url' => '#',
+            'text' => 'Sell Log',
+            'route' => 'manager.orders',
+            'icon' => 'bi bi-table',
+            'can' => 'view-sell-log',
         ],
+
+        // Accounts
         [
-            'text' => 'information',
-            'icon_color' => 'cyan',
-            'url' => '#',
+            'text' => 'Accounts',
+            'route' => 'manager.accounts',
+            'icon' => 'bi bi-ui-checks-grid',
+            'can' => 'manage-accounts',
+        ],
+
+        // Reports
+        [
+            'text' => 'Reports',
+            'icon' => 'bi bi-clipboard-fill',
+            'can' => 'view-reports',
+            'submenu' => [
+                [
+                    'text' => 'Needs Return',
+                    'route' => 'manager.orders.needs_return',
+                    'icon' => 'bi bi-circle',
+                ],
+                [
+                    'text' => 'Reported Issues',
+                    'route' => 'manager.orders.has_problem',
+                    'icon' => 'bi bi-circle',
+                ],
+                [
+                    'text' => 'Solved',
+                    'route' => 'manager.orders.solved',
+                    'icon' => 'bi bi-circle',
+                ],
+            ],
+        ],
+
+        // Users
+        [
+            'text' => 'Users',
+            'icon' => 'bi bi-clipboard-fill',
+            'can' => 'manage-users',
+            'submenu' => [
+                [
+                    'text' => 'All',
+                    'route' => 'manager.users.index',
+                    'icon' => 'bi bi-circle',
+                ],
+                [
+                    'text' => 'Sales',
+                    'route' => 'manager.users.sales',
+                    'icon' => 'bi bi-circle',
+                ],
+                [
+                    'text' => 'Account Managers',
+                    'route' => 'manager.users.acc.managers',
+                    'icon' => 'bi bi-circle',
+                ],
+                [
+                    'text' => 'Accountants',
+                    'route' => 'manager.users.accountants',
+                    'icon' => 'bi bi-circle',
+                ],
+                [
+                    'text' => 'Admins',
+                    'route' => 'manager.users.admins',
+                    'icon' => 'bi bi-circle',
+                ],
+            ],
+        ],
+
+        // Store Profiles
+        [
+            'text' => 'Stores Profiles',
+            'route' => 'manager.storeProfiles.index',
+            'icon' => 'bi bi-palette',
+            'can' => 'manage-store-profiles',
         ],
     ],
+
 
     /*
     |--------------------------------------------------------------------------
