@@ -29,7 +29,6 @@ use App\Http\Controllers\DashboardController;
 Route::get('/', function () {
     return view('welcome');
 });
-
 Route::prefix('manager')->group(function () {
     // Manager login routes (no middleware needed here)
     Route::get('/login', [AdminLoginController::class, 'showLoginForm'])->name('manager.login');
