@@ -100,7 +100,7 @@
 
 @endsection
 
-@push('scripts')
+@push('js')
 <script>
     jQuery(document).ready(function($) {
         // Handle search input

@@ -226,7 +226,7 @@
 
 
 @endsection
-@push('scripts')
+@push('js')
 <!-- JavaScript for handling AJAX form submission -->
 <script>
     jQuery(document).ready(function($) {

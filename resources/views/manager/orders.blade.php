@@ -199,7 +199,7 @@
 
 @endsection
 
-@push('scripts')
+@push('js')
     <script>
         jQuery(document).ready(function($) {
             // Initialize Flatpickr for startDate and endDate inputs
@@ -360,7 +360,7 @@
     </script>
 @endpush
 
-@push('scripts')
+@push('js')
     <script>
         jQuery(document).ready(
             function($) {

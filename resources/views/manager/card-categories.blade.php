@@ -77,7 +77,7 @@
 
 @endsection
 
-@push('scripts')
+@push('js')
     <script>
         // Open Create Modal
         function openCreateModal() {

@@ -95,6 +95,8 @@
         background-color: #db890a;
         border-color: #db890a;
     }
-    
+    [class*="sidebar-dark-"] {
+        background-color: #080808;
+    }
 </style>
 @endpush

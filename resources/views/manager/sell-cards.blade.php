@@ -118,7 +118,7 @@
 
 @endsection
 
-@push('scripts')
+@push('js')
     <script src="{{ asset('assets/js/intlTelInput.min.js') }}"></script>
     <script src="{{ asset('assets/js/utils.js') }}"></script>
     <script>

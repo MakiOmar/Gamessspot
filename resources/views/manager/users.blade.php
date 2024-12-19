@@ -139,7 +139,7 @@
 
 @endsection
 
-@push('scripts')
+@push('js')
 <!-- JavaScript for handling modal edit functionality -->
 <script>
     jQuery(document).ready(function($) {

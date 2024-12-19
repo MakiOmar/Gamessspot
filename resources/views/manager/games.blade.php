@@ -162,7 +162,7 @@
 
 
 @endsection
-@push('scripts')
+@push('js')
 <script>
     jQuery(document).ready(function($) {
         // Set up AJAX to include CSRF token in every request

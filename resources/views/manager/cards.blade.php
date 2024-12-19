@@ -80,7 +80,7 @@
     </div>
 </div>
 @endsection
-@push('scripts')
+@push('js')
 <script>
     function submitCardForm() {
         let formData = new FormData(document.getElementById('addCardForm'));
