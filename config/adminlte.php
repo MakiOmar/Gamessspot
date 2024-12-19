@@ -299,6 +299,20 @@ return [
     */
 
     'menu' => [
+        [
+            'type' => 'navbar-search',
+            'text' => 'search',          // Placeholder for the underlying input.
+            'topnav_right' => true,      // Or "topnav => true" to place on the left.
+            'url' => 'manager/orders/quick-search',    // The url used to submit the data ('#' by default).
+            'method' => 'get',          // 'get' or 'post' ('get' by default).
+            'input_name' => 'search', // Name for the underlying input ('adminlteSearch' by default).
+            'id' => 'search-query',       // ID attribute for the underlying input (optional).
+            'placeholder' => 'Enter email, phone, or name'       // ID attribute for the underlying input (optional).
+        ],
+        [
+            'type' => 'fullscreen-widget',
+            'topnav_right' => true,
+        ],
         // Dashboard
         [
             'text' => 'Dashboard',
@@ -438,6 +452,34 @@ return [
             'route' => 'manager.storeProfiles.index',
             'icon' => 'bi bi-palette',
             'can' => 'manage-store-profiles',
+        ],
+    ],
+
+    'navbar-left' => [
+
+        // Games
+        [
+            'text' => 'Games',
+            'icon' => 'bi bi-speedometer',
+            'can' => 'manage-games',
+            'submenu' => [
+                [
+                    'text' => 'Edit/Add Games',
+                    'route' => 'manager.games',
+                    'icon' => 'bi bi-circle',
+                    'can' => 'edit-games',
+                ],
+                [
+                    'text' => 'PS4 Games',
+                    'route' => 'manager.games.ps4',
+                    'icon' => 'bi bi-circle',
+                ],
+                [
+                    'text' => 'PS5 Games',
+                    'route' => 'manager.games.ps5',
+                    'icon' => 'bi bi-circle',
+                ],
+            ],
         ],
     ],
 
