@@ -47,6 +47,7 @@
 {{-- Add common Javascript/Jquery code --}}
 
 @push('js')
+<script src="{{ asset('assets/js/flatpickr.js') }}"></script>
 <script>
 
     $(document).ready(function() {
@@ -59,6 +60,8 @@
 {{-- Add common CSS customizations --}}
 
 @push('css')
+<script src="{{ asset('assets/js/sweetalert2.js') }}"></script>
+<link rel="stylesheet" href="{{ asset('assets/css/flatpickr.css') }}">
 <style type="text/css">
 
     {{-- You can add AdminLTE customizations here --}}
