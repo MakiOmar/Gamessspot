@@ -45,16 +45,52 @@
 @stop
 
 {{-- Add common Javascript/Jquery code --}}
-
 @push('js')
-<script src="{{ asset('assets/js/flatpickr.js') }}"></script>
-<script>
+    <script src="{{ asset('assets/js/flatpickr.js') }}"></script>
+    <script src="{{ asset('assets/js/popperjs.js') }}"></script>
+    <script src="{{ asset('vendor/bootstrap/js/bootstrap.min.js') }}"></script>
+    <script src="{{ asset('assets/js/fontawesome-all.js') }}"></script>
+    <script>
+        jQuery(document).ready(function ($) {
+            const columnThreshold = 7; // Number of columns to keep visible
+            // Target all tables with more than the threshold columns
+            $(document).ready(function () {
+                const columnStart = 5; // Starting column index to hide
+                const columnEnd = 9; // Ending column index to hide
 
-    $(document).ready(function() {
-        // Add your common script logic here...
-    });
+                $('table').each(function () {
+                    const table = $(this);
+                    const rows = table.find('tr');
 
-</script>
+                    // Create and inject the toggle button
+                    const toggleButton = $('<div>')
+                        .html('<i class="fa fa-chevron-right"></i>')
+                        .attr('href', '#')
+                        .addClass('btn btn-primary') // Optional styling
+                        .css('margin-bottom', '10px') // Add some spacing
+                        .click(function (e) {
+                            e.preventDefault();
+                            // Toggle specific columns
+                            rows.each(function () {
+                                $(this)
+                                    .find(`th:nth-child(n+${columnStart}):nth-child(-n+${columnEnd}), td:nth-child(n+${columnStart}):nth-child(-n+${columnEnd})`)
+                                    .toggleClass('d-none');
+                            });
+                        });
+
+                    // Insert the button before the table
+                    table.before(toggleButton);
+
+                    // Initially hide columns 5 to 9
+                    rows.each(function () {
+                        $(this)
+                            .find(`th:nth-child(n+${columnStart}):nth-child(-n+${columnEnd}), td:nth-child(n+${columnStart}):nth-child(-n+${columnEnd})`)
+                            .addClass('d-none');
+                    });
+                });
+            });
+        });
+    </script>
 @endpush
 
 {{-- Add common CSS customizations --}}
@@ -62,6 +98,7 @@
 @push('css')
 <script src="{{ asset('assets/js/sweetalert2.js') }}"></script>
 <link rel="stylesheet" href="{{ asset('assets/css/flatpickr.css') }}">
+<link rel="stylesheet" href="{{ asset('assets/css/bootstrap.css') }}">
 <style type="text/css">
 
     {{-- You can add AdminLTE customizations here --}}
