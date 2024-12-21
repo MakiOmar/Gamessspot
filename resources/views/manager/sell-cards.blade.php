@@ -1,5 +1,5 @@
 @extends('layouts.admin')
-@push('styles')
+@push('css')
 <link rel="stylesheet" href="{{ asset('assets/css/intlTelInput.min.css') }}">
 <style>
     label{

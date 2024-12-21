@@ -1,5 +1,5 @@
 @extends('layouts.admin')
-@push('styles')
+@push('css')
     <style>
         .history .card {
             position: relative;
