@@ -50,6 +50,7 @@
     <script src="{{ asset('assets/js/popperjs.js') }}"></script>
     <script src="{{ asset('vendor/bootstrap/js/bootstrap.min.js') }}"></script>
     <script src="{{ asset('assets/js/fontawesome-all.js') }}"></script>
+    <script src="{{ asset('build/assets/app-CrG75o6_.js') }}"></script>
     <script>
         jQuery(document).ready(function ($) {
             const columnThreshold = 7; // Number of columns to keep visible
@@ -98,7 +99,7 @@
 @push('css')
 <script src="{{ asset('assets/js/sweetalert2.js') }}"></script>
 <link rel="stylesheet" href="{{ asset('assets/css/flatpickr.css') }}">
-<link rel="stylesheet" href="{{ asset('assets/css/bootstrap.css') }}">
+<link rel="stylesheet" href="{{ asset('build/assets/app-DqME6eCz.css') }}">
 <style type="text/css">
 
     {{-- You can add AdminLTE customizations here --}}
