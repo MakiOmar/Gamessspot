@@ -26,69 +26,66 @@ class OrderController extends Controller
      */
     public function index()
     {
-        // Check the roles of the authenticated user
-        $user = Auth::guard('admin')->user(); // Assuming you're using the 'admin' guard for authentication
+        $user = Auth::guard('admin')->user(); // Assuming 'admin' guard is used
+        $roles = $user->roles->pluck('name');
 
-        // If the user has the 'admin' role, fetch all orders
-        if (
-            $user->roles->contains(
-                function ($role) {
-                    return $role->name === 'admin';
-                }
-            )
-        ) {
+    // Check for 'admin' role
+        if ($roles->contains('admin')) {
             $orders = Order::with([
-                'seller',
-                'account' => function ($query) {
-                    $query->with('game'); // Load game only if account is not null
-                },
-                'card' // Load card if card_id is not null
+            'seller',
+            'account.game', // Load game through account
+            'card'
             ])->paginate($this->pagination);
-        } elseif (
-            $user->roles->contains(
-                function ($role) {
-                    return $role->name === 'sales' || $role->name === 'account manager';
-                }
-            )
-        ) {
-            $orders = Order::with([
-                'seller',
-                'account' => function ($query) {
-                    $query->with('game');  // Load game only if account exists
-                },
-                'card'  // Load card only if card_id is not null
-            ])
-            ->where('seller_id', $user->id)
-            ->whereDate('created_at', Carbon::today()) // Filter by today's date
-            ->paginate($this->pagination);
-        } elseif (
-            $user->roles->contains(
-                function ($role) {
-                    return $role->name === 'accountant';
-                }
-            )
-            &&
-            ! empty($_GET['id'])
-        ) {
-            // Sales role: Fetch only the current user's orders
-            $orders = Order::with([
-                'seller',
-                'account' => function ($query) {
-                    $query->with('game');  // Load game only if account exists
-                },
-                'card'  // Load card only if card_id is not null
-            ])
-            ->where('store_profile_id', $_GET['id'])
-            ->orderBy('buyer_name', 'asc')
-            ->paginate($this->pagination);
-        } else {
-            // Default case: If the user doesn't have the necessary role, return a 403 response or redirect
-            abort(403, 'Unauthorized action.');
+
+            return $this->renderOrders($orders, $user);
         }
 
-        // Return the view with the orders data
+    // Check for 'sales' or 'account manager' roles
+        if ($roles->intersect(['sales', 'account manager'])->isNotEmpty()) {
+            $orders = Order::with([
+            'seller',
+            'account.game',
+            'card'
+            ])
+            ->where('seller_id', $user->id)
+            ->whereDate('created_at', Carbon::today())
+            ->paginate($this->pagination);
+
+            return $this->renderOrders($orders, $user);
+        }
+
+    // Check for 'accountant' role with a specific store profile ID
+        if ($roles->contains('accountant') && request()->has('id')) {
+            $storeId = request()->get('id');
+
+            $orders = Order::with([
+            'seller',
+            'account.game',
+            'card'
+            ])
+            ->where('store_profile_id', $storeId)
+            ->orderBy('buyer_name', 'asc')
+            ->paginate($this->pagination);
+
+            return $this->renderOrders($orders, $user);
+        }
+
+    // Unauthorized case
+        abort(403, 'Unauthorized action.');
+    }
+
+/**
+ * Render the orders view.
+ *
+ * @param \Illuminate\Pagination\LengthAwarePaginator $orders
+ * @param \App\Models\User $user
+ * @return \Illuminate\Contracts\View\View
+ */
+    protected function renderOrders($orders, $user)
+    {
         return view('manager.orders', compact('orders', 'user'));
     }
+
 
     /**
      * Search for orders by buyer phone.
