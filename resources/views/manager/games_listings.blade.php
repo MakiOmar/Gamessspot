@@ -110,14 +110,14 @@
                         <div class="form-group">
                             <label>Store Profile</label>
                             
-                            @if(auth()->user()->roles->contains('name', 'admin') || auth()->user()->roles->contains('name', 'account manager')) <!-- Check if the user has the 'admin' role -->
+                            @if(auth()->user()->roles->contains('name', 'admin')) <!-- Check if the user has the 'admin' role -->
                                 <select class="form-control" name="store_profile_id" required>
                                     @foreach ($storeProfiles as $profile)
                                         <option value="{{ $profile->id }}">{{ $profile->name }}</option>
                                     @endforeach
                                 </select>
                             @else
-                                <input type="hidden" name="store_profile_id" value="{{ auth()->user()->store_profile_id }}">
+                                <input type="hidden" name="store_profile_id" value="{{ auth()->user()->store_profile_id ?? '0' }}">
                                 <!-- Optionally display the store profile name, handling if storeProfile relation is null -->
                                 <p>{{ auth()->user()->storeProfile->name ?? 'No Store Profile Assigned' }}</p>
                             @endif
