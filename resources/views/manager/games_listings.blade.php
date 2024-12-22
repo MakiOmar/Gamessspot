@@ -394,9 +394,15 @@
                             $('#accountModal').modal('show');
                         },
                         error: function(xhr) {
+                            let errorMessage = 'An error occurred while creating the order.';
+                            if (xhr.status === 422 && xhr.responseJSON && xhr.responseJSON.message) {
+                                // Extract the error message from the response
+                                errorMessage = xhr.responseJSON.message;
+                            }
+
                             Swal.fire({
                                 title: 'Error',
-                                text: 'An error occurred while creating the order.', // Display the first error message for each field
+                                text: errorMessage, // Display the specific error message
                                 icon: 'error',
                                 confirmButtonText: 'OK'
                             });

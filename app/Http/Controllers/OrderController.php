@@ -210,7 +210,7 @@ class OrderController extends Controller
         }
 
         // Execute the query and get results
-        $orders = $orders->paginate(1);
+        $orders = $orders->paginate(20);
         if ($buyer && $orders && !empty($orders)) {
             $buyer = $orders[0];
         }
@@ -330,7 +330,20 @@ class OrderController extends Controller
         'type'             => 'required|string|max:255',
         'platform'         => 'required|string|max:255',
         ]);
+        // Check if the buyer_phone has been used before and validate buyer_name
+        $existingOrder = Order::where('buyer_phone', $validatedData['buyer_phone'])->first();
+        if ($existingOrder && $existingOrder->buyer_name !== $validatedData['buyer_name']) {
+            return response()->json([
+                'message' => 'The buyer name does not match the previous orders for this phone number.',
+            ], 422);
+        }
 
+        $existingOrder = Order::where('buyer_name', $validatedData['buyer_name'])->first();
+        if ($existingOrder && $existingOrder->buyer_phone !== $validatedData['buyer_phone']) {
+            return response()->json([
+                'message' => 'The buyer phone does not match the previous orders for this buyer name.',
+            ], 422);
+        }
         // Determine the sold item field dynamically
         $sold_item         = "ps{$validatedData['platform']}_{$validatedData['type']}_stock";
         $sold_item_status  = "ps{$validatedData['platform']}_{$validatedData['type']}_status";
