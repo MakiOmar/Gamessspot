@@ -334,14 +334,14 @@ class OrderController extends Controller
         $existingOrder = Order::where('buyer_phone', $validatedData['buyer_phone'])->first();
         if ($existingOrder && $existingOrder->buyer_name !== $validatedData['buyer_name']) {
             return response()->json([
-                'message' => 'The buyer name does not match the previous orders for this phone number.',
+                'message' => "Incorrect buyer name. Should be ( $existingOrder->buyer_name )",
             ], 422);
         }
 
         $existingOrder = Order::where('buyer_name', $validatedData['buyer_name'])->first();
         if ($existingOrder && $existingOrder->buyer_phone !== $validatedData['buyer_phone']) {
             return response()->json([
-                'message' => 'The buyer phone does not match the previous orders for this buyer name.',
+                'message' => "Incorrect buyer phone. Should be ( $existingOrder->buyer_phone )",
             ], 422);
         }
         // Determine the sold item field dynamically
