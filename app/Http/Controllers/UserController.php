@@ -20,7 +20,7 @@ class UserController extends Controller
             $users = User::whereHas(
                 'roles',
                 function ($query) use ($role) {
-                    $query->where('id', intval($role));
+                    $query->where('roles.id', intval($role));
                 }
             )->with('storeProfile')->paginate(10);
         }
@@ -52,6 +52,11 @@ class UserController extends Controller
     public function accountManagers()
     {
         return $this->users(4);
+    }
+
+    public function customers()
+    {
+        return $this->users(5);
     }
 
     // Method to search users based on the input
