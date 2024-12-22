@@ -10,6 +10,7 @@ use App\Models\User;
 use App\Models\Order;
 use App\Models\Game;
 use Illuminate\Support\Facades\DB;
+use App\Models\StoresProfile;
 
 class DashboardController extends Controller
 {
@@ -37,6 +38,8 @@ class DashboardController extends Controller
 
         $topBuyers = $this->topBuyers();
 
+        $storeProfiles = StoresProfile::withCount('orders')->paginate(10);
+
         $StockLevels = $this->getStockLevels();
         $lowStockGames = $StockLevels[0] ?? collect([]);
         $highStockGames = $StockLevels[1] ?? collect([]);
@@ -54,6 +57,7 @@ class DashboardController extends Controller
                 'topBuyers',
                 'lowStockGames',
                 'highStockGames',
+                'storeProfiles',
             )
         );
     }

@@ -214,6 +214,8 @@
     @include('manager.dashboard-admin')
     @elseif(Auth::user()->roles->contains('name', 'sales') || Auth::user()->roles->contains('name', 'account manager'))
     @include('manager.dashboard-sales')
+    @elseif(Auth::user()->roles->contains('name', 'accountant'))
+    @include('manager.stores')
     @endif
 @stop
 
