@@ -79,7 +79,7 @@
                     @foreach ($orders as $order)
                         <tr id="orderRow-{{ $order->id }}">
                             <td>{{ $order->id }}</td>
-                            <td>{{ $order->seller->name }}</td>
+                            <td class="{{ $order->seller ? '' : 'text-danger' }}">{{ $order->seller?->name ?? 'Maybe deleted' }}</td>
                             @if($order->account)
                                 <td>{{ $order->account->game->title }}</td>
                                 <td>{{ $order->account->mail }}</td>
