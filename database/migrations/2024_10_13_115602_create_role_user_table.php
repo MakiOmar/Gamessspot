@@ -12,9 +12,10 @@ return new class extends Migration
     public function up()
     {
         Schema::create('role_user', function (Blueprint $table) {
+            $table->id(); // Add the primary key column
             $table->foreignId('user_id')->constrained()->onDelete('cascade');
             $table->foreignId('role_id')->constrained()->onDelete('cascade');
-            $table->primary(['user_id', 'role_id']); // Composite primary key for many-to-many relationship
+            $table->unique(['user_id', 'role_id']);
         });
     }
 
