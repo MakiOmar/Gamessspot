@@ -41,8 +41,10 @@
                     <td>{{ $user->storeProfile->name ?? 'No Store Profile' }}</td>
                     <td>
                         <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#editUserModal" data-id="{{ $user->id }}">Edit</button>
+                        @if(auth()->id() !== $user->id)
                         <!-- Delete Button -->
                         <button type="button" class="btn btn-danger deleteUserButton" data-id="{{ $user->id }}">Delete</button>
+                        @endif
                     </td>
                 </tr>
                 @endforeach

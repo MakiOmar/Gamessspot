@@ -139,6 +139,12 @@
                             </li>
                         </ul>
                     </li>
+                    <li class="nav-item">
+                        <a href="{{ route( 'manager.uniqueBuyers' ) }}" class="nav-link">
+                            <i class="bi bi-people"></i>
+                            <p>Customers</p>
+                        </a>
+                    </li>
                 @endif
                 @if ( !Auth::user()->roles->contains('name', 'account manager') && !Auth::user()->roles->contains('name', 'sales') )
                 <li class="nav-item">

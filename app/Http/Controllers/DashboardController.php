@@ -11,6 +11,7 @@ use App\Models\Order;
 use App\Models\Game;
 use Illuminate\Support\Facades\DB;
 use App\Models\StoresProfile;
+use Carbon\Carbon;
 
 class DashboardController extends Controller
 {
@@ -37,6 +38,8 @@ class DashboardController extends Controller
         $topSellingGames = $this->topSellingGames();
 
         $topBuyers = $this->topBuyers();
+        $topSellingStores = $this->topSellingStores();
+        $branchesWithOrders = $this->branchesWithOrdersThisMonth();
 
         $storeProfiles = StoresProfile::withCount('orders')->paginate(10);
 
@@ -58,10 +61,26 @@ class DashboardController extends Controller
                 'lowStockGames',
                 'highStockGames',
                 'storeProfiles',
+                'topSellingStores',
+                'branchesWithOrders'
             )
         );
     }
-
+    public function branchesWithOrdersThisMonth()
+    {
+        return StoresProfile::withCount(['orders' => function ($query) {
+            $query->whereMonth('created_at', Carbon::now()->month)
+                  ->whereYear('created_at', Carbon::now()->year);
+        }])
+        ->withSum(['orders' => function ($query) {
+            $query->whereMonth('created_at', Carbon::now()->month)
+                  ->whereYear('created_at', Carbon::now()->year);
+        }], 'price')
+        ->having('orders_count', '>', 0)
+        ->get();
+    
+        
+    }
     public function topSellingGames()
     {
     // Get top 5 selling games
@@ -134,4 +153,14 @@ class DashboardController extends Controller
 
         return $results;
     }
+    public function topSellingStores()
+    {
+        return StoresProfile::withCount('orders') // Count the number of orders
+        ->withSum('orders', 'price') // Sum the price of all orders
+        ->having('orders_sum_price', '>', 0) // Ensure total price > 0
+        ->orderBy('orders_sum_price', 'desc') // Sort by total price in descending order
+        ->take(3)
+        ->get();
+    }
+
 }

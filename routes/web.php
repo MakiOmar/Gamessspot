@@ -72,6 +72,9 @@ Route::prefix('manager')->group(function () {
         Route::post('/orders/store', [OrderController::class, 'store'])->name('orders.store');
         Route::post('/orders/sell-card', [OrderController::class, 'sellCard'])->name('manager.orders.sell.card');
 
+        Route::get('/customers/export', [OrderController::class, 'customersExport'])->name('manager.customers.export');
+        Route::get('/customers', [OrderController::class, 'uniqueBuyers'])->name('manager.uniqueBuyers');
+
         Route::middleware(['checkRole:admin'])->group(function () {
             Route::post('/orders/undo', [OrderController::class, 'undo'])->name('manager.orders.undo');
         });

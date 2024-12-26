@@ -453,6 +453,14 @@ return [
             'icon' => 'bi bi-palette',
             'can' => 'manage-store-profiles',
         ],
+
+        // Customers
+        [
+            'text' => 'Customers',
+            'route' => 'manager.uniqueBuyers',
+            'icon' => 'bi bi-people',
+            'can' => 'manage-options',
+        ],
     ],
 
     'navbar-left' => [

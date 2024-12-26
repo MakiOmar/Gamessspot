@@ -6,6 +6,7 @@ use App\Models\Order;
 use App\Models\Account;
 use Illuminate\Http\Request;
 use App\Exports\OrdersExport;
+use App\Exports\CustomersExport;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
@@ -29,7 +30,7 @@ class OrderController extends Controller
         $user = Auth::guard('admin')->user(); // Assuming 'admin' guard is used
         $roles = $user->roles->pluck('name');
 
-    // Check for 'admin' role
+        // Check for 'admin' role
         if ($roles->contains('admin')) {
             $orders = Order::with([
             'seller',
@@ -40,7 +41,7 @@ class OrderController extends Controller
             return $this->renderOrders($orders, $user);
         }
 
-    // Check for 'sales' or 'account manager' roles
+        // Check for 'sales' or 'account manager' roles
         if ($roles->intersect(['sales', 'account manager'])->isNotEmpty()) {
             $orders = Order::with([
             'seller',
@@ -54,7 +55,7 @@ class OrderController extends Controller
             return $this->renderOrders($orders, $user);
         }
 
-    // Check for 'accountant' role with a specific store profile ID
+        // Check for 'accountant' role with a specific store profile ID
         if ($roles->contains('accountant') && request()->has('id')) {
             $storeId = request()->get('id');
 
@@ -70,17 +71,35 @@ class OrderController extends Controller
             return $this->renderOrders($orders, $user);
         }
 
+        // Unauthorized case
+        abort(403, 'Unauthorized action.');
+    }
+    public function uniqueBuyers()
+    {
+        $user = Auth::guard('admin')->user();
+        $roles = $user->roles->pluck('name');
+
+    // Check if the user is an admin
+        if ($roles->contains('admin')) {
+            $uniqueBuyers = Order::select('buyer_phone', 'buyer_name')
+            ->groupBy('buyer_phone', 'buyer_name') // Group by buyer_phone and buyer_name to ensure uniqueness
+            ->paginate(10); // Paginate the results with 10 per page
+
+            return view('manager.unique_buyers', compact('uniqueBuyers'));
+        }
+
     // Unauthorized case
         abort(403, 'Unauthorized action.');
     }
 
-/**
- * Render the orders view.
- *
- * @param \Illuminate\Pagination\LengthAwarePaginator $orders
- * @param \App\Models\User $user
- * @return \Illuminate\Contracts\View\View
- */
+
+    /**
+     * Render the orders view.
+     *
+     * @param \Illuminate\Pagination\LengthAwarePaginator $orders
+     * @param \App\Models\User $user
+     * @return \Illuminate\Contracts\View\View
+     */
     protected function renderOrders($orders, $user)
     {
         return view('manager.orders', compact('orders', 'user'));
@@ -226,6 +245,17 @@ class OrderController extends Controller
     {
         return Excel::download(new OrdersExport(), 'orders.xlsx');
     }
+
+    /**
+     * Export the list of customers as an Excel file.
+     *
+     * @return \Symfony\Component\HttpFoundation\BinaryFileResponse
+     */
+    public function customersExport()
+    {
+        return Excel::download(new CustomersExport(), 'customers.xlsx');
+    }
+       
     /**
      * Undo an order by deleting it and updating the corresponding stock.
      */

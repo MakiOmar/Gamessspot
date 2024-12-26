@@ -112,26 +112,57 @@
     <div class="col-lg-4">
         <div class="card">
             <div class="card-body">
-                <h5>Top buyers</h5>
-                @if($topBuyers->isEmpty())
-                    <p>No buyers found.</p>
+                <h5>Branchs monthly revenue (This Month)</h5>
+                @if($branchesWithOrders->isEmpty())
+                    <p>No orders yet.</p>
                 @else
                     <table class="table table-striped">
                         <thead>
                             <tr>
-                                <th>Rank</th>
-                                <th>Buyer Phone</th>
-                                <th>Buyer name</th>
-                                <th>Total Orders</th>
+                                <th>ID</th>
+                                <th>Store</th>
+                                <th>Orders Count</th>
+                                <th>Total Revenue</th>
                             </tr>
                         </thead>
                         <tbody>
-                            @foreach($topBuyers as $index => $buyer)
+                            @foreach($topSellingStores as $index => $topSellingStore)
                                 <tr>
                                     <td>{{ $index + 1 }}</td>
-                                    <td>{{ $buyer->buyer_phone }}</td>
-                                    <td>{{ $buyer->buyer_name }}</td>
-                                    <td>{{ $buyer->total_orders }}</td>
+                                    <td>{{ $topSellingStore->name }}</td>
+                                    <td>{{ $topSellingStore->orders_count }}</td>
+                                    <td>{{ number_format($topSellingStore->orders_sum_price, 2) }} EGP</td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                @endif
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-body">
+                <h5>Top selling branchs</h5>
+                @if($topSellingStores->isEmpty())
+                    <p>No orders yet.</p>
+                @else
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Store</th>
+                                <th>Orders count</th>
+                                <th>Total Revenue</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach($topSellingStores as $index => $topSellingStore)
+                                <tr>
+                                    <td>{{ $index + 1 }}</td>
+                                    <td>{{ $topSellingStore->name }}</td>
+                                    <td>{{ $topSellingStore->orders_count }}</td>
+                                    <td>{{ number_format($topSellingStore->orders_sum_price, 2) }} EGP</td>
                                 </tr>
                             @endforeach
                         </tbody>
