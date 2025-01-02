@@ -32,7 +32,7 @@
             content: '';
             position: absolute;
             top: 0;
-            left: 67px;
+            left: 90px;
             height: 100%;
             width: 4px;
             background: #e9ecef;
@@ -52,7 +52,7 @@
         .history .vertical-timeline-element-icon {
             position: absolute;
             top: 0;
-            left: 60px;
+            left: 82px;
         }
 
         .history .vertical-timeline-element-icon .badge-dot-xl {
@@ -83,7 +83,7 @@
 
         .history .vertical-timeline-element-content {
             position: relative;
-            margin-left: 90px;
+            margin-left: 110px;
             font-size: 0.8rem;
         }
 
@@ -98,10 +98,10 @@
         .history .vertical-timeline-element-content .vertical-timeline-element-date {
             display: block;
             position: absolute;
-            left: -90px;
+            left: -100px;
             top: 0;
             padding-right: 10px;
-            text-align: right;
+            text-align: center;
             color: #adb5bd;
             font-size: 0.7619rem;
             white-space: nowrap;

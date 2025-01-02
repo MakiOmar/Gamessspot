@@ -70,7 +70,19 @@ class OrdersExport implements FromCollection, WithHeadings
             )
             ->get();
     }
-
+    /**
+     * Map the data to include formatting.
+     *
+     * @param $order
+     * @return array
+     */
+    public function map($order): array
+    {
+        return [
+            " {$order->buyer_phone}", // Add a single quote to force Excel to treat it as text
+            $order->buyer_name,
+        ];
+    }
     /**
      * Define the headers for the exported file.
      *

@@ -46,6 +46,7 @@ class DashboardController extends Controller
         $StockLevels = $this->getStockLevels();
         $lowStockGames = $StockLevels[0] ?? collect([]);
         $highStockGames = $StockLevels[1] ?? collect([]);
+        $orders   = $this->activity();
 
         $total = $totalCodeCost + $accountsCost;
         return view(
@@ -62,7 +63,8 @@ class DashboardController extends Controller
                 'highStockGames',
                 'storeProfiles',
                 'topSellingStores',
-                'branchesWithOrders'
+                'branchesWithOrders',
+                'orders'
             )
         );
     }
@@ -78,9 +80,16 @@ class DashboardController extends Controller
         }], 'price')
         ->having('orders_count', '>', 0)
         ->get();
-    
-        
     }
+    public function activity()
+    {
+        // Fetch the 10 most recent orders for admin
+        return Order::with(['seller', 'account.game', 'card'])
+            ->latest()
+            ->take(10)
+            ->get();
+    }
+
     public function topSellingGames()
     {
     // Get top 5 selling games
