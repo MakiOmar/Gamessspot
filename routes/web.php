@@ -74,6 +74,8 @@ Route::prefix('manager')->group(function () {
 
         Route::get('/customers/export', [OrderController::class, 'customersExport'])->name('manager.customers.export');
         Route::get('/customers', [OrderController::class, 'uniqueBuyers'])->name('manager.uniqueBuyers');
+        Route::get('/customers/search', [OrderController::class, 'searchCustomers'])->name('manager.orders.searchCustomers');
+
 
         Route::middleware(['checkRole:admin'])->group(function () {
             Route::post('/orders/undo', [OrderController::class, 'undo'])->name('manager.orders.undo');

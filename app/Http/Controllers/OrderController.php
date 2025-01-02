@@ -184,6 +184,33 @@ class OrderController extends Controller
         // Return the updated rows for the table (assuming a partial view)
         return view('manager.partials.order_rows', compact('orders', 'status'))->render();
     }
+    public function searchCustomers(Request $request)
+    {
+        // Extract search query
+        $query = $request->input('search');
+
+        // Ensure admin-only access
+        $user = Auth::user();
+        if (!$user->roles->contains('name', 'admin')) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        // Query for unique customers
+        $customers = Order::query()
+            ->select('buyer_name', 'buyer_phone')
+            ->when($query, function ($q) use ($query) {
+                $q->where(function ($q) use ($query) {
+                    $q->where('buyer_phone', 'like', "%$query%")
+                    ->orWhere('buyer_name', 'like', "%$query%");
+                });
+            })
+            ->distinct()
+            ->orderBy('buyer_name')
+            ->get();
+
+        // Render a partial view with the results
+        return view('manager.partials.customer_rows', compact('customers'))->render();
+    }
 
     public function quickSearch(Request $request)
     {

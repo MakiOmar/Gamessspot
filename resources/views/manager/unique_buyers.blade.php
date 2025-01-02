@@ -70,14 +70,11 @@
             // Handle search input and date range filter
             $('#searchOrder').on('input change', function() {
                 let query = $('#searchOrder').val();
-                // Check if we have a valid date range or search query
-                if ( query.length >= 3) {
+                if (query.length >= 3) {
                     $.ajax({
-                        url: "{{ route('manager.orders.search') }}", // Search route for orders
+                        url: "{{ route('manager.orders.searchCustomers') }}",
                         method: 'GET',
-                        data: {
-                            search: query,
-                        },
+                        data: { search: query },
                         success: function(response) {
                             if (response.trim() === '') {
                                 Swal.fire({
@@ -85,9 +82,9 @@
                                     text: 'No customers found matching your search criteria.',
                                     icon: 'info',
                                     confirmButtonText: 'OK'
-                                }); // Show 'No results' message
+                                });
                             } else {
-                                $('#orderTableBody').html(response); // Replace table rows with search results
+                                $('#orderTableBody').html(response);
                             }
                         },
                         error: function(xhr) {
@@ -100,7 +97,7 @@
                         }
                     });
                 } else if (!query) {
-                    location.reload(); // Reload the page if both search and date range are cleared
+                    location.reload();
                 }
             });
 
