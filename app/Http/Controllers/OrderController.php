@@ -74,6 +74,38 @@ class OrderController extends Controller
         // Unauthorized case
         abort(403, 'Unauthorized action.');
     }
+    /**
+ * Get the latest 10 orders for a customer by buyer_phone.
+ *
+ * @param \Illuminate\Http\Request $request
+ * @return \Illuminate\Http\JsonResponse
+ */
+    public function latestCustomerOrders(Request $request)
+    {
+        $validatedData = $request->validate([
+        'buyer_phone' => 'required|string|max:15',
+        ]);
+
+        try {
+            $orders = Order::with(['seller', 'account.game', 'card'])
+            ->where('buyer_phone', $validatedData['buyer_phone'])
+            ->orderBy('created_at', 'desc')
+            ->take(10)
+            ->get();
+
+            return response()->json([
+            'success' => true,
+            'orders' => $orders,
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+            'success' => false,
+            'message' => 'Failed to retrieve orders.',
+            'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
     public function uniqueBuyers()
     {
         $user = Auth::guard('admin')->user();
@@ -282,7 +314,7 @@ class OrderController extends Controller
     {
         return Excel::download(new CustomersExport(), 'customers.xlsx');
     }
-       
+
     /**
      * Undo an order by deleting it and updating the corresponding stock.
      */
