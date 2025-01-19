@@ -19,6 +19,10 @@ class AppServiceProvider extends ServiceProvider
                 return new ImageUploadService();
             });
         }
+
+        if ($this->app->environment('production')) {
+            \URL::forceScheme('https');
+        }
     }
 
     /**
