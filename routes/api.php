@@ -2,6 +2,7 @@
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\OrderController;
 
 /*
 |--------------------------------------------------------------------------
@@ -17,3 +18,23 @@ use Illuminate\Support\Facades\Route;
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
 });
+
+Route::post('/login', function (Request $request) {
+    $request->validate([
+        'phone' => 'required|string',
+        'password' => 'required',
+    ]);
+
+    $user = \App\Models\User::where('phone', $request->phone)->first();
+
+    if (!$user || !Hash::check($request->password, $user->password)) {
+        return response()->json(['message' => 'Invalid credentials'], 401);
+    }
+
+    // Generate a token
+    $token = $user->createToken('API Token')->plainTextToken;
+
+    return response()->json(['token' => $token], 200);
+});
+
+Route::middleware('auth:sanctum')->get('orders/latest', [OrderController::class, 'latestCustomerOrders']);
