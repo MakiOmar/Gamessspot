@@ -274,6 +274,37 @@
     </script>
     <script>
         jQuery(document).ready(function($) {
+            function copyToClipboard(selector) {
+                // Get the element by selector
+                const element = document.querySelector(selector);
+
+                if (element) {
+                    // Select the text content
+                    element.select();
+                    element.setSelectionRange(0, 99999); // For mobile compatibility
+
+                    // Copy the text to the clipboard
+                    document.execCommand("copy");
+
+                    // Display success message using SweetAlert2
+                    Swal.fire({
+                        icon: "success",
+                        title: "Copied!",
+                        text: "Has been successfully copied to your clipboard.",
+                        timer: 2000,
+                        showConfirmButton: false,
+                    });
+                } else {
+                // Display error message if element is not found
+                Swal.fire({
+                    icon: "error",
+                    title: "Error",
+                    text: "Unable to find the element to copy.",
+                    timer: 2000,
+                    showConfirmButton: false,
+                });
+                }
+            }
             const input = document.querySelector("#buyer_phone");
             const iti = window.intlTelInput(input, {
                 initialCountry: "auto", // Automatically detect the user's country
