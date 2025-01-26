@@ -218,12 +218,13 @@ class ManagerController extends Controller
                 ->first();
 
             $game->is_primary_active = false;
-
-            if ($oldestAccount) {
+            if ($oldestAccount && 5 !== $n) {
                 // Check if offline stock is 0 for the oldest account
                 if ($oldestAccount->$offline_stock == 0) {
                     $game->is_primary_active = true;
                 }
+            } elseif (5 === $n) {
+                $game->is_primary_active = true;
             }
         }
 
