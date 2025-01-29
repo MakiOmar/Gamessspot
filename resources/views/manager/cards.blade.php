@@ -84,7 +84,6 @@
 <script>
     function submitCardForm() {
         let formData = new FormData(document.getElementById('addCardForm'));
-
         jQuery.ajax({
             url: "{{ route('cards.store') }}", // Adjust route as needed
             type: 'POST',

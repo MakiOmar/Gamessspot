@@ -18,16 +18,17 @@ class AdminMiddleware
     public function handle(Request $request, Closure $next)
     {
         if (
-            Auth::check() && Auth::user()->roles->contains(
-                function ($role) {
-                    return in_array($role->id, array( 1, 2, 3,4 )); // Role IDs for 'admin', 'sales', and 'accountant'
-                }
-            )
+            Auth::check() &&
+            Auth::user()->roles->contains(function ($role) {
+                return in_array($role->id, [1, 2, 3, 4]); // Role IDs for 'admin', 'sales', 'accountant'
+            }) &&
+            Auth::user()->is_active // Ensure the user is active
         ) {
             return $next($request);
         }
 
-        // If the user is not an admin, redirect to the home page or return an unauthorized response
-        return redirect('/')->with('error', 'Unauthorized Access');
+        // If the user is not authorized or is disabled, redirect to the home page or return an unauthorized response
+        Auth::logout(); // Log out the user if they are disabled
+        return redirect('/')->with('error', 'Unauthorized Access or Account Disabled');
     }
 }

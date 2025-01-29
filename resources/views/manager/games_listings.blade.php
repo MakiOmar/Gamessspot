@@ -16,6 +16,15 @@
         padding: 5px;
         margin-bottom: 20px;
     }
+    #gamesListings{
+        max-width: 1200px;
+    }
+    #gamesListings .card-img-top{
+        height: 250px; 
+        background-size: contain; 
+        background-position: center;
+        background-repeat: no-repeat;
+    }
 </style>
 @endpush
 @section('title', 'Manager - Games')
@@ -51,10 +60,10 @@
                             $isBlocked = auth()->user()->storeProfile ? auth()->user()->storeProfile->isBlockedForGame($game->id) : false;
                         @endphp
                         
-                        <div class="card-img-top" style="background-image: url('{{ asset($game->$image_url) }}'); height: 250px; background-size: cover; background-position: center;"></div>
+                        <div class="card-img-top" style="background-image: url('{{ asset($game->$image_url) }}');"></div>
                 
                         <div class="card-body text-center">
-                            <h5 class="card-title">{{ $game->title }}</h5>
+                            <h5 class="card-title float-none">{{ $game->title }}</h5>
                             @if (!$isBlocked)
                                 @foreach (['offline', 'primary', 'secondary'] as $type)
                                     @php
@@ -125,7 +134,7 @@
                         
                         <div class="form-group">
                             <label>Client Name:</label>
-                            <input type="text" class="form-control" placeholder="Client name" name="buyer_name" required>
+                            <input type="text" class="form-control" placeholder="Client name" id="buyer_name" name="buyer_name" required>
                         </div>
                         <div class="form-group">
                             <label>Client Phone:</label>
@@ -226,6 +235,11 @@
                 } else if (query === '') {
                     location.reload(); // Reload the page if the search is cleared
                 }
+            });    
+            $('#buyer_phone').on('focusout', function () {
+                const query = $(this).val();
+    
+                
             });
     
             function performSearch(query) {
@@ -425,6 +439,7 @@
                             $('#accountModal').modal('show');
                         },
                         error: function(xhr) {
+                            console.log(xhr);
                             let errorMessage = 'An error occurred while creating the order.';
                             if (xhr.status === 422 && xhr.responseJSON && xhr.responseJSON.message) {
                                 // Extract the error message from the response

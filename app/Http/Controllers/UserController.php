@@ -12,6 +12,26 @@ use Illuminate\Support\Facades\Cache;
 
 class UserController extends Controller
 {
+    public function toggleStatus(Request $request, $id)
+    {
+        $user = User::findOrFail($id);
+        $action = $request->input('action');
+
+        if ($action === 'deactivate') {
+            $user->is_active = 0;
+            $message = "User account deactivated successfully.";
+        } elseif ($action === 'activate') {
+            $user->is_active = 1;
+            $message = "User account activated successfully.";
+        } else {
+            return response()->json(['success' => false, 'message' => 'Invalid action.']);
+        }
+
+        $user->save();
+
+        return response()->json(['success' => true, 'message' => $message]);
+    }
+
     public function users($role = 'any')
     {
         if ('any' === $role) {

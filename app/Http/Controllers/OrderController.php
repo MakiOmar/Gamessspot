@@ -445,19 +445,31 @@ class OrderController extends Controller
         if ($validatedData['type'] === 'offline') {
             $accountQuery->where($sold_item, '>', 0);
         } elseif ($validatedData['type'] === 'primary') {
-            $accountQuery->where($sold_offline_item, 0)->where($sold_item, '>', 0);
+            if ($validatedData['platform'] === '5') {
+                $accountQuery->where($sold_item, '>', 0);
+            } else {
+                $accountQuery->where($sold_offline_item, 0)->where($sold_item, '>', 0);
+            }
         } elseif ($validatedData['type'] === 'secondary') {
-            $accountQuery->where($sold_offline_item, 0)
-                    /*->where('ps' . $validatedData['platform'] . '_primary_stock', 0)*/
+            if ($validatedData['platform'] === '5') {
+                $accountQuery->where($sold_item, '>', 0);
+            } else {
+                $accountQuery->where($sold_offline_item, 0)
                     ->where($sold_item, '>', 0);
+            }
         }
 
         try {
             DB::beginTransaction();
 
             // Fetch the first matching account or fail
-            $account = $accountQuery->select('accounts.*')->firstOrFail();
-
+            $account = $accountQuery->select('accounts.*')->first();
+            // Check if no account was found
+            if (!$account) {
+                return response()->json([
+                    'message' => 'No available account matches the specified criteria.',
+                ], 422); // 422 Unprocessable Entity
+            }
             // Reduce the corresponding stock by 1 for the account
             $account->decrement($sold_item, 1);
 

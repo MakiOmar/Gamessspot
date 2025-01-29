@@ -122,22 +122,24 @@
     <script src="{{ asset('assets/js/intlTelInput.min.js') }}"></script>
     <script src="{{ asset('assets/js/utils.js') }}"></script>
     <script>
-        const input = document.querySelector("#buyer_phone");
-        const iti = window.intlTelInput(input, {
-            initialCountry: "auto", // Automatically detect the user's country
-            separateDialCode: true, // Show country code separately
-            geoIpLookup: function(success, failure) {
-                // Automatically detect the user's country using an API
-                fetch("https://ipinfo.io/json", {mode: "cors"})
-                .then(response => response.json())
-                .then((response) => {
-                    const countryCode = (response && response.country) ? response.country : "eg";
-                    success(countryCode);
-                })
-                .catch(() => failure());
-            }
+        jQuery(document).ready(function($) {
+            const input = document.querySelector("#buyer_phone");
+            const iti = window.intlTelInput(input, {
+                initialCountry: "auto", // Automatically detect the user's country
+                separateDialCode: true, // Show country code separately
+                geoIpLookup: function(success, failure) {
+                    // Automatically detect the user's country using an API
+                    fetch("https://ipinfo.io/json", {mode: "cors"})
+                    .then(response => response.json())
+                    .then((response) => {
+                        const countryCode = (response && response.country) ? response.country : "eg";
+                        success(countryCode);
+                    })
+                    .catch(() => failure());
+                }
+            });
+            window.iti = iti;
         });
-        window.iti = iti;
         function openOrderForm(categoryId, categoryName) {
             document.getElementById('card_category_id').value = categoryId;
             document.getElementById('categoryName').textContent = categoryName;
@@ -171,8 +173,13 @@
             });
         }
         function submitOrder() {
-            let formData = new FormData(document.getElementById('orderForm'));
+            let formElement = document.getElementById('orderForm');
+            let formData = new FormData(formElement);
+            let phoneNumber = iti.getNumber();
+            // Manually replace the `buyer_phone` in the FormData
+            formData.set('buyer_phone', phoneNumber);
             if (iti.isValidNumber()) {
+                
                 jQuery.ajax({
                     url: "{{ route('manager.orders.sell.card') }}",
                     type: 'POST',

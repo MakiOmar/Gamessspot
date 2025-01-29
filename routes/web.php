@@ -110,6 +110,10 @@ Route::prefix('manager')->group(function () {
         Route::put('/users/update/{id}', [UserController::class, 'update'])->name('manager.users.update');
         Route::post('/users/store', [UserController::class, 'store'])->name('manager.users.store');
         Route::delete('/users/delete/{id}', [UserController::class, 'destroy'])->name('users.delete');
+        Route::post('/users/toggle-status/{id}', [UserController::class, 'toggleStatus'])
+        ->middleware('auth', 'can:manage-users')
+        ->name('users.toggleStatus');
+
 
 
         Route::get('/storeProfiles', [StoreProfileController::class, 'index'])->name('manager.storeProfiles.index');

@@ -51,11 +51,15 @@
     <script src="{{ asset('vendor/bootstrap/js/bootstrap.min.js') }}"></script>
     <script src="{{ asset('assets/js/fontawesome-all.js') }}"></script>
     <script src="{{ asset('build/assets/app-CrG75o6_.js') }}"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chosen-js@1.8.7/chosen.jquery.min.js"></script>
+
     <script>
         jQuery(document).ready(function ($) {
+            $('#game,#region').chosen({
+                width: '100%'
+            });
             const columnThreshold = 7; // Number of columns to keep visible
             // Target all tables with more than the threshold columns
-            $(document).ready(function () {
                 const columnStart = 5; // Starting column index to hide
                 const columnEnd = 9; // Ending column index to hide
 
@@ -89,7 +93,6 @@
                             .addClass('d-none');
                     });
                 });
-            });
         });
     </script>
 @endpush
@@ -98,6 +101,7 @@
 
 @push('css')
 <script src="{{ asset('assets/js/sweetalert2.js') }}"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/chosen-js@1.8.7/chosen.min.css">
 <link rel="stylesheet" href="{{ asset('assets/css/flatpickr.css') }}">
 <link rel="stylesheet" href="{{ asset('build/assets/app-DqME6eCz.css') }}">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.min.css" integrity="sha256-Qsx5lrStHZyR9REqhUF8iQt73X06c8LGIUPzpOhwRrI=" crossorigin="anonymous"><!--end::Third Party Plugin(Bootstrap Icons)--><!--begin::Required Plugin(AdminLTE)-->
