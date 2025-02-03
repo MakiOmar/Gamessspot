@@ -288,6 +288,17 @@ class ManagerController extends Controller
 
         return view('manager.partials.games_list', compact('psGames', 'n'))->render();
     }
+    public function searchGamesByTitle(Request $request)
+    {
+        $query = $request->get('query', '');
+
+    // Fetch games matching the title
+        $games = Game::where('title', 'LIKE', "%{$query}%")->paginate(10); // Paginate results
+
+        return view('manager.partials.games_row', compact('games'))->render(); // Return partial view
+    }
+
+
     private function filterGames($platform, $query)
     {
         $user = Auth::user();
