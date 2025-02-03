@@ -231,7 +231,7 @@
 <script>
     jQuery(document).ready(function($) {
         // Handle Add Account Button
-        $('#addAccountButton').on('click', function() {
+        $(document).on('click','#addAccountButton',function() {
             $('#accountModalLabel').text('Add New Account');
             $('#accountForm').attr('action', "{{ route('manager.accounts.store') }}").attr('method', 'POST');
             $('#accountForm')[0].reset(); // Reset the form
@@ -239,7 +239,7 @@
         });
 
         // Handle Edit Account Button
-        $('.editAccount').on('click', function() {
+        $(document).on('click', '.editAccount',function() {
             $('#stock-availability').hide();
             $('#accountModalLabel').text('Edit Account');
             $('#accountForm').attr('action', `/manager/accounts/${$(this).data('id')}`).attr('data-method', 'PUT');
@@ -248,7 +248,7 @@
             $('#accountId').val($(this).data('id'));
             $('#mail').val($(this).data('mail'));
             $('#password').val($(this).data('password'));
-            $('#game').val($(this).data('game_id'));
+            $('#game').val($(this).data('game_id')).trigger('change');
             $('#region').val($(this).data('region'));
             $('#cost').val($(this).data('cost'));
             $('#birthdate').val($(this).data('birthdate'));
@@ -309,6 +309,10 @@
                             $('#noResultsMessage').hide(); // Hide 'No results' message
                             $('#accountTableBody').html(response); // Replace table rows with search results
                         }
+                        $('table').toggleTableColumns({
+                            columnStart: 5,
+                            columnEnd: 10
+                        });
                     }
                 });
             } else if (query === '') {
