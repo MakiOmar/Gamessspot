@@ -5,42 +5,21 @@
 @section('content')
     <div class="container mt-5">
         <h1 class="text-center mb-4">Games Management</h1>
+        <!-- Search Box -->
+        <input type="text" id="search-box" class="form-control mb-3" placeholder="Search games by title...">
         <div class="d-flex justify-content-end mb-4">
             <button class="btn btn-success" id="createGameBtn" data-bs-toggle="modal" data-bs-target="#editGameModal">
                 Create Game
             </button>
+            
         </div>
         
         <!-- Scrollable table container -->
-        <div style="overflow-x:auto; max-width: 100%; white-space: nowrap;">
-            <table class="table table-striped table-bordered" style="min-width: 800px;">
-                <thead>
-                    <tr>
-                        <th style="width: 21px;">id</th>
-                        <th style="width: 388px;">Game Name</th>
-                        <th style="width: 286px;">Code</th>
-                        <th style="width: 98px;">Reports</th>
-                        <th style="width: 73px;">Edit</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach($games as $game)
-                        <tr>
-                            <td>{{ $game->id }}</td>
-                            <td>{{ $game->title }}</td>
-                            <td>{{ $game->code }}</td>
-                            <td><a href="#">View Reports</a></td>
-                            <td><a href="#" class="btn btn-primary edit-game" data-id="{{ $game->id }}" data-bs-toggle="modal" data-bs-target="#editGameModal">Edit</a></td>
-                        </tr>
-                    @endforeach
-                </tbody>
-            </table>
+        <div id="games-table" style="overflow-x:auto; max-width: 100%; white-space: nowrap;">
+            @include('manager.partials.games_row', ['games' => $games]) <!-- Load initial table -->
         </div>
 
-        <!-- Pagination links -->
-        <div class="d-flex justify-content-center mt-4">
-            {{ $games->links('vendor.pagination.bootstrap-5') }}
-        </div>
+        
     </div>
 
     <!-- Edit Game Modal -->
@@ -163,12 +142,31 @@
 
 @endsection
 @push('js')
+
 <script>
     jQuery(document).ready(function($) {
+        
         // Set up AJAX to include CSRF token in every request
         $.ajaxSetup({
             headers: {
                 'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+            }
+        });
+
+        $('#search-box').on('keyup', function () {
+            console.log($(this).val());
+            let query = $(this).val();
+            if ( query.length >= 3 ) {
+                    $.ajax({
+                    url: "{{ route('manager.games.search') }}",
+                    type: "GET",
+                    data: { query: query },
+                    success: function (data) {
+                        $('#games-table').html(data);
+                    }
+                });
+            } else if( query === '' ) {
+                location.reload();
             }
         });
 
