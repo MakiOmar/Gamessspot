@@ -216,7 +216,8 @@ class OrderController extends Controller
         // Return the updated rows for the table (assuming a partial view)
         return view('manager.partials.order_rows', compact('orders', 'status'))->render();
     }
-    public function searchCustomers(Request $request)
+
+    public function searchCustomersHelper(Request $request)
     {
         // Extract search query
         $query = $request->input('search');
@@ -239,7 +240,12 @@ class OrderController extends Controller
             ->distinct()
             ->orderBy('buyer_name')
             ->get();
+        return $customers;
+    }
+    public function searchCustomers(Request $request)
+    {
 
+        $customers = $this->searchCustomersHelper($request);
         // Render a partial view with the results
         return view('manager.partials.customer_rows', compact('customers'))->render();
     }
@@ -260,7 +266,7 @@ class OrderController extends Controller
 
     // If the user is not an admin, filter by seller_id
         if (!$isAdmin) {
-            $orders->where('seller_id', $user->id);
+            //$orders->where('seller_id', $user->id);
         }
         $buyer   = false;
         $account = false;
@@ -418,18 +424,10 @@ class OrderController extends Controller
         ]);
         // Check if the buyer_phone has been used before and validate buyer_name
         $existingOrder = Order::where('buyer_phone', $validatedData['buyer_phone'])->first();
-        if ($existingOrder && $existingOrder->buyer_name !== $validatedData['buyer_name']) {
-            return response()->json([
-                'message' => "Incorrect buyer name. Should be ( $existingOrder->buyer_name )",
-            ], 422);
+        if ($existingOrder) {
+            $validatedData['buyer_name'] = $existingOrder->buyer_name;
         }
 
-        $existingOrder = Order::where('buyer_name', $validatedData['buyer_name'])->first();
-        if ($existingOrder && $existingOrder->buyer_phone !== $validatedData['buyer_phone']) {
-            return response()->json([
-                'message' => "Incorrect buyer phone. Should be ( $existingOrder->buyer_phone )",
-            ], 422);
-        }
         // Determine the sold item field dynamically
         $sold_item         = "ps{$validatedData['platform']}_{$validatedData['type']}_stock";
         $sold_item_status  = "ps{$validatedData['platform']}_{$validatedData['type']}_status";
