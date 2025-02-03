@@ -54,45 +54,65 @@
     <script src="https://cdn.jsdelivr.net/npm/chosen-js@1.8.7/chosen.jquery.min.js"></script>
 
     <script>
+        (function ($) {
+            $.fn.toggleTableColumns = function (options) {
+                // Default settings
+                const settings = $.extend({
+                    columnStart: 5,
+                    columnEnd: 10,
+                    buttonClass: 'btn btn-primary',
+                    buttonText: '<i class="fa fa-chevron-right"></i>',
+                    buttonMargin: '10px',
+                }, options);
+
+                return this.each(function () {
+                    const table = $(this);
+                    const rows = table.find('tr');
+
+                    // Check if a toggle button already exists
+                    if (table.prev('.toggle-button').length === 0) {
+                        // Create and inject the toggle button
+                        const toggleButton = $('<div>')
+                            .html(settings.buttonText)
+                            .attr('href', '#')
+                            .addClass(settings.buttonClass + ' toggle-button')
+                            .css('margin-bottom', settings.buttonMargin)
+                            .click(function (e) {
+                                e.preventDefault();
+                                // Toggle specific columns
+                                rows.each(function () {
+                                    $(this)
+                                        .find(`th:nth-child(n+${settings.columnStart}):nth-child(-n+${settings.columnEnd}), td:nth-child(n+${settings.columnStart}):nth-child(-n+${settings.columnEnd})`)
+                                        .toggleClass('d-none');
+                                });
+                            });
+
+                        // Insert the button before the table
+                        table.before(toggleButton);
+                    }
+
+                    // Initially hide columns
+                    rows.each(function () {
+                        $(this)
+                            .find(`th:nth-child(n+${settings.columnStart}):nth-child(-n+${settings.columnEnd}), td:nth-child(n+${settings.columnStart}):nth-child(-n+${settings.columnEnd})`)
+                            .addClass('d-none');
+                    });
+                });
+            };
+        })(jQuery);
         jQuery(document).ready(function ($) {
             $('#game,#region').chosen({
                 width: '100%'
             });
             const columnThreshold = 7; // Number of columns to keep visible
             // Target all tables with more than the threshold columns
-                const columnStart = 5; // Starting column index to hide
-                const columnEnd = 10; // Ending column index to hide
+            const columnStart = 5; // Starting column index to hide
+            const columnEnd = 10; // Ending column index to hide
 
-                $('table').each(function () {
-                    const table = $(this);
-                    const rows = table.find('tr');
-
-                    // Create and inject the toggle button
-                    const toggleButton = $('<div>')
-                        .html('<i class="fa fa-chevron-right"></i>')
-                        .attr('href', '#')
-                        .addClass('btn btn-primary') // Optional styling
-                        .css('margin-bottom', '10px') // Add some spacing
-                        .click(function (e) {
-                            e.preventDefault();
-                            // Toggle specific columns
-                            rows.each(function () {
-                                $(this)
-                                    .find(`th:nth-child(n+${columnStart}):nth-child(-n+${columnEnd}), td:nth-child(n+${columnStart}):nth-child(-n+${columnEnd})`)
-                                    .toggleClass('d-none');
-                            });
-                        });
-
-                    // Insert the button before the table
-                    table.before(toggleButton);
-
-                    // Initially hide columns 5 to 9
-                    rows.each(function () {
-                        $(this)
-                            .find(`th:nth-child(n+${columnStart}):nth-child(-n+${columnEnd}), td:nth-child(n+${columnStart}):nth-child(-n+${columnEnd})`)
-                            .addClass('d-none');
-                    });
-                });
+            $('table').toggleTableColumns({
+                columnStart: 5,
+                columnEnd: 10
+            });
         });
     </script>
 @endpush
