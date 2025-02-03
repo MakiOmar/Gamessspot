@@ -61,7 +61,7 @@
             const columnThreshold = 7; // Number of columns to keep visible
             // Target all tables with more than the threshold columns
                 const columnStart = 5; // Starting column index to hide
-                const columnEnd = 9; // Ending column index to hide
+                const columnEnd = 10; // Ending column index to hide
 
                 $('table').each(function () {
                     const table = $(this);
