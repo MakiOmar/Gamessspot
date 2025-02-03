@@ -131,14 +131,13 @@
                                 <p>{{ auth()->user()->storeProfile->name ?? 'No Store Profile Assigned' }}</p>
                             @endif
                         </div>
-                        
-                        <div class="form-group">
-                            <label>Client Name:</label>
-                            <input type="text" class="form-control" placeholder="Client name" id="buyer_name" name="buyer_name" required>
-                        </div>
                         <div class="form-group">
                             <label>Client Phone:</label>
                             <input type="text" class="form-control" placeholder="Enter Client Phone" name="buyer_phone" id="buyer_phone" required>
+                        </div>                        
+                        <div class="form-group">
+                            <label>Client Name:</label>
+                            <input type="text" class="form-control" placeholder="Client name" id="buyer_name" name="buyer_name" required>
                         </div>
                         <div class="form-group">
                             <label>Enter Price:</label>
@@ -237,9 +236,27 @@
                 }
             });    
             $('#buyer_phone').on('focusout', function () {
-                const query = $(this).val();
-    
-                
+                const query = $(this).val().trim(); // Get input value
+
+                if (query.length > 0) {
+                    $.ajax({
+                        url: '{{ route("manager.buyer.name") }}', // Make sure this route matches your Laravel route
+                        type: 'GET',
+                        data: { search: query },
+                        dataType: 'json',
+                        success: function (response) {
+                            console.log(response);
+                            if (response.length > 0) {
+                                $('#buyer_name').val(response[0].buyer_name); // Populate name field
+                            } else {
+                                $('#buyer_name').val(''); // Clear if no result
+                            }
+                        },
+                        error: function (xhr) {
+                            console.error(xhr.responseText);
+                        }
+                    });
+                }
             });
     
             function performSearch(query) {
