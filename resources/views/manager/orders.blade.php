@@ -103,7 +103,7 @@
                                 @if (! isset($status))
                                     {{ $order->notes }}
                                 @else
-                                {{ $order->reports->first()->note }}
+                                {{ optional($order->reports)->note }}
                                 @endif
                             </td>
                             <td>{{ $order->created_at }}</td>
@@ -113,12 +113,12 @@
                                     <!-- Button for orders with 'needs_return' -->
                                     <button class="btn btn-danger btn-sm undo-order" data-order-id="{{ $order->id }}"
                                         data-sold-item="{{ $order->sold_item }}"
-                                        data-report-id="{{ $order->reports->first()->id }}">
+                                        data-report-id="{{ $order->reports->id }}">
                                         Undo
                                     </button>
                                 @elseif(isset($status) && 'has_problem' === $status)
                                     <button class="btn btn-success btn-sm solve-problem"
-                                        data-report-id="{{ $order->reports->first()->id }}">
+                                        data-report-id="{{ $order->reports->id }}">
                                         Mark as Solved
                                     </button>
                                 @elseif(isset($status) && 'solved' === $status)
