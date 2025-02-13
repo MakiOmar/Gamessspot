@@ -30,6 +30,7 @@
                     <th style="width: 57px;">ID</th>
                     <th style="width: 265px;">Name</th>
                     <th style="width: 170px;">Store Profile</th>
+                    <th style="width: 170px;">Phone</th>
                     <th style="width: 120px;">Actions</th>
                 </tr>
             </thead>
@@ -39,6 +40,7 @@
                     <td>{{ $user->id }}</td>
                     <td>{{ $user->name }}</td>
                     <td>{{ $user->storeProfile->name ?? 'No Store Profile' }}</td>
+                    <td>{{ $user->phone }}</td>
                     <td>
                         <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#editUserModal" data-id="{{ $user->id }}">Edit</button>
                         @if(auth()->id() !== $user->id)
