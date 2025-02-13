@@ -77,9 +77,6 @@ Route::prefix('manager')->group(function () {
         Route::get('/customers/export', [OrderController::class, 'customersExport'])->name('manager.customers.export');
         Route::get('/customers', [OrderController::class, 'uniqueBuyers'])->name('manager.uniqueBuyers');
         Route::get('/customers/search', [OrderController::class, 'searchCustomers'])->name('manager.orders.searchCustomers');
-        Route::get('/customers/buyer-name', [OrderController::class, 'searchCustomersHelper'])->name('manager.buyer.name');
-
-
 
         Route::middleware(['checkRole:admin'])->group(function () {
             Route::post('/orders/undo', [OrderController::class, 'undo'])->name('manager.orders.undo');
@@ -109,6 +106,7 @@ Route::prefix('manager')->group(function () {
         Route::get('/users/accountants', [UserController::class, 'accountants'])->name('manager.users.accountants');
         Route::get('/users/admins', [UserController::class, 'admins'])->name('manager.users.admins');
         Route::get('/users/account-managers', [UserController::class, 'accountManagers'])->name('manager.users.acc.managers');
+        Route::get('/users/customers', [UserController::class, 'customers'])->name('manager.users.customers');
         Route::get('/users/search', [UserController::class, 'search'])->name('manager.users.search');
         Route::get('/users/{id}/edit', [UserController::class, 'edit'])->name('manager.users.edit');
         Route::put('/users/update/{id}', [UserController::class, 'update'])->name('manager.users.update');
@@ -117,6 +115,7 @@ Route::prefix('manager')->group(function () {
         Route::post('/users/toggle-status/{id}', [UserController::class, 'toggleStatus'])
         ->middleware('auth', 'can:manage-users')
         ->name('users.toggleStatus');
+        Route::get('/customers/buyer-name', [UserController::class, 'searchUserHelper'])->name('manager.buyer.name');
 
 
 
