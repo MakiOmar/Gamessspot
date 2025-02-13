@@ -16,6 +16,8 @@ use App\Models\Card;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Cache;
 use Carbon\Carbon;
+use Illuminate\Support\Str;
+use App\Models\Role;
 
 class OrderController extends Controller
 {
@@ -414,19 +416,36 @@ class OrderController extends Controller
     {
         // Validate incoming data
         $validatedData = $request->validate([
-        'store_profile_id' => 'required|exists:stores_profile,id',
-        'game_id'          => 'required|exists:games,id',
-        'buyer_phone'      => 'required|string|max:15',
-        'buyer_name'       => 'required|string|max:100',
-        'price'            => 'required|numeric|min:0',
-        'type'             => 'required|string|max:255',
-        'platform'         => 'required|string|max:255',
+            'store_profile_id' => 'required|exists:stores_profile,id',
+            'game_id'          => 'required|exists:games,id',
+            'buyer_phone'      => 'required|string|max:15',
+            'buyer_name'       => 'required|string|max:100',
+            'price'            => 'required|numeric|min:0',
+            'type'             => 'required|string|max:255',
+            'platform'         => 'required|string|max:255',
         ]);
-        // Check if the buyer_phone has been used before and validate buyer_name
-        $existingOrder = Order::where('buyer_phone', $validatedData['buyer_phone'])->first();
-        if ($existingOrder) {
-            $validatedData['buyer_name'] = $existingOrder->buyer_name;
+
+        // Check if the user already exists by phone number
+        $user = User::where('phone', $validatedData['buyer_phone'])->first();
+
+        // If the user does not exist, create a new one
+        if (!$user) {
+            $user = User::create([
+                'name'     => $validatedData['buyer_name'],
+                'email'    => Str::random(10) . '@' . Str::random(4) . '.com', // Temporary email to satisfy unique constraint
+                'phone'    => $validatedData['buyer_phone'],
+                'password' => bcrypt(Str::random(12)), // Generate a random password
+            ]);
+
+            // Assign a default role if necessary
+            $defaultRole = Role::where('name', 'customer')->first();
+            if ($defaultRole) {
+                $user->roles()->attach($defaultRole->id);
+            }
         }
+
+        // Update buyer name to match user record if necessary
+        $validatedData['buyer_name'] = $user->name;
 
         // Determine the sold item field dynamically
         $sold_item         = "ps{$validatedData['platform']}_{$validatedData['type']}_stock";
@@ -435,10 +454,9 @@ class OrderController extends Controller
 
         // Fetch the appropriate account based on type, stock availability, and game status
         $accountQuery = Account::where('game_id', $validatedData['game_id'])
-        ->join('games', 'accounts.game_id', '=', 'games.id')
-        ->where("games.{$sold_item_status}", true) // Ensure the game's status is true
-        ->orderBy('accounts.created_at', 'asc'); // Order by the oldest date
-
+            ->join('games', 'accounts.game_id', '=', 'games.id')
+            ->where("games.{$sold_item_status}", true) // Ensure the game's status is true
+            ->orderBy('accounts.created_at', 'asc'); // Order by the oldest date
 
         if ($validatedData['type'] === 'offline') {
             $accountQuery->where($sold_item, '>', 0);
@@ -462,12 +480,14 @@ class OrderController extends Controller
 
             // Fetch the first matching account or fail
             $account = $accountQuery->select('accounts.*')->first();
+
             // Check if no account was found
             if (!$account) {
                 return response()->json([
                     'message' => 'No available account matches the specified criteria.',
                 ], 422); // 422 Unprocessable Entity
             }
+
             // Reduce the corresponding stock by 1 for the account
             $account->decrement($sold_item, 1);
 
@@ -477,18 +497,18 @@ class OrderController extends Controller
             if (
                 $validatedData['platform'] == 4 &&
                 (
-                ($validatedData['type'] === 'offline' && $account->$sold_item == 0) ||
-                ($validatedData['type'] === 'primary' && $account->$sold_offline_item == 0)
+                    ($validatedData['type'] === 'offline' && $account->$sold_item == 0) ||
+                    ($validatedData['type'] === 'primary' && $account->$sold_offline_item == 0)
                 )
             ) {
                 $check_for = $validatedData['type'] === 'primary' ? $sold_offline_item : $sold_item;
 
                 // Fetch the recent order for this account and item within the last 11 minutes
                 $recentOrder = Order::where('account_id', $account->id)
-                ->where('sold_item', $check_for)
-                ->where('created_at', '>=', now()->subMinutes(11))
-                ->latest()
-                ->first();
+                    ->where('sold_item', $check_for)
+                    ->where('created_at', '>=', now()->subMinutes(11))
+                    ->latest()
+                    ->first();
 
                 if ($recentOrder) {
                     $seller = User::find($recentOrder->seller_id);
@@ -501,14 +521,14 @@ class OrderController extends Controller
 
             // Prepare the order data
             $order_data = [
-            'seller_id'        => Auth::id(),
-            'store_profile_id' => $validatedData['store_profile_id'],
-            'account_id'       => $account->id,
-            'buyer_phone'      => $validatedData['buyer_phone'],
-            'buyer_name'       => $validatedData['buyer_name'],
-            'price'            => $validatedData['price'],
-            'notes'            => '',
-            'sold_item'        => $sold_item,
+                'seller_id'        => Auth::id(),
+                'store_profile_id' => $validatedData['store_profile_id'],
+                'account_id'       => $account->id,
+                'buyer_phone'      => $validatedData['buyer_phone'],
+                'buyer_name'       => $validatedData['buyer_name'],
+                'price'            => $validatedData['price'],
+                'notes'            => '',
+                'sold_item'        => $sold_item,
             ];
 
             // Create the order
@@ -517,14 +537,15 @@ class OrderController extends Controller
             // Commit the transaction if everything succeeds
             DB::commit();
             Cache::forget('unique_buyer_phone_count'); // Clear the cache
+
             // Return a JSON response on success, including recent order and seller details if applicable
             return response()->json([
-            'message'          => 'Order created successfully!',
-            'account_email'    => $account->mail,
-            'account_password' => $account->password, // Be cautious with sensitive data
-            'recent_order'     => $recentOrder,
-            'additional_message' => $message,
-            'order_id'         => $order->id,
+                'message'          => 'Order created successfully!',
+                'account_email'    => $account->mail,
+                'account_password' => $account->password, // Be cautious with sensitive data
+                'recent_order'     => $recentOrder,
+                'additional_message' => $message,
+                'order_id'         => $order->id,
             ]);
         } catch (\Exception $e) {
             // Rollback the transaction in case of any error
@@ -532,11 +553,12 @@ class OrderController extends Controller
 
             // Return an error response
             return response()->json([
-            'message' => 'Not possible to create the order. Please try again later.',
-            'error'   => $e->getMessage(),
+                'message' => 'Not possible to create the order. Please try again later.',
+                'error'   => $e->getMessage(),
             ], 500);
         }
     }
+
 
 
     public function sellCard(Request $request)
