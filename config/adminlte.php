@@ -443,6 +443,11 @@ return [
                     'route' => 'manager.users.admins',
                     'icon' => 'bi bi-circle',
                 ],
+                [
+                    'text' => 'Customers',
+                    'route' => 'manager.users.customers',
+                    'icon' => 'bi bi-circle',
+                ],
             ],
         ],
 
@@ -452,14 +457,6 @@ return [
             'route' => 'manager.storeProfiles.index',
             'icon' => 'bi bi-palette',
             'can' => 'manage-store-profiles',
-        ],
-
-        // Customers
-        [
-            'text' => 'Customers',
-            'route' => 'manager.uniqueBuyers',
-            'icon' => 'bi bi-people',
-            'can' => 'manage-options',
         ],
     ],
 
