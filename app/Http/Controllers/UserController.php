@@ -183,7 +183,7 @@ class UserController extends Controller
             array(
                 'name'             => 'required|string|max:255',
                 'email'            => 'required|email|max:255|unique:users',
-                'phone'            => 'nullable|string|max:20',
+                'phone'            => 'nullable|string|max:20|unique:users',
                 'password'         => 'required|min:8|confirmed', // Required for creation
                 'store_profile_id' => 'nullable|exists:stores_profile,id',
                 'roles'            => 'required|array',
@@ -197,5 +197,31 @@ class UserController extends Controller
         Cache::forget('total_user_count'); // Clear the cache
         $user->roles()->sync($request->input('roles')); // Sync roles
         return response()->json(array( 'message' => 'User created successfully' ));
+    }
+
+    public function searchUserHelper(Request $request)
+    {
+        // Extract search query
+        $query = $request->input('search');
+
+        // Ensure admin-only access
+        $user = Auth::user();
+        if (!$user->roles->contains('name', 'admin')) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        // Query for users based on phone number or name
+        $users = User::query()
+            ->select('name as buyer_name', 'phone as buyer_phone')
+            ->when($query, function ($q) use ($query) {
+                $q->where(function ($q) use ($query) {
+                    $q->where('phone', 'like', "%$query%")
+                    ->orWhere('name', 'like', "%$query%");
+                });
+            })
+            ->orderBy('name')
+            ->get();
+
+        return $users;
     }
 }
