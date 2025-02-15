@@ -80,39 +80,39 @@ class UserController extends Controller
     }
 
     // Method to search users based on the input
-    public function search(Request $request)
+    public function search(Request $request, $role = null)
     {
         $query = $request->input('search');
 
-        if (! empty($query)) {
-            // Fetch users who have the 'sales' role (role ID 2)
-            $users = User::whereHas(
-                'roles',
-                function ($q) {
-                    $q->where('id', 2); // Role ID for 'sales'
-                }
-            )
-                ->where(
-                    function ($q) use ($query) {
-                        // Search for the query in the user's name or the store profile's name
-                        $q->where('name', 'like', "%{$query}%")
-                        ->orWhereHas(
-                            'storeProfile',
-                            function ($q) use ($query) {
-                                $q->where('name', 'like', "%{$query}%");
-                            }
-                        );
-                    }
-                )
-                ->with('storeProfile')
-                ->get();
+        if (!empty($query)) {
+            $users = User::query();
 
-            // Return the search result as a partial view to dynamically update the table rows
+            // Filter by role if provided
+            if ($role !== null) {
+                $users->whereHas('roles', function ($q) use ($role) {
+                    $q->where('roles.id', intval($role));
+                });
+            }
+
+            // Search by name, phone, or store profile name
+            $users->where(function ($q) use ($query) {
+                $q->where('users.name', 'like', "%{$query}%")
+                ->orWhere('users.phone', 'like', "%{$query}%") // Search by phone
+                ->orWhereHas('storeProfile', function ($q) use ($query) {
+                    $q->where('stores_profile.name', 'like', "%{$query}%");
+                });
+            });
+
+            $users = $users->with('storeProfile')->get();
+
+            // Return search results as a partial view
             return view('manager.partials.user_table_rows', compact('users'))->render();
         }
 
         return '';
     }
+
+
 
     public function edit($id)
     {

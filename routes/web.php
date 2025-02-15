@@ -107,7 +107,7 @@ Route::prefix('manager')->group(function () {
         Route::get('/users/admins', [UserController::class, 'admins'])->name('manager.users.admins');
         Route::get('/users/account-managers', [UserController::class, 'accountManagers'])->name('manager.users.acc.managers');
         Route::get('/users/customers', [UserController::class, 'customers'])->name('manager.users.customers');
-        Route::get('/users/search', [UserController::class, 'search'])->name('manager.users.search');
+        Route::get('/users/search/{role?}', [UserController::class, 'search'])->name('manager.users.search');
         Route::get('/users/{id}/edit', [UserController::class, 'edit'])->name('manager.users.edit');
         Route::put('/users/update/{id}', [UserController::class, 'update'])->name('manager.users.update');
         Route::post('/users/store', [UserController::class, 'store'])->name('manager.users.store');

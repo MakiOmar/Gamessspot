@@ -201,26 +201,40 @@
         // Handle search input
         $('#searchUser').on('input', function() {
             let query = $(this).val();
+            let currentUrl = window.location.href;
+            let role = null;
+
+            if (currentUrl.includes('/users/sales')) {
+                role = 2;
+            } else if (currentUrl.includes('/users/accountants')) {
+                role = 3;
+            } else if (currentUrl.includes('/users/admins')) {
+                role = 1;
+            } else if (currentUrl.includes('/users/account-managers')) {
+                role = 4;
+            } else if (currentUrl.includes('/users/customers')) {
+                role = 5;
+            }
 
             if (query.length >= 3) {
                 $.ajax({
-                    url: "{{ route('manager.users.search') }}", // Your search route
+                    url: `/manager/users/search/${role}`, // Send role dynamically
                     method: 'GET',
                     data: { search: query },
                     success: function(response) {
-                        console.log(response);
                         if (response.trim() === '') {
                             $('#noResultsMessage').show();
                         } else {
                             $('#noResultsMessage').hide();
-                            $('#userTableBody').html(response); // Update the user table with the search results
+                            $('#userTableBody').html(response); // Update the table dynamically
                         }
                     }
                 });
             } else if (query === '') {
-                location.reload(); // Reload the page if the search is cleared
+                location.reload();
             }
         });
+
 
         // Handle opening the Create User modal
         $(document).on('click', '#createUserButton', function () {

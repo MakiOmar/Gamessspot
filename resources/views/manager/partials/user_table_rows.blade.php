@@ -3,6 +3,7 @@
     <td>{{ $user->id }}</td>
     <td>{{ $user->name }}</td>
     <td>{{ $user->storeProfile->name ?? 'No Store Profile' }}</td>
+    <td>{{ $user->phone }}</td>
     <td>
         <!-- Edit Button -->
         <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#editUserModal" data-id="{{ $user->id }}">Edit</button>
