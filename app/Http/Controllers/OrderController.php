@@ -32,27 +32,30 @@ class OrderController extends Controller
         $user = Auth::guard('admin')->user(); // Assuming 'admin' guard is used
         $roles = $user->roles->pluck('name');
 
-        // Check for 'admin' role
-        if ($roles->contains('admin')) {
-            $orders = Order::with([
+        // Get only today's orders
+        $ordersQuery = Order::with([
             'seller',
             'account.game', // Load game through account
             'card'
-            ])->paginate($this->pagination);
+        ])->whereDate('created_at', Carbon::today());
 
+        // Check for 'admin' role
+        if ($roles->contains('admin')) {
+            // Apply store profile filter if 'id' is provided
+            if (request()->has('id')) {
+                $storeId = request()->get('id');
+                $ordersQuery->where('store_profile_id', $storeId);
+            }
+
+            $orders = $ordersQuery->paginate($this->pagination);
             return $this->renderOrders($orders, $user);
         }
 
         // Check for 'sales' or 'account manager' roles
         if ($roles->intersect(['sales', 'account manager'])->isNotEmpty()) {
-            $orders = Order::with([
-            'seller',
-            'account.game',
-            'card'
-            ])
-            ->where('seller_id', $user->id)
-            ->whereDate('created_at', Carbon::today())
-            ->paginate($this->pagination);
+            $orders = $ordersQuery
+                ->where('seller_id', $user->id)
+                ->paginate($this->pagination);
 
             return $this->renderOrders($orders, $user);
         }
@@ -61,14 +64,10 @@ class OrderController extends Controller
         if ($roles->contains('accountant') && request()->has('id')) {
             $storeId = request()->get('id');
 
-            $orders = Order::with([
-            'seller',
-            'account.game',
-            'card'
-            ])
-            ->where('store_profile_id', $storeId)
-            ->orderBy('buyer_name', 'asc')
-            ->paginate($this->pagination);
+            $orders = $ordersQuery
+                ->where('store_profile_id', $storeId)
+                ->orderBy('buyer_name', 'asc')
+                ->paginate($this->pagination);
 
             return $this->renderOrders($orders, $user);
         }
@@ -76,6 +75,8 @@ class OrderController extends Controller
         // Unauthorized case
         abort(403, 'Unauthorized action.');
     }
+
+
     /**
  * Get the latest 10 orders for a customer by buyer_phone.
  *
