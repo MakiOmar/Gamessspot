@@ -108,11 +108,12 @@
             // Target all tables with more than the threshold columns
             const columnStart = 5; // Starting column index to hide
             const columnEnd = 10; // Ending column index to hide
-
+            /*
             $('table').toggleTableColumns({
                 columnStart: 5,
                 columnEnd: 10
             });
+            */
         });
     </script>
 @endpush
