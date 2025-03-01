@@ -67,7 +67,7 @@ class ManagerController extends Controller
         // Validate the request
         $request->validate([
             'title'                => 'required|string|max:255',
-            'code'                 => 'required|string|max:255|unique:games,code,' . $game->id,
+            'code'                 => 'required|string|max:255',
             'full_price'           => 'required|numeric|min:0',
             'ps4_primary_price'    => 'nullable|numeric|min:0',
             'ps4_secondary_price'  => 'nullable|numeric|min:0',
@@ -108,7 +108,7 @@ class ManagerController extends Controller
         // Validate and store the new game
         $validatedData = $request->validate([
             'title'                => 'required|string|max:255',
-            'code'                 => 'required|string|max:255|unique:games,code',
+            'code'                 => 'required|string|max:255',
             'full_price'           => 'required|numeric|min:0',
             'ps4_primary_price'    => 'nullable|numeric|min:0',
             'ps4_secondary_price'  => 'nullable|numeric|min:0',
