@@ -64,10 +64,8 @@
                         @if(! Auth::user()->roles->contains('name', 'accountant') )
                         <th>Password</th>
                         @endif
-                        @if (! isset($status))
                         <th>Buyer Phone</th>
                         <th>Buyer Name</th>
-                        @endif
                         <th>Price</th>
                         <th>Sold Item</th>
                         <th>Notes</th>
@@ -93,10 +91,10 @@
                                 @endif
                                 <td>--</td>
                             @endif
-                            @if (! isset($status))
+
                             <td>{{ $order->buyer_phone }}</td>
                             <td>{{ $order->buyer_name }}</td>
-                            @endif
+
                             <td>{{ $order->price }}</td>
                             <td>{{ $order->sold_item }}</td>
                             <td>

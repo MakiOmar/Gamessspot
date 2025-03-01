@@ -15,7 +15,7 @@
 @foreach($psGames as $game)
     <div class="col-md-4 mb-4 game-card">
         <div class="card">
-            <div class="card-img-top" style="background-image: url('{{ asset($game->$image_url) }}'); height: 250px; background-size: cover; background-position: center;"></div>
+            <div class="card-img-top" style="background-image: url('{{ asset($game->$image_url) }}');"></div>
             <div class="card-body text-center">
                 <h5 class="card-title">{{ $game->title }}</h5>
                 @foreach (['offline', 'primary', 'secondary'] as $type)

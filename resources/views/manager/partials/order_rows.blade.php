@@ -19,9 +19,16 @@
 
         <td>{{ $order->buyer_phone }}</td>
         <td>{{ $order->buyer_name }}</td>
+
         <td>{{ $order->price }}</td>
         <td>{{ $order->sold_item }}</td>
-        <td>{{ $order->notes }}</td>
+        <td>
+            @if (! isset($status))
+                {{ $order->notes }}
+            @else
+            {{ optional($order->reports)->note }}
+            @endif
+        </td>
         <td>{{ $order->created_at }}</td>
         <td>
             @if (isset($status) && 'needs_return' === $status)

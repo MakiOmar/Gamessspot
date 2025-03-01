@@ -31,7 +31,7 @@
 
 @section('content')
     <div class="container mb-4">
-        <div class="row">
+        <div class="row d-flex justify-content-center">
             <div class="col-md-6">
                 <input type="text" id="searchBox" class="form-control" placeholder="Search games...">
             </div>
