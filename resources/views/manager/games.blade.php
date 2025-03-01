@@ -188,7 +188,7 @@
         });
 
         // When the "Edit" button is clicked
-        $('.edit-game').on('click', function() {
+        $(document).on('click', '.edit-game', function() {
             var gameId = $(this).data('id');
 
             // Clear any previous error messages or inputs
