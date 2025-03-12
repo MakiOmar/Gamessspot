@@ -234,8 +234,11 @@
                 } else if (query === '') {
                     location.reload(); // Reload the page if the search is cleared
                 }
-            });    
+            });
+            let buyPhoneRequest = false; 
             $('#buyer_phone').on('focusout', function () {
+                if (buyPhoneRequest) return;
+                buyPhoneRequest = true;
                 const query = $(this).val().trim(); // Get input value
 
                 if (query.length > 0) {
@@ -254,6 +257,9 @@
                         },
                         error: function (xhr) {
                             console.error(xhr.responseText);
+                        },
+                        complete: function () {
+                            buyPhoneRequest = false; // Reset flag when request is complete
                         }
                     });
                 }
@@ -356,8 +362,11 @@
             });
             window.iti = iti;
             var gameModal = new bootstrap.Modal(document.getElementById('gameModal'));
+            let reportFormSubmitting = false;
             $('#reportForm').on('submit', function(e) {
                 e.preventDefault();
+                if (reportFormSubmitting) return; // Prevent multiple submissions
+                reportFormSubmitting = true; // Set flag before sending request
 
                 var formData = $(this).serialize();
 
@@ -382,6 +391,9 @@
                             title: 'Oops...',
                             text: 'An error occurred while submitting the report.'
                         });
+                    },
+                    complete: function() {
+                        reportFormSubmitting = false; // Reset flag after request completes
                     }
                 });
             });
@@ -403,10 +415,12 @@
                 // Show the modal
                 $('#gameModal').modal('show');
             });
-
+            let orderFormSubmitting = false; // Flag to prevent duplicate submissions
             // Handle form submission with AJAX
             $('#orderForm').on('submit', function(e) {
                 e.preventDefault();
+                if (orderFormSubmitting) return; // Prevent multiple submissions
+                orderFormSubmitting = true; // Set flag before sending request
                 // Get the formatted phone number from intl-tel-input
                 if (iti.isValidNumber()) {
                     var phoneNumber = iti.getNumber();  // Get the full international number
@@ -469,6 +483,9 @@
                                 icon: 'error',
                                 confirmButtonText: 'OK'
                             });
+                        },
+                        complete: function() {
+                            orderFormSubmitting = false; // Reset flag after request completes
                         }
                     });
                 } else {
@@ -478,6 +495,7 @@
                         icon: 'error',
                         confirmButtonText: 'OK'
                     });
+                    orderFormSubmitting = false; // Reset flag after request completes
                 }
             });
 
