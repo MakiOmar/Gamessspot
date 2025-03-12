@@ -60,7 +60,7 @@
                             $isBlocked = auth()->user()->storeProfile ? auth()->user()->storeProfile->isBlockedForGame($game->id) : false;
                         @endphp
                         
-                        <div class="card-img-top" style="background-image: url('{{ asset($game->$image_url) }}');"></div>
+                        <div class="card-img-top" style="background-image: url('{{ asset($game->$image_url) }}')"></div>
                 
                         <div class="card-body text-center">
                             <h5 class="card-title float-none">{{ $game->title }}</h5>
