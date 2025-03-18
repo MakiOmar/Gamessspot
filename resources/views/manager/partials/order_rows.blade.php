@@ -1,8 +1,11 @@
 @foreach ($orders as $order)
     <tr>
         <td>{{ $order->id }}</td>
-        <td>{{ $order->seller->name }}</td>
-
+        @if ( $order->store_profile_id === 17 )
+        <td>Website</td>
+        @else
+        <td class="{{ $order->seller ? '' : 'text-danger' }}">{{ $order->seller?->name ?? 'Maybe deleted' }}</td>
+        @endif
         @if($order->account)
             <td>{{ $order->account->game->title }}</td>
             <td>{{ $order->account->mail }}</td>

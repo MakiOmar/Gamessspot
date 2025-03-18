@@ -559,10 +559,34 @@ class OrderController extends Controller
             ], 500);
         }
     }
+    public function checkStockApi(Request $request)
+    {
+        // Validate incoming data
+        $validatedData = $request->validate([
+            'game_id'  => 'required|exists:games,id',
+            'platform' => 'required|string|max:255',
+            'type'     => 'required|string|in:primary,secondary',
+        ]);
 
+        // Determine the sold item field dynamically
+        $sold_item        = "ps{$validatedData['platform']}_{$validatedData['type']}_stock";
+        $sold_item_status = "ps{$validatedData['platform']}_{$validatedData['type']}_status";
+
+        // Fetch available stock
+        $availableStock = Account::where('game_id', $validatedData['game_id'])
+            ->join('games', 'accounts.game_id', '=', 'games.id')
+            ->where("games.{$sold_item_status}", true) // Ensure the game's status is active
+            ->sum($sold_item); // Sum the available stock
+
+        // Return response
+        return response()->json([
+            'stock'         => $availableStock,
+            'is_available'  => $availableStock > 0,
+        ]);
+    }
     public function storeApi(Request $request)
     {
-        
+
         // Validate incoming data
         $validatedData = $request->validate([
             'store_profile_id' => 'required|exists:stores_profile,id',

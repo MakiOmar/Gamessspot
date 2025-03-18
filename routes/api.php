@@ -33,12 +33,13 @@ Route::post('/login', function (Request $request) {
     }
 
     // Generate a token
-    $token = $user->createToken('API Token')->plainTextToken;
+    $token = $user->createToken('API Token', ['*'], now()->addDays(8))->plainTextToken;
 
     return response()->json(['token' => $token], 200);
 });
 
 Route::middleware('auth:sanctum')->get('orders/latest', [OrderController::class, 'latestCustomerOrders']);
-Route::middleware('auth:sanctum')->post('/orders/create', [OrderController::class, 'storeApi']);
+Route::middleware('auth:sanctum')->post('/orders/receive', [OrderController::class, 'storeApi']);
+Route::middleware('auth:sanctum')->post('/orders/check_stock', [OrderController::class, 'checkStockApi']);
 Route::get('/games/platform/{platform}', [ManagerController::class, 'getGamesByPlatformApi']);
 Route::get('/games/{id}', [ManagerController::class, 'getGameById']);
