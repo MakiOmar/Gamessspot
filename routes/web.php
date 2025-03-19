@@ -73,6 +73,7 @@ Route::prefix('manager')->group(function () {
         Route::get('/orders/export', [OrderController::class, 'export'])->name('manager.orders.export');
         Route::post('/orders/store', [OrderController::class, 'store'])->name('orders.store');
         Route::post('/orders/sell-card', [OrderController::class, 'sellCard'])->name('manager.orders.sell.card');
+        Route::post('/orders/send-to-pos', [OrderController::class, 'sendToPos'])->name('manager.orders.sendToPos');
 
         Route::get('/customers/export', [OrderController::class, 'customersExport'])->name('manager.customers.export');
         Route::get('/customers', [OrderController::class, 'uniqueBuyers'])->name('manager.uniqueBuyers');

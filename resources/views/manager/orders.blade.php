@@ -11,6 +11,19 @@
             Reports Management
             @endif
         </h1>
+        <!-- Display Success Message -->
+        @if(session('success'))
+        <div class="alert alert-success">
+            {{ session('success') }}
+        </div>
+        @endif
+
+        <!-- Display Error Message -->
+        @if(session('error'))
+        <div class="alert alert-danger">
+            {{ session('error') }}
+        </div>
+        @endif
         <div>
             <form action="{{ route('manager.orders.export') }}" method="GET">
                 <div class="d-flex ">
@@ -54,101 +67,109 @@
 
         <!-- Scrollable table container -->
         <div style="overflow-x:auto; max-width: 100%; white-space: nowrap;">
-            <table class="table table-striped table-bordered" style="min-width: 1200px;">
-                <thead>
-                    <tr role="row">
-                        <th>ID</th>
-                        <th>Seller</th>
-                        <th>Product</th>
-                        <th>Account</th>
-                        @if(! Auth::user()->roles->contains('name', 'accountant') )
-                        <th>Password</th>
-                        @endif
-                        <th>Buyer Phone</th>
-                        <th>Buyer Name</th>
-                        <th>Price</th>
-                        <th>Sold Item</th>
-                        <th>Notes</th>
-                        <th>Date</th>
-                        <th>Action</th>
-                    </tr>
-                </thead>
-                <tbody id="orderTableBody">
-                    @foreach ($orders as $order)
-                        <tr id="orderRow-{{ $order->id }}">
-                            <td>{{ $order->id }}</td>
-                            @if ( $order->store_profile_id === 17 )
-                            <td>Website</td>
-                            @else
-                            <td class="{{ $order->seller ? '' : 'text-danger' }}">{{ $order->seller?->name ?? 'Maybe deleted' }}</td>
+            <form method="post" action="{{ route('manager.orders.sendToPos') }}">
+                @csrf
+                <table class="table table-striped table-bordered" style="min-width: 1200px;">
+                    <thead>
+                        <tr role="row">
+                            <th><input type="checkbox" id="select_all" /></th>
+                            <th>ID</th>
+                            <th>Seller</th>
+                            <th>Product</th>
+                            <th>Account</th>
+                            @if(! Auth::user()->roles->contains('name', 'accountant') )
+                            <th>Password</th>
                             @endif
-                            @if($order->account)
-                                <td>{{ $order->account->game->title }}</td>
-                                <td>{{ $order->account->mail }}</td>
-                                @if(! Auth::user()->roles->contains('name', 'accountant') )
-                                <td>{{ $order->account->password }}</td>
-                                @endif
-                            @elseif($order->card)
-                                <td>{{ $order->card->category->name }}</td>
-                                @if(! Auth::user()->roles->contains('name', 'accountant') )
-                                <td>{{ $order->card->code }}</td>
-                                @endif
-                                <td>--</td>
-                            @endif
-
-                            <td>{{ $order->buyer_phone }}</td>
-                            <td>{{ $order->buyer_name }}</td>
-
-                            <td>{{ $order->price }}</td>
-                            <td>{{ $order->sold_item }}</td>
-                            <td>
-                                @if (! isset($status))
-                                    {{ $order->notes }}
+                            <th>Buyer Phone</th>
+                            <th>Buyer Name</th>
+                            <th>Price</th>
+                            <th>Sold Item</th>
+                            <th>Notes</th>
+                            <th>Date</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="orderTableBody">
+                        @foreach ($orders as $order)
+                            <tr id="orderRow-{{ $order->id }}">
+                                <td><input type="checkbox" name="order_ids[]" value="{{ $order->id }}" /></td>
+                                <td>{{ $order->id }}</td>
+                                @if ( $order->store_profile_id === 17 )
+                                <td>Website</td>
                                 @else
-                                {{ optional($order->reports)->note }}
+                                <td class="{{ $order->seller ? '' : 'text-danger' }}">{{ $order->seller?->name ?? 'Maybe deleted' }}</td>
                                 @endif
-                            </td>
-                            <td>{{ $order->created_at }}</td>
-                            <td>
-                                <!-- Check if 'needs_return' flag is true -->
-                                @if (isset($status) && 'needs_return' === $status)
-                                    <!-- Button for orders with 'needs_return' -->
-                                    <button class="btn btn-danger btn-sm undo-order" data-order-id="{{ $order->id }}"
-                                        data-sold-item="{{ $order->sold_item }}"
-                                        data-report-id="{{ $order->reports->id }}">
-                                        Undo
-                                    </button>
-                                @elseif(isset($status) && 'has_problem' === $status)
-                                    <button class="btn btn-success btn-sm solve-problem"
-                                        data-report-id="{{ $order->reports->id }}">
-                                        Mark as Solved
-                                    </button>
-                                @elseif(isset($status) && 'solved' === $status)
-                                    @if(Auth::user()->roles->contains('name', 'admin'))
+                                @if($order->account)
+                                    <td>{{ $order->account->game->title }}</td>
+                                    <td>{{ $order->account->mail }}</td>
+                                    @if(! Auth::user()->roles->contains('name', 'accountant') )
+                                    <td>{{ $order->account->password }}</td>
+                                    @endif
+                                @elseif($order->card)
+                                    <td>{{ $order->card->category->name }}</td>
+                                    @if(! Auth::user()->roles->contains('name', 'accountant') )
+                                    <td>{{ $order->card->code }}</td>
+                                    @endif
+                                    <td>--</td>
+                                @endif
+
+                                <td>{{ $order->buyer_phone }}</td>
+                                <td>{{ $order->buyer_name }}</td>
+
+                                <td>{{ $order->price }}</td>
+                                <td>{{ $order->sold_item }}</td>
+                                <td>
+                                    @if (! isset($status))
+                                        {{ $order->notes }}
+                                    @else
+                                    {{ optional($order->reports)->note }}
+                                    @endif
+                                </td>
+                                <td>{{ $order->created_at }}</td>
+                                <td>
+                                    <!-- Check if 'needs_return' flag is true -->
+                                    @if (isset($status) && 'needs_return' === $status)
+                                        <!-- Button for orders with 'needs_return' -->
+                                        <button class="btn btn-danger btn-sm undo-order" data-order-id="{{ $order->id }}"
+                                            data-sold-item="{{ $order->sold_item }}"
+                                            data-report-id="{{ $order->reports->id }}">
+                                            Undo
+                                        </button>
+                                    @elseif(isset($status) && 'has_problem' === $status)
+                                        <button class="btn btn-success btn-sm solve-problem"
+                                            data-report-id="{{ $order->reports->id }}">
+                                            Mark as Solved
+                                        </button>
+                                    @elseif(isset($status) && 'solved' === $status)
+                                        @if(Auth::user()->roles->contains('name', 'admin'))
+                                                <!-- Regular undo button -->
+                                                <button class="btn btn-danger btn-sm undo-order" data-order-id="{{ $order->id }}" data-sold-item="{{ $order->sold_item }}">
+                                                    Undo
+                                                </button>
+                                        @endif
+                                    @else
+                                        @if(! Auth::user()->roles->contains('name', 'accountant') )
+                                            @if ( Auth::user()->roles->contains('name', 'admin') )
                                             <!-- Regular undo button -->
                                             <button class="btn btn-danger btn-sm undo-order" data-order-id="{{ $order->id }}" data-sold-item="{{ $order->sold_item }}">
                                                 Undo
                                             </button>
-                                    @endif
-                                @else
-                                    @if(! Auth::user()->roles->contains('name', 'accountant') )
-                                        @if ( Auth::user()->roles->contains('name', 'admin') )
-                                        <!-- Regular undo button -->
-                                        <button class="btn btn-danger btn-sm undo-order" data-order-id="{{ $order->id }}" data-sold-item="{{ $order->sold_item }}">
-                                            Undo
-                                        </button>
+                                            @endif
+                                            <!-- Button to open report modal for sales -->
+                                            <button class="btn btn-warning btn-sm report-order" data-order-id="{{ $order->id }}" data-toggle="modal" data-target="#reportOrderModal">
+                                                Actions
+                                            </button>
                                         @endif
-                                        <!-- Button to open report modal for sales -->
-                                        <button class="btn btn-warning btn-sm report-order" data-order-id="{{ $order->id }}" data-toggle="modal" data-target="#reportOrderModal">
-                                            Actions
-                                        </button>
                                     @endif
-                                @endif
-                            </td>
-                        </tr>
-                    @endforeach
-                </tbody>
-            </table>
+                                </td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+                <p>
+                    <input type="submit" name="bulk_send_odoo" class="btn btn-primary" value="{{ __('Send to POS') }}" />
+                </p>
+            </form>
         </div>
         @if (isset($status))
         <input type="hidden" id="currentReportStatus" value="{{$status}}"/>
@@ -428,5 +449,14 @@
                 });
             }
         );
+    </script>
+    <script>
+        // JavaScript to handle "Check All" functionality
+        document.getElementById('select_all').addEventListener('change', function() {
+            var checkboxes = document.querySelectorAll('input[name="order_ids[]"]');
+            checkboxes.forEach(function(checkbox) {
+                checkbox.checked = document.getElementById('select_all').checked;
+            });
+        });
     </script>
 @endpush

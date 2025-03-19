@@ -18,10 +18,49 @@ use Illuminate\Support\Facades\Cache;
 use Carbon\Carbon;
 use Illuminate\Support\Str;
 use App\Models\Role;
+use Illuminate\Support\Facades\Http;
 
 class OrderController extends Controller
 {
     protected $pagination = 10;
+    protected $pos_base   = 'https://pos.gamesspoteg.com';
+
+    public function login()
+    {
+    // Check if a valid token is already stored in the cache
+        $token = Cache::get('api_token');
+
+    // If token is not found or expired, regenerate it
+        if (!$token) {
+            // API endpoint for login
+            $endpoint = $this->pos_base . '/api/login';
+
+            // Request body data
+            $data = [
+            'username' => 'admin',
+            'password' => 'pos@123'
+            ];
+
+            // Make a POST request to the API
+            $response = Http::post($endpoint, $data);
+
+            // Check if the request was successful
+            if ($response->successful()) {
+                // Parse the token from the response
+                $token = $response->json()['token'];
+
+                // Store the token in cache for 3 days
+                Cache::put('api_token', $token, now()->addDays(3));
+
+                return $token;
+            }
+
+            return false; // Return false if authentication fails
+        }
+
+    // Return the existing token from the cache
+        return $token;
+    }
     /**
      * Display a listing of the orders.
      *
@@ -255,25 +294,25 @@ class OrderController extends Controller
 
     public function quickSearch(Request $request)
     {
-    // Get the search query input
+        // Get the search query input
         $query = $request->input('search');
         if (empty($query)) {
             $query = $_GET['search'];
         }
-    // Build the query to filter orders
+        // Build the query to filter orders
         $orders = Order::with(['seller', 'account.game']);
 
-    // Check if the user is an admin
+        // Check if the user is an admin
         $user = Auth::user();
         $isAdmin = $user->roles->contains('name', 'admin');
 
-    // If the user is not an admin, filter by seller_id
+        // If the user is not an admin, filter by seller_id
         if (!$isAdmin) {
             //$orders->where('seller_id', $user->id);
         }
         $buyer   = false;
         $account = false;
-    // Determine the type of query
+        // Determine the type of query
         if (filter_var($query, FILTER_VALIDATE_EMAIL)) {
             // If query is a valid email, search in account email
             $orders->whereHas('account', function ($q) use ($query) {
@@ -786,5 +825,207 @@ class OrderController extends Controller
     public function solvedOrders()
     {
         return $this->ordersWithStatus('solved');
+    }
+    public function sendToPos(Request $request)
+    {
+        // Validate that the order_ids are provided and are an array of valid IDs
+        $validated = $request->validate([
+            'order_ids' => 'required|array',
+            'order_ids.*' => 'exists:orders,id' // Ensure each order ID exists in the orders table
+        ]);
+        $posSkus = [
+            'offline' => '0040',
+            'secondary' => '125u',
+            'primary' => '0039',
+            'card' => '0041',
+        ];
+        $posIds = [
+            'offline' => '40',
+            'secondary' => '45',
+            'primary' => '39',
+            'card' => '47',
+        ];
+        // Get the array of order IDs
+        $orderIds = $validated['order_ids'];
+        $billing_details  = false;
+        $basic_details    = false;
+        $order_total      = 0;
+        $order_key        = '';
+        $line_items       = [];
+        $buyer_phone      = false;
+        // Process each order ID (e.g., send each order to the POS system)
+        foreach ($orderIds as $orderId) {
+            try {
+                // Fetch the order
+                $order = Order::findOrFail($orderId);
+                if ($order->type === 'card') {
+                } else {
+                    $account = Account::with('game:id,title')->findOrFail($order->account_id);
+                    $account_mail   = $account->mail;
+                    $account_password   = $account->password;
+                    $game_title = $account->game->title;
+                }
+                if ($buyer_phone && $order->buyer_phone !== $buyer_phone) {
+                    return redirect()->route('manager.orders')->with('error', 'Selected orders are not for the same client.');
+                }
+                $buyer_phone = $order->buyer_phone;
+                $sold_item          = $order->sold_item;
+                $platform           = explode('_', $sold_item);
+                $user = User::where('phone', $order->buyer_phone)->first();
+                if (isset($platform[1])) {
+                    $key = $platform[1];
+                    $sku = $posSkus[$key];
+                    $pos_product_id = $posIds[$key];
+                    $type = $key;
+                } else {
+                    $sku = $posSkus['card'];
+                    $pos_product_id = $posIds['card'];
+                    $type = 'card';
+                }
+                if ($user) {
+                    // User found, get the email
+                    $email = $user->email;
+                } else {
+                    $email = null;
+                }
+                if (! $billing_details) {
+                    $billing_details = array(
+                        "first_name" => $order->buyer_name,
+                        "last_name" => "",
+                        "company" => "",
+                        "address_1" => "",
+                        "address_2" => "",
+                        "city" => "cairo",
+                        "state" => "EGC",
+                        "postcode" => "6108",
+                        "country" => "EG",
+                        "email" => $email,
+                        "phone" => $order->buyer_phone
+                    );
+                }
+                if (! $basic_details) {
+                    $basic_details = array(
+                        "id" => $order->id,
+                        "parent_id" => 0,
+                        "status" => "processing",
+                        "currency" => "EGP",
+                        "version" => "9.7.1",
+                        "prices_include_tax" => false,
+                        "date_created" => $order->created_at->toDateString(),
+                        "date_modified" => $order->updated_at->toDateString(),
+                        "discount_total" => "0.00",
+                        "discount_tax" => "0.00",
+                        "shipping_total" => "0.00",
+                        "shipping_tax" => "0.00",
+                        "cart_tax" => "0.00",
+                        "total_tax" => "0.00",
+                        "customer_id" => $user->id,
+                        "payment_method" => "cod",
+                        "payment_method_title" => "Cash on delivery",
+                        "transaction_id" => "",
+                        "customer_ip_address" => "41.36.182.159",
+                        "customer_user_agent" => "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36",
+                        "created_via" => "checkout",
+                        "customer_note" => "",
+                        "date_completed" => null,
+                        "date_paid" => null,
+                        "meta_data" => [],
+                        "is_editable" => false,
+                        "needs_payment" => false,
+                        "needs_processing" => true,
+                        "currency_symbol" => "EGP",
+                        "shipping_lines" => array(),
+                    );
+                }
+                $line_items[] = array(
+                    "name" => $order->sold_item,
+                    "product_id" => $order->account_id,
+                    "variation_id" => 0,
+                    "quantity" => 1,
+                    "tax_class" => "",
+                    "subtotal" => "$order->price",
+                    "subtotal_tax" => "0.00",
+                    "total" => "$order->price",
+                    "total_tax" => "0.00",
+                    "taxes" => array(),
+                    "meta_data" => array(
+                        array(
+                            "id" => 1207,
+                            "key" => "platform",
+                            "value" => "$platform[0]"
+                        ),
+                        array(
+                            "id" => 1208,
+                            "key" => "game_title",
+                            "value" => "$game_title"
+                        ),
+                        array(
+                            "id" => 1217,
+                            "key" => "_account",
+                            "value" => $account_mail
+                        ),array(
+                            "id" => 1217,
+                            "key" => "type",
+                            "value" => $type
+                        ),
+                        array(
+                            "id" => 1218,
+                            "key" => "_password",
+                            "value" => $account_password
+                        ),
+                        array(
+                            "id" => 1219,
+                            "key" => "_pos_product_id",
+                            "value" => $pos_product_id
+                        )
+                    ),
+                    "sku" => "$sku",
+                    "price" => $order->price,
+                    "image" => array(
+                        "id" => "",
+                        "src" => ""
+                    ),
+                    "parent_name" => null
+                );
+                $order_total += $order->price;
+                $order_key .= $orderId;
+            } catch (\Exception $e) {
+                // Store the order ID in the failedOrders array if there's an error
+                $failedOrders[] = $orderId;
+            }
+        }
+        if ($billing_details) {
+            $basic_details['billing'] = $billing_details;
+            $basic_details['shipping'] = $billing_details;
+        }
+        if ($basic_details) {
+            $basic_details['line_items'] = $line_items;
+            $basic_details['total'] = $order_total;
+            $basic_details['order_key'] = $order_key;
+        }
+        // If there are failed orders, return a custom response
+        if (!empty($failedOrders)) {
+            return redirect()->route('manager.orders')->with('error', 'Some orders failed to be sent to POS: ' . implode(', ', $failedOrders));
+        }
+        $token = $this->login();
+        if (! $token) {
+            return redirect()->route('manager.orders')->with('error', 'Failed to authenticate');
+        }
+        // API endpoint for creating an order
+        $endpoint = $this->pos_base . '/api/accounts/orders/create/1';
+
+        // Make a POST request with Bearer token and $basic_details array as JSON
+        $response = Http::withToken($token)  // Set Bearer token
+                    ->post($endpoint, $basic_details);  // Send POST request with data
+
+        // Check if the request was successful
+        if ($response->successful()) {
+            // Return a success message if all orders were sent successfully
+            return redirect()->route('manager.orders')->with('success', 'Orders successfully sent to POS');
+        } else {
+            // Handle errors from the API
+            Log::emergency($response->body());
+            return redirect()->route('manager.orders')->with('error', 'Failed to create order');
+        }
     }
 }
