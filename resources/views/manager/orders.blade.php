@@ -238,7 +238,8 @@
                 dateFormat: "Y-m-d",
             });
             // When the report-order button is clicked, populate the hidden input with the order ID
-            $(document).on('click', '.report-order', function() {
+            $(document).on('click', '.report-order', function(e) {
+                e.preventDefault();
                 let orderId = $(this).data('order-id');
                 $('#reportOrderId').val(orderId);
             });
