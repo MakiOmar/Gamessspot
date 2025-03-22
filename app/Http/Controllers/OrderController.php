@@ -510,8 +510,7 @@ class OrderController extends Controller
             if ($validatedData['platform'] === '5') {
                 $accountQuery->where($sold_item, '>', 0);
             } else {
-                $accountQuery->where($sold_offline_item, 0)
-                    ->where($sold_item, '>', 0);
+                $accountQuery->where($sold_item, '>', 0);
             }
         }
 
