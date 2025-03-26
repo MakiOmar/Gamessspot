@@ -844,6 +844,17 @@ class OrderController extends Controller
             'primary' => '39',
             'card' => '47',
         ];
+        $store_profile_ids = [
+            'profile_13' => 1, // New Cairo
+            'profile_14' => 3, // Beverly Hills.
+            'profile_15' => 4, // Elserag mall.
+            'profile_16' => 5, // City stars.
+            'profile_17' => 6, // WooComerce
+        ];
+        //$user = auth()->user();
+        $user = User::findOrFail(44);
+        $store_profile_id = $user->store_profile_id ?? '0';
+        $pos_location = $store_profile_id == '0' ? 1 : $store_profile_ids['profile_' . $store_profile_id];
         // Get the array of order IDs
         $orderIds = $validated['order_ids'];
         $billing_details  = false;
@@ -1001,6 +1012,7 @@ class OrderController extends Controller
             $basic_details['line_items'] = $line_items;
             $basic_details['total'] = $order_total;
             $basic_details['order_key'] = $order_key;
+            $basic_details['location_id'] = $pos_location;
         }
         // If there are failed orders, return a custom response
         if (!empty($failedOrders)) {
@@ -1019,6 +1031,8 @@ class OrderController extends Controller
 
         // Check if the request was successful
         if ($response->successful()) {
+            $body = json_decode($response->body());
+            $transaction_id = $body->created->id;
             // Return a success message if all orders were sent successfully
             return redirect()->route('manager.orders')->with('success', 'Orders successfully sent to POS');
         } else {
