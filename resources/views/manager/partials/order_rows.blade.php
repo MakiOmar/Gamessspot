@@ -1,5 +1,6 @@
 @foreach ($orders as $order)
     <tr>
+        <td><input type="checkbox" name="order_ids[]" value="{{ $order->id }}" /></td>
         <td>{{ $order->id }}</td>
         @if ( $order->store_profile_id === 17 )
         <td>Website</td>
@@ -59,6 +60,6 @@
                     </button>
                 @endif
             @endif
-        </td>
+        </td> 
     </tr>
 @endforeach
