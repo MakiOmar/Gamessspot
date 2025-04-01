@@ -568,6 +568,8 @@ class OrderController extends Controller
                 'price'            => $validatedData['price'],
                 'notes'            => '',
                 'sold_item'        => $sold_item,
+                'updated_at'       => now(), // أو أي وقت تحدده
+                'created_at'       => now(),
             ];
 
             // Create the order
@@ -868,17 +870,26 @@ class OrderController extends Controller
             try {
                 // Fetch the order
                 $order = Order::findOrFail($orderId);
-                if ($order->type === 'card') {
+                if ($order->sold_item === 'card') {
+                    $card = Card::with('category')->find($order->card_id);
+                    $card_code = $card->code;
+                    $card_category = $card->category->name;
+                    $account_mail = null;
+                    $account_password = null;
+                    $game_title = null;
                 } else {
+                    $card = null;
                     $account = Account::with('game:id,title')->findOrFail($order->account_id);
                     $account_mail   = $account->mail;
                     $account_password   = $account->password;
                     $game_title = $account->game->title;
+                    $card_code = null;
+                    $card_category = null;
                 }
                 if ($buyer_phone && $order->buyer_phone !== $buyer_phone) {
                     return redirect()->route('manager.orders')->with('error', 'Selected orders are not for the same client.');
                 }
-                $buyer_phone = $order->buyer_phone;
+                $buyer_phone        = $order->buyer_phone;
                 $sold_item          = $order->sold_item;
                 $platform           = explode('_', $sold_item);
                 $user = User::where('phone', $order->buyer_phone)->first();
@@ -949,7 +960,7 @@ class OrderController extends Controller
                 }
                 $line_items[] = array(
                     "name" => $order->sold_item,
-                    "product_id" => $order->account_id,
+                    "product_id" => $order->sold_item === 'card' ? $order->card_id : $order->account_id,
                     "variation_id" => 0,
                     "quantity" => 1,
                     "tax_class" => "",
@@ -987,6 +998,16 @@ class OrderController extends Controller
                             "id" => 1219,
                             "key" => "_pos_product_id",
                             "value" => $pos_product_id
+                        ),
+                        array(
+                            "id" => 1220,
+                            "key" => "_card_code",
+                            "value" => $card_code
+                        ),
+                        array(
+                            "id" => 1221,
+                            "key" => "_card_category",
+                            "value" => $card_category
                         )
                     ),
                     "sku" => "$sku",
@@ -1014,6 +1035,7 @@ class OrderController extends Controller
             $basic_details['order_key'] = $order_key;
             $basic_details['location_id'] = $pos_location;
         }
+
         // If there are failed orders, return a custom response
         if (!empty($failedOrders)) {
             return redirect()->route('manager.orders')->with('error', 'Some orders failed to be sent to POS: ' . implode(', ', $failedOrders));
