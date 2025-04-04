@@ -624,8 +624,24 @@ class OrderController extends Controller
             'is_available'  => $availableStock > 0,
         ]);
     }
+    public function checkCardStockApi(Request $request)
+    {
+        // Validate incoming data
+        $validatedData = $request->validate([
+            'category_id'  => 'required|exists:card_categories,id',
+        ]);
+
+        // Return response
+        return response()->json([
+            'stock'         => 5,
+            'is_available'  => true,
+        ]);
+    }
     public function storeApi(Request $request)
     {
+        if ($request->has('card_category_id')) {
+            return $this->sellCard($request);
+        }
 
         // Validate incoming data
         $validatedData = $request->validate([
@@ -782,6 +798,7 @@ class OrderController extends Controller
             'success'  => true,
             'message'  => 'Order created successfully!',
             'code'     => $card->code,
+            'card_details' => [ 'code' => $card->code ],
             'order_id' => $order->id,
             ]);
         } catch (\Exception $e) {
@@ -795,8 +812,6 @@ class OrderController extends Controller
             ], 500);
         }
     }
-
-
 
     public function ordersWithStatus($status)
     {

@@ -4,6 +4,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\ManagerController;
+use App\Http\Controllers\CardCategoryController;
 
 /*
 |--------------------------------------------------------------------------
@@ -41,5 +42,7 @@ Route::post('/login', function (Request $request) {
 Route::middleware('auth:sanctum')->get('orders/latest', [OrderController::class, 'latestCustomerOrders']);
 Route::middleware('auth:sanctum')->post('/orders/receive', [OrderController::class, 'storeApi']);
 Route::middleware('auth:sanctum')->post('/orders/check_stock', [OrderController::class, 'checkStockApi']);
+Route::middleware('auth:sanctum')->post('/orders/check_card_stock', [OrderController::class, 'checkCardStockApi']);
 Route::get('/games/platform/{platform}', [ManagerController::class, 'getGamesByPlatformApi']);
 Route::get('/games/{id}', [ManagerController::class, 'getGameById']);
+Route::get('/card-ctegories/list', [CardCategoryController::class, 'sellApi']);

@@ -26,18 +26,29 @@ class CardCategoryController extends Controller
         $categories = CardCategory::all();
         return view('manager.card-categories', compact('categories'));
     }
-    public function sell()
+    public function getCategories()
     {
-        $categories = CardCategory::whereHas('cards', function ($query) {
+        return CardCategory::whereHas('cards', function ($query) {
             $query->where('status', true); // Only include categories with active cards
         })
         ->with(['cards' => function ($query) {
             $query->where('status', true); // Load only active cards
         }])
         ->get();
+    }
+    public function sell()
+    {
+        $categories    = $this->getCategories();
         $storeProfiles = StoresProfile::all();
 
         return view('manager.sell-cards', compact('categories', 'storeProfiles'));
+    }
+    public function sellApi()
+    {
+        return response()->json([
+            'status' => true,
+            'data' => $this->getCategories()
+        ]);
     }
 
 
