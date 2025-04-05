@@ -24,7 +24,7 @@
 
         <!-- Scrollable table container -->
         <div style="overflow-x:auto; max-width: 100%; white-space: nowrap;">
-            <table class="table table-striped table-bordered" style="min-width: 1200px;">
+            <table class="table table-striped table-bordered stores-responsive-table">
                 <thead>
                     <tr role="row">
                         <th style="width: 57px;">ID</th>
@@ -103,6 +103,9 @@
 @push('js')
 <script>
     jQuery(document).ready(function($) {
+        $('.stores-responsive-table').mobileTableToggle({
+            maxVisibleCols: 3,
+        });
         // Handle search input
         $('#searchStoreProfile').on('input', function() {
             let query = $(this).val();
@@ -119,6 +122,9 @@
                             $('#noResultsMessage').hide();
                             $('#storeProfileTableBody').html(response);
                         }
+                        $('.stores-responsive-table').mobileTableToggle({
+                            maxVisibleCols: 3,
+                        });
                     }
                 });
             } else if (query === '') {

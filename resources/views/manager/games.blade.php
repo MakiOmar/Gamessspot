@@ -1,7 +1,15 @@
 @extends('layouts.admin')
 
 @section('title', 'Manager - Games')
-
+@push('css')
+<style>
+    @media screen and ( min-width:1200px ){
+        .games-reponsive-table{
+            min-width: 1200px;
+        }
+    }
+</style>
+@endpush
 @section('content')
     <div class="container mt-5">
         <h1 class="text-center mb-4">Games Management</h1>
@@ -145,7 +153,9 @@
 
 <script>
     jQuery(document).ready(function($) {
-        
+        $('.games-reponsive-table').mobileTableToggle({
+            maxVisibleCols: 2,
+        });
         // Set up AJAX to include CSRF token in every request
         $.ajaxSetup({
             headers: {

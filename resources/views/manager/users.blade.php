@@ -24,7 +24,7 @@
 
     <!-- Scrollable table container -->
     <div style="overflow-x:auto; max-width: 100%; white-space: nowrap;">
-        <table class="table table-striped table-bordered" style="min-width: 1200px;">
+        <table class="table table-striped table-bordered users-reponsive-table">
             <thead>
                 <tr role="row">
                     <th style="width: 57px;">ID</th>
@@ -155,6 +155,9 @@
 <!-- JavaScript for handling modal edit functionality -->
 <script>
     jQuery(document).ready(function($) {
+        $('.users-reponsive-table').mobileTableToggle({
+                maxVisibleCols: 3,
+            });
         // Handle delete user button click using event delegation
         $(document).on('click', '.deleteUserButton', function() {
             var userId = $(this).data('id'); // Get user ID from button data attribute
@@ -228,6 +231,9 @@
                             $('#noResultsMessage').hide();
                             $('#userTableBody').html(response); // Update the table dynamically
                         }
+                        $('.users-reponsive-table').mobileTableToggle({
+                            maxVisibleCols: 3,
+                        });
                     }
                 });
             } else if (query === '') {

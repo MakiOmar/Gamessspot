@@ -8,7 +8,7 @@
     <button type="button" class="btn btn-success mb-3" onclick="openCreateModal()">Create New Category</button>
 
     <!-- Card Categories Table -->
-    <table class="table table-striped table-hover">
+    <table class="table table-striped table-hover card-categories-reponsive">
         <thead>
             <tr>
                 <th>#</th>
@@ -79,6 +79,11 @@
 
 @push('js')
     <script>
+        jQuery(document).ready(function($){
+            $('.card-categories-reponsive').mobileTableToggle({
+                maxVisibleCols: 4,
+            });
+        });
         // Open Create Modal
         function openCreateModal() {
             document.getElementById('categoryForm').reset();
