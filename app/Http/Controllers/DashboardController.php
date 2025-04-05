@@ -86,7 +86,7 @@ class DashboardController extends Controller
         // Fetch the 10 most recent orders for admin
         return Order::with(['seller', 'account.game', 'card'])
             ->latest()
-            ->take(10)
+            ->take(5)
             ->get();
     }
 

@@ -115,6 +115,69 @@
             });
             */
         });
+        (function ($) {
+            $.fn.mobileTableToggle = function (options) {
+                const settings = $.extend({
+                    maxVisibleCols: 2,
+                    toggleTextShow: 'chevron',
+                    toggleTextHide: 'chevron',
+                    mobileBreakpoint: 768
+                }, options);
+
+                if ($(window).width() > settings.mobileBreakpoint) return this;
+
+                return this.each(function () {
+                    const $table = $(this);
+                    const $headers = $table.find('thead th');
+                    const totalCols = $headers.length;
+
+                    if (totalCols <= settings.maxVisibleCols) return;
+                    $table.addClass('mobile-responsive-table');
+                    const hiddenIndexes = [];
+                    $headers.each(function (i) {
+                        if (i >= settings.maxVisibleCols) {
+                            $(this).addClass('mobile-hidden');
+                            hiddenIndexes.push(i);
+                        }
+                    });
+
+                    $table.find('tbody tr').each(function () {
+                        const $row = $(this);
+                        const $cells = $row.find('td');
+
+                        hiddenIndexes.forEach(function (i) {
+                            $cells.eq(i).addClass('mobile-hidden');
+                        });
+
+                        const $toggleBtn = $(`
+                            <button class="toggle-details-btn">
+                                <span class="chevron chevron-down"></span>
+                            </button>
+                        `);
+                        $toggleBtn.on('click', function(e){
+                            e.preventDefault();
+                        });
+                        $cells.eq(settings.maxVisibleCols - 1).append($toggleBtn);
+
+                        let detailHTML = '<tr class="mobile-detail-row"><td colspan="' + settings.maxVisibleCols + '">';
+                        hiddenIndexes.forEach(function (i) {
+                            const key = $headers.eq(i).text();
+                            const val = $cells.eq(i).html();
+                            detailHTML += '<div><strong>' + key + ':</strong> ' + val + '</div>';
+                        });
+                        detailHTML += '</td></tr>';
+                        const $detailRow = $(detailHTML).hide();
+                        $row.after($detailRow);
+
+                        $toggleBtn.on('click', function () {
+                            $detailRow.toggle();
+                            $(this).find('.chevron').toggleClass('chevron-down chevron-up');
+                        });
+                    });
+                });
+            };
+
+        })(jQuery);
     </script>
 @endpush
 
@@ -129,6 +192,66 @@
 <style type="text/css">
 
     {{-- You can add AdminLTE customizations here --}}
+    .table-bordered th, .table-bordered td {
+        vertical-align: middle;
+    }
+    @media (max-width: 768px) {
+        .mobile-responsive-table td{
+            position: relative;
+        }
+        .mobile-hidden {
+            display: none !important;
+        }
+
+        .mobile-detail-row {
+            display: none;
+        }
+        .mobile-detail-row td > div {
+            word-wrap: break-word;   /* يُقسّم الكلمة الطويلة */
+            white-space: normal;     /* يسمح بلف النص */
+            overflow-wrap: break-word; /* دعم أوسع للمتصفحات الحديثة */
+        }
+        .toggle-details-btn {
+            background-color: #eee;
+            border: none;
+            padding: 6px 12px;
+            margin-top: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            display: inline-block;
+            position: absolute;
+            right: 10px;
+            top: 0;
+            margin: 0;
+        }
+        .toggle-details-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 5px;
+        }
+
+        .chevron {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-right: 2px solid #333;
+            border-bottom: 2px solid #333;
+            transform: rotate(45deg);
+            transition: transform 0.3s ease;
+            margin-left: 5px;
+        }
+
+        .chevron-down {
+            transform: rotate(45deg);
+        }
+
+        .chevron-up {
+            transform: rotate(-135deg);
+        }
+
+    }
+
     /*
     .card-header {
         border-bottom: none;

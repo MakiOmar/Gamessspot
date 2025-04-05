@@ -1,5 +1,13 @@
 @extends('layouts.admin')
-
+@push('css')
+<style>
+    @media screen and ( min-width:1200px ){
+        #accounts-table{
+            min-width: 1200px;
+        }
+    }
+</style>
+@endpush
 @section('title', 'Manager - Accounts')
 
 @section('content')
@@ -35,28 +43,28 @@
 
         <!-- Scrollable table container -->
         <div style="overflow-x:auto; max-width: 100%; white-space: nowrap;">
-            <table class="table table-striped table-bordered" style="min-width: 1200px;">
+            <table id="accounts-table" class="table table-striped table-bordered accounts-responsive-table">
                 <thead>
                     <tr role="row">
-                        <th style="width: 57px;">ID</th>
-                        <th style="width: 265px;">Mail</th>
-                        <th style="width: 170px;">Game Name</th>
-                        <th style="width: 52px;">Region</th> <!-- Region will display an emoji -->
-                        <th style="width: 111px;">Offline (PS4)</th>
-                        <th style="width: 104px;">Primary (PS4)</th>
-                        <th style="width: 114px;">Secondary (PS4)</th>
-                        <th style="width: 99px;">Offline (PS5)</th>
-                        <th style="width: 104px;">Primary (PS5)</th>
-                        <th style="width: 114px;">Secondary (PS5)</th>
-                        <th style="width: 99px;">Cost</th>
-                        <th style="width: 120px;">Password</th>
-                        <th style="width: 150px;">Actions</th>
+                        <th style="width:30px">ID</th>
+                        <th>Mail</th>
+                        <th>Game Name</th>
+                        <th>Region</th> <!-- Region will display an emoji -->
+                        <th>Offline (PS4)</th>
+                        <th>Primary (PS4)</th>
+                        <th>Secondary (PS4)</th>
+                        <th>Offline (PS5)</th>
+                        <th>Primary (PS5)</th>
+                        <th>Secondary (PS5)</th>
+                        <th>Cost</th>
+                        <th>Password</th>
+                        <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody id="accountTableBody">
                     @foreach($accounts as $account)
                     <tr>
-                        <td>{{ $account->id }}</td>
+                        <td style="width:30px">{{ $account->id }}</td>
                         <td>{{ $account->mail }}</td>
                         <td>{{ $account->game->title }}</td>
                         <td>{{ $regionEmojis[$account->region] ?? $account->region }}</td>
@@ -309,16 +317,16 @@
                             $('#noResultsMessage').hide(); // Hide 'No results' message
                             $('#accountTableBody').html(response); // Replace table rows with search results
                         }
-                        $('table').toggleTableColumns({
-                            columnStart: 5,
-                            columnEnd: 10
-                        });
+                        $('.mobile-responsive-table').mobileTableToggle();
                     }
                 });
             } else if (query === '') {
                 location.reload(); // Reload the page if the search is cleared
             }
         });
+    });
+    jQuery(document).ready(function ($) {
+        $('.accounts-responsive-table').mobileTableToggle();
     });
 </script>
 @endpush
