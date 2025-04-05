@@ -235,6 +235,8 @@
         jQuery(document).ready(function($) {
             $('.orders-responsive-table').mobileTableToggle({
                 maxVisibleCols: 3,
+                maxVisibleColsDesktop: 5,
+                enableOnDesktop: true
             });
             // Initialize Flatpickr for startDate and endDate inputs
             flatpickr("#startDate", {
@@ -378,6 +380,8 @@
                             }
                             $('.orders-responsive-table').mobileTableToggle({
                                 maxVisibleCols: 3,
+                                maxVisibleColsDesktop: 5,
+                                enableOnDesktop: true
                             });
                         },
                         error: function(xhr) {

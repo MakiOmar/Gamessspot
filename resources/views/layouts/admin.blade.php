@@ -119,23 +119,33 @@
             $.fn.mobileTableToggle = function (options) {
                 const settings = $.extend({
                     maxVisibleCols: 2,
+                    maxVisibleColsDesktop: null, // إذا null يتم تجاهله
                     toggleTextShow: 'chevron',
                     toggleTextHide: 'chevron',
-                    mobileBreakpoint: 768
+                    mobileBreakpoint: 768,
+                    enableOnDesktop: false // الخيار الجديد
                 }, options);
 
-                if ($(window).width() > settings.mobileBreakpoint) return this;
+                const isMobile = $(window).width() <= settings.mobileBreakpoint;
+                const isDesktop = $(window).width() > settings.mobileBreakpoint;
+
+                if (!isMobile && !settings.enableOnDesktop) return this;
 
                 return this.each(function () {
                     const $table = $(this);
                     const $headers = $table.find('thead th');
                     const totalCols = $headers.length;
 
-                    if (totalCols <= settings.maxVisibleCols) return;
+                    // نحدد العدد المسموح به بناءً على حجم الشاشة
+                    const maxVisible = isMobile ? settings.maxVisibleCols : (settings.maxVisibleColsDesktop || totalCols);
+
+                    if (totalCols <= maxVisible) return;
+
                     $table.addClass('mobile-responsive-table');
+
                     const hiddenIndexes = [];
                     $headers.each(function (i) {
-                        if (i >= settings.maxVisibleCols) {
+                        if (i >= maxVisible) {
                             $(this).addClass('mobile-hidden');
                             hiddenIndexes.push(i);
                         }
@@ -154,12 +164,18 @@
                                 <span class="chevron chevron-down"></span>
                             </button>
                         `);
-                        $toggleBtn.on('click', function(e){
-                            e.preventDefault();
-                        });
-                        $cells.eq(settings.maxVisibleCols - 1).append($toggleBtn);
 
-                        let detailHTML = '<tr class="mobile-detail-row"><td colspan="' + settings.maxVisibleCols + '">';
+                        // تفادي تكرار الحدث
+                        $toggleBtn.on('click', function (e) {
+                            e.preventDefault();
+                            const $detailRow = $(this).closest('tr').next('.mobile-detail-row');
+                            $detailRow.toggle();
+                            $(this).find('.chevron').toggleClass('chevron-down chevron-up');
+                        });
+
+                        $cells.eq(maxVisible - 1).append($toggleBtn);
+
+                        let detailHTML = '<tr class="mobile-detail-row"><td colspan="' + maxVisible + '">';
                         hiddenIndexes.forEach(function (i) {
                             const key = $headers.eq(i).text();
                             const val = $cells.eq(i).html();
@@ -168,16 +184,11 @@
                         detailHTML += '</td></tr>';
                         const $detailRow = $(detailHTML).hide();
                         $row.after($detailRow);
-
-                        $toggleBtn.on('click', function () {
-                            $detailRow.toggle();
-                            $(this).find('.chevron').toggleClass('chevron-down chevron-up');
-                        });
                     });
                 });
             };
-
         })(jQuery);
+
     </script>
 @endpush
 
@@ -195,8 +206,7 @@
     .table-bordered th, .table-bordered td {
         vertical-align: middle;
     }
-    @media (max-width: 768px) {
-        .mobile-responsive-table td{
+    .mobile-responsive-table td{
             position: relative;
         }
         .mobile-hidden {
@@ -249,8 +259,6 @@
         .chevron-up {
             transform: rotate(-135deg);
         }
-
-    }
 
     /*
     .card-header {

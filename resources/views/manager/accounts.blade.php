@@ -317,7 +317,10 @@
                             $('#noResultsMessage').hide(); // Hide 'No results' message
                             $('#accountTableBody').html(response); // Replace table rows with search results
                         }
-                        $('.mobile-responsive-table').mobileTableToggle();
+                        $('.accounts-responsive-table').mobileTableToggle({
+                            maxVisibleColsDesktop: 5,
+                            enableOnDesktop: true
+                        });
                     }
                 });
             } else if (query === '') {
@@ -326,7 +329,10 @@
         });
     });
     jQuery(document).ready(function ($) {
-        $('.accounts-responsive-table').mobileTableToggle();
+        $('.accounts-responsive-table').mobileTableToggle({
+            maxVisibleColsDesktop: 5,
+            enableOnDesktop: true
+        });
     });
 </script>
 @endpush
