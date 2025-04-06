@@ -206,6 +206,27 @@
             min-width: 1200px;
         }
     }
+    @media screen and ( max-width:480px ){
+        .small-box h3, .small-box .h3 {
+            font-size: 18px;
+        }
+    }
+    .text-bg-warning {
+        color: #000 !important;
+        background-color: RGB(178, 150, 65) !important;
+    }
+    .text-bg-danger {
+        color: #fff !important;
+        background-color: RGB(163, 65, 75) !important;
+    }
+    .navbar-search-block {
+        left: auto;
+        right: 70px;
+        max-width: 500px;
+    }
+    #search-query{
+        max-width: 400px;
+    }
     {{-- You can add AdminLTE customizations here --}}
     .wraptext{
         word-wrap: break-word;white-space: normal;overflow-wrap: break-word;

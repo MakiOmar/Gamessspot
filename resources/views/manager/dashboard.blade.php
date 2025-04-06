@@ -1,6 +1,72 @@
 @extends('layouts.admin')
 @push('css')
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
+        .stock-level-card {
+            border: none;
+            box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.05);
+            border-radius: 0.5rem;
+            overflow: hidden;
+        }
+        .stock-level-card .card-header {
+            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+            padding: 1rem 1.5rem;
+        }
+        .stock-level-card .table {
+            margin-bottom: 0;
+        }
+        .stock-level-card .table thead th {
+            border-bottom-width: 1px;
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.75rem;
+            letter-spacing: 0.5px;
+        }
+        .circle-stat {
+        text-align: center;
+    }
+    
+    .circle-progress {
+        position: relative;
+        width: 100px;
+        height: 100px;
+        margin: 0 auto;
+        border-radius: 50%;
+        background: conic-gradient(#e9ecef 0%, #e9ecef 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .circle-progress::before {
+        content: '';
+        position: absolute;
+        width: 90px;
+        height: 90px;
+        background: white;
+        border-radius: 50%;
+    }
+    
+    .circle-inner {
+        position: relative;
+        z-index: 1;
+        font-size: 2rem;
+    }
+    
+    .circle-progress[data-value] {
+        background: conic-gradient(#4e73df 0%, #4e73df calc(var(--value) * 1%), #e9ecef calc(var(--value) * 1%) 100%);
+        transition: background 1.5s ease;
+    }
+    
+    .circle-progress[data-value="75"] { --value: 75; }
+    .circle-progress[data-value="{{ min(100, ($totalUserCount/100)*100) }}"] { --value: {{ min(100, ($totalUserCount/100)*100) }}; }
+    .circle-progress[data-value="{{ min(100, ($uniqueBuyerPhoneCount/500)*100) }}"] { --value: {{ min(100, ($uniqueBuyerPhoneCount/500)*100) }}; }
+    .circle-progress[data-value="{{ min(100, ($newUsersCount/50)*100) }}"] { --value: {{ min(100, ($newUsersCount/50)*100) }}; }
+    
+    .text-warning { color: #f6c23e !important; }
+    .text-primary { color: #4e73df !important; }
+    .text-danger { color: #e74a3b !important; }
+    .text-success { color: #1cc88a !important; }
         .history .card {
             position: relative;
             display: flex;
@@ -230,4 +296,55 @@
 
 @push('js')
     <script> console.log("Hi, I'm using the Laravel-AdminLTE package!"); </script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Animate circles on load
+            const circles = document.querySelectorAll('.circle-progress');
+            circles.forEach(circle => {
+                const value = circle.getAttribute('data-value');
+                circle.style.setProperty('--value', value);
+            });
+            
+            // Initialize chart
+            const ctx = document.getElementById('salesChart').getContext('2d');
+            const salesChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+                    datasets: [{
+                        label: 'Sales',
+                        data: [12000, 19000, 15000, 20000, 17000, 22000],
+                        backgroundColor: 'rgba(78, 115, 223, 0.05)',
+                        borderColor: 'rgba(78, 115, 223, 1)',
+                        borderWidth: 2,
+                        pointBackgroundColor: 'rgba(78, 115, 223, 1)',
+                        pointRadius: 3,
+                        pointHoverRadius: 5,
+                        fill: true
+                    }]
+                },
+                options: {
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: false,
+                            grid: {
+                                color: 'rgba(0, 0, 0, 0.05)'
+                            }
+                        },
+                        x: {
+                            grid: {
+                                display: false
+                            }
+                        }
+                    }
+                }
+            });
+        });
+        </script>
 @endpush
