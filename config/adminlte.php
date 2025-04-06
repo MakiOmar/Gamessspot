@@ -116,8 +116,8 @@ return [
             'path' => 'assets/img/finallogo.png',
             'alt' => 'GamesSpot Preloader Image',
             'effect' => 'animation__shake',
-            'width' => 60,
-            'height' => 60,
+            'width' => 150,
+            'height' => 150,
         ],
     ],
 
