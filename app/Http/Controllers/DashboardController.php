@@ -47,6 +47,14 @@ class DashboardController extends Controller
         $lowStockGames = $StockLevels[0] ?? collect([]);
         $highStockGames = $StockLevels[1] ?? collect([]);
         $orders   = $this->activity();
+        $newUsersCount = Cache::remember('new_users_role_5_count', 600, function () {
+            return User::whereHas('roles', function ($query) {
+                    $query->where('role_id', 5);
+            })
+                ->whereMonth('created_at', now()->month)
+                ->whereYear('created_at', now()->year)
+                ->count();
+        });
 
         $total = $totalCodeCost + $accountsCost;
         return view(
@@ -64,7 +72,8 @@ class DashboardController extends Controller
                 'storeProfiles',
                 'topSellingStores',
                 'branchesWithOrders',
-                'orders'
+                'orders',
+                'newUsersCount'
             )
         );
     }
@@ -86,7 +95,7 @@ class DashboardController extends Controller
         // Fetch the 10 most recent orders for admin
         return Order::with(['seller', 'account.game', 'card'])
             ->latest()
-            ->take(5)
+            ->take(4)
             ->get();
     }
 
@@ -171,5 +180,4 @@ class DashboardController extends Controller
         ->take(3)
         ->get();
     }
-
 }
