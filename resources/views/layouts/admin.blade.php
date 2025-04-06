@@ -200,7 +200,39 @@
 <link rel="stylesheet" href="{{ asset('assets/css/flatpickr.css') }}">
 <link rel="stylesheet" href="{{ asset('build/assets/app-DqME6eCz.css') }}">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.min.css" integrity="sha256-Qsx5lrStHZyR9REqhUF8iQt73X06c8LGIUPzpOhwRrI=" crossorigin="anonymous"><!--end::Third Party Plugin(Bootstrap Icons)--><!--begin::Required Plugin(AdminLTE)-->
+<style>
+    @font-face {
+        font-family: 'Arista';
+        font-style: normal;
+        font-weight: normal;
+        src: url('/assets/fonts/arista/[z] Arista.woff') format('woff');
+    }
+
+    @font-face {
+        font-family: 'Arista ExtraFilled';
+        font-style: normal;
+        font-weight: normal;
+        src: url('/assets/fonts/arista/[z] Arista ExtraFilled.woff') format('woff');
+    }
+
+    @font-face {
+        font-family: 'Arista Light';
+        font-style: normal;
+        font-weight: normal;
+        src: url('/assets/fonts/arista/[z] Arista light.woff') format('woff');
+    }
+</style>
+
 <style type="text/css">
+    a{
+        text-decoration:none;
+    }
+    .brand-link{
+        font-family: 'Arista';
+    }
+    .mobile-results-count{
+        display: none;
+    }
     @media screen and ( min-width:1200px ){
         .table-bordered{
             min-width: 1200px;
@@ -209,6 +241,9 @@
     @media screen and ( max-width:480px ){
         .small-box h3, .small-box .h3 {
             font-size: 18px;
+        }
+        .mobile-results-count{
+            display: block;
         }
     }
     .page-item.active .page-link {

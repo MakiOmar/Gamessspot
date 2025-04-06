@@ -258,11 +258,11 @@ class OrderController extends Controller
         }
         // Execute the query and paginate or get the results
         $orders = $orders->paginate(20)->appends($request->all());
-
+        $showing = "<div class=\"mb-2 mb-md-0 mobile-results-count\">Showing {$orders->firstItem()} to {$orders->lastItem()} of {$orders->total()} results</div>";
         // Return the updated rows for the table (assuming a partial view)
         return response()->json([
             'rows' => view('manager.partials.order_rows', compact('orders', 'status'))->render(),
-            'pagination' => $orders->links('vendor.pagination.bootstrap-5')->render(),
+            'pagination' => $showing . $orders->links('vendor.pagination.bootstrap-5')->render(),
         ]);
     }
 
