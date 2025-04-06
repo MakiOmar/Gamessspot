@@ -10,6 +10,10 @@
     }
 </style>
 @endpush
+@php
+    $status = $status ?? 'all';
+@endphp
+
 @section('content')
     <div class="container mt-5">
         <h1 class="text-center mb-4">
@@ -98,81 +102,21 @@
                         </tr>
                     </thead>
                     <tbody id="orderTableBody">
-                        @foreach ($orders as $order)
-                            <tr id="orderRow-{{ $order->id }}">
-                                <td><input type="checkbox" name="order_ids[]" value="{{ $order->id }}" /></td>
-                                <td>{{ $order->id }}</td>
-                                @if ( $order->store_profile_id === 17 )
-                                <td>Website</td>
-                                @else
-                                <td class="{{ $order->seller ? '' : 'text-danger' }}">{{ $order->seller?->name ?? 'Maybe deleted' }}</td>
-                                @endif
-                                @if($order->account)
-                                    <td>{{ $order->account->game->title }}</td>
-                                    <td>{{ $order->account->mail }}</td>
-                                    @if(! Auth::user()->roles->contains('name', 'accountant') )
-                                    <td>{{ $order->account->password }}</td>
-                                    @endif
-                                @elseif($order->card)
-                                    <td>{{ $order->card->category->name }}</td>
-                                    @if(! Auth::user()->roles->contains('name', 'accountant') )
-                                    <td>{{ $order->card->code }}</td>
-                                    @endif
-                                    <td>--</td>
-                                @endif
-
-                                <td>{{ $order->buyer_phone }}</td>
-                                <td>{{ $order->buyer_name }}</td>
-
-                                <td>{{ $order->price }}</td>
-                                <td>{{ $order->sold_item }}</td>
-                                <td>
-                                    @if (! isset($status))
-                                        {{ $order->notes }}
-                                    @else
-                                    {{ optional($order->reports)->note }}
-                                    @endif
-                                </td>
-                                <td>{{ $order->created_at }}</td>
-                                <td>
-                                    <!-- Check if 'needs_return' flag is true -->
-                                    @if (isset($status) && 'needs_return' === $status)
-                                        <!-- Button for orders with 'needs_return' -->
-                                        <button class="btn btn-danger btn-sm undo-order" data-order-id="{{ $order->id }}"
-                                            data-sold-item="{{ $order->sold_item }}"
-                                            data-report-id="{{ $order->reports->id }}">
-                                            Undo
-                                        </button>
-                                    @elseif(isset($status) && 'has_problem' === $status)
-                                        <button class="btn btn-success btn-sm solve-problem"
-                                            data-report-id="{{ $order->reports->id }}">
-                                            Mark as Solved
-                                        </button>
-                                    @elseif(isset($status) && 'solved' === $status)
-                                        @if(Auth::user()->roles->contains('name', 'admin'))
-                                                <!-- Regular undo button -->
-                                                <button class="btn btn-danger btn-sm undo-order" data-order-id="{{ $order->id }}" data-sold-item="{{ $order->sold_item }}">
-                                                    Undo
-                                                </button>
-                                        @endif
-                                    @else
-                                        @if(! Auth::user()->roles->contains('name', 'accountant') )
-                                            @if ( Auth::user()->roles->contains('name', 'admin') )
-                                            <!-- Regular undo button -->
-                                            <button class="btn btn-danger btn-sm undo-order" data-order-id="{{ $order->id }}" data-sold-item="{{ $order->sold_item }}">
-                                                Undo
-                                            </button>
-                                            @endif
-                                            <!-- Button to open report modal for sales -->
-                                            <button class="btn btn-warning btn-sm report-order" data-order-id="{{ $order->id }}" data-toggle="modal" data-target="#reportOrderModal">
-                                                Actions
-                                            </button>
-                                        @endif
-                                    @endif
-                                </td>
-                            </tr>
-                        @endforeach
+                        @include('manager.partials.order_rows', ['orders' => $orders, 'status' => $status])
                     </tbody>
+                    <tfoot>
+                        <tr>
+                            <td colspan="100%">
+                                <div id="orderPagination">
+                                    @if(request()->has('id'))
+                                        {{ $orders->appends(['id' => request()->get('id')])->links('vendor.pagination.bootstrap-5') }}
+                                    @else
+                                        {{ $orders->links('vendor.pagination.bootstrap-5') }}
+                                    @endif
+                                </div>
+                            </td>
+                        </tr>
+                    </tfoot>
                 </table>
                 <p>
                     <input type="submit" name="bulk_send_odoo" class="btn btn-primary" value="{{ __('Send to POS') }}" />
@@ -182,14 +126,6 @@
         @if (isset($status))
         <input type="hidden" id="currentReportStatus" value="{{$status}}"/>
         @endif
-        <!-- Pagination links (if needed) -->
-        <div class="d-flex justify-content-center mt-4">
-            @if(request()->has('id'))
-                {{ $orders->appends(['id' => request()->get('id')])->links('vendor.pagination.bootstrap-5') }}
-            @else
-                {{ $orders->links('vendor.pagination.bootstrap-5') }}
-            @endif
-        </div>
     </div>
     <!-- Report Order Modal -->
     <div class="modal fade" id="reportOrderModal" tabindex="-1" aria-labelledby="reportOrderModalLabel" aria-hidden="true">
@@ -367,7 +303,7 @@
                             store_profile_id: storeProfileId,
                         },
                         success: function(response) {
-                            if (response.trim() === '') {
+                            if (!response.rows || response.rows.trim() === '') {
                                 Swal.fire({
                                     title: 'No Results',
                                     text: 'No orders found matching your search criteria.',
@@ -376,13 +312,15 @@
                                 }); // Show 'No results' message
                             } else {
                                 $('#orderTableBody').html(
-                                response); // Replace table rows with search results
+                                    response.rows); // Replace table rows with search results
+                                $('#orderPagination').html(response.pagination);
                             }
                             $('.orders-responsive-table').mobileTableToggle({
                                 maxVisibleCols: 3,
                                 maxVisibleColsDesktop: 5,
                                 enableOnDesktop: true
                             });
+                            
                         },
                         error: function(xhr) {
                             Swal.fire({
@@ -396,6 +334,42 @@
                 } else if (!query && !startDate && !endDate) {
                     location.reload(); // Reload the page if both search and date range are cleared
                 }
+            });
+            $(document).on('click', '#orderPagination .pagination a', function(e) {
+                e.preventDefault();
+
+                let url = $(this).attr('href');
+                let queryParams = new URLSearchParams(url.split('?')[1]);
+
+                let search     = $('#searchOrder').val();
+                let startDate  = $('#startDate').val();
+                let endDate    = $('#endDate').val();
+                let storeId    = $('#storeId').val();
+                let status     = $('#currentReportStatus').length > 0 ? $('#currentReportStatus').val() : 'all';
+
+                // Add any manually selected filters
+                queryParams.set('search', search);
+                queryParams.set('start_date', startDate);
+                queryParams.set('end_date', endDate);
+                queryParams.set('store_profile_id', storeId);
+                queryParams.set('status', status);
+
+                $.ajax({
+                    url: url.split('?')[0] + '?' + queryParams.toString(),
+                    method: 'GET',
+                    success: function(response) {
+                        $('#orderTableBody').html(response.rows);
+                        $('#orderPagination').html(response.pagination);
+                        $('.orders-responsive-table').mobileTableToggle({
+                            maxVisibleCols: 3,
+                            maxVisibleColsDesktop: 5,
+                            enableOnDesktop: true
+                        });
+                    },
+                    error: function() {
+                        Swal.fire('Error', 'Could not load page', 'error');
+                    }
+                });
             });
 
         });

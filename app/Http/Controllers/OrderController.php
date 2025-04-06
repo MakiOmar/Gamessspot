@@ -176,7 +176,8 @@ class OrderController extends Controller
      */
     protected function renderOrders($orders, $user)
     {
-        return view('manager.orders', compact('orders', 'user'));
+        $status = request()->get('status', 'all');
+        return view('manager.orders', compact('orders', 'user', 'status'));
     }
 
 
@@ -256,10 +257,13 @@ class OrderController extends Controller
             $orders->where('orders.store_profile_id', $storeProfileId)->orderBy('buyer_name', 'asc');
         }
         // Execute the query and paginate or get the results
-        $orders = $orders->get();
+        $orders = $orders->paginate(20)->appends($request->all());
 
         // Return the updated rows for the table (assuming a partial view)
-        return view('manager.partials.order_rows', compact('orders', 'status'))->render();
+        return response()->json([
+            'rows' => view('manager.partials.order_rows', compact('orders', 'status'))->render(),
+            'pagination' => $orders->links('vendor.pagination.bootstrap-5')->render(),
+        ]);
     }
 
     public function searchCustomersHelper(Request $request)

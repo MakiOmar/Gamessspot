@@ -211,6 +211,17 @@
             font-size: 18px;
         }
     }
+    .page-item.active .page-link {
+        background-color: #db890a;
+        border-color: #db890a;
+    }
+    .page-link {
+	    color: #db890a;
+	}
+    .page-link:hover{
+        background-color: #000;
+        color: #fff;
+    }
     .text-bg-warning {
         color: #000 !important;
         background-color: RGB(178, 150, 65) !important;
