@@ -224,6 +224,9 @@ class OrderController extends Controller
                             $q->where('mail', 'like', "%$query%");
                         }
                     )
+                    ->orWhereHas('card', function ($q) use ($query) {
+                        $q->where('code', 'like', "%$query%");
+                    })
                     // Search by game title (related through account's game)
                     ->orWhereHas(
                         'account.game',
