@@ -12,6 +12,9 @@
         .form-control{
             background-color: #fff!important
         }
+        .preloader .img-circle{
+            border-radius: 0!important
+        }
     </style>
     {{-- Custom Meta Tags --}}
     @yield('meta_tags')
