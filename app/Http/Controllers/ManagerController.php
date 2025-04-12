@@ -313,7 +313,7 @@ class ManagerController extends Controller
                 "special_prices.ps{$n}_offline_price",
             )
             ->havingRaw("SUM(accounts.{$offline_stock}) > 0 OR SUM(accounts.{$primary_stock}) > 0 OR SUM(accounts.{$secondary_stock}) > 0")
-            ->paginate(10);  // Paginate 10 results per page
+            ->get();
 
         // Determine if the primary stock is active
         foreach ($psGames as $game) {
