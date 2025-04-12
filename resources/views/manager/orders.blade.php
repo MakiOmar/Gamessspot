@@ -335,18 +335,16 @@
                     location.reload(); // Reload the page if both search and date range are cleared
                 }
             });
-            $(document).on('click', '#orderPagination .pagination a', function(e) {
+            $(document).on('click', '#search-pagination .pagination a', function(e) {
                 e.preventDefault();
 
                 let url = $(this).attr('href');
                 let queryParams = new URLSearchParams(url.split('?')[1]);
-
                 let search     = $('#searchOrder').val();
                 let startDate  = $('#startDate').val();
                 let endDate    = $('#endDate').val();
                 let storeId    = $('#storeId').val();
                 let status     = $('#currentReportStatus').length > 0 ? $('#currentReportStatus').val() : 'all';
-
                 // Add any manually selected filters
                 queryParams.set('search', search);
                 queryParams.set('start_date', startDate);

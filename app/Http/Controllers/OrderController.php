@@ -262,7 +262,7 @@ class OrderController extends Controller
         // Return the updated rows for the table (assuming a partial view)
         return response()->json([
             'rows' => view('manager.partials.order_rows', compact('orders', 'status'))->render(),
-            'pagination' => $showing . $orders->links('vendor.pagination.bootstrap-5')->render(),
+            'pagination' => '<div id="search-pagination">' . $showing . $orders->links('vendor.pagination.bootstrap-5')->render() . '</div>',
         ]);
     }
 
