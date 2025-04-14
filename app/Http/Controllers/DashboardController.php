@@ -30,6 +30,11 @@ class DashboardController extends Controller
             return User::count();
         });
 
+        // Get the total orders count, caching it for 5 minutes
+        $totalOrderCount = Cache::remember('today_order_count', 300, function () {
+            return Order::whereDate('created_at', now()->toDateString())->count();
+        });
+
         // Get the unique buyer_phone count, caching it for 10 minutes
         $uniqueBuyerPhoneCount = Cache::remember('unique_buyer_phone_count', 600, function () {
             return Order::distinct('buyer_phone')->count('buyer_phone');
@@ -73,7 +78,8 @@ class DashboardController extends Controller
                 'topSellingStores',
                 'branchesWithOrders',
                 'orders',
-                'newUsersCount'
+                'newUsersCount',
+                'totalOrderCount'
             )
         );
     }
