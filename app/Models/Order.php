@@ -22,6 +22,7 @@ class Order extends Model
         'notes',
         'sold_item',
         'card_id',
+        'pos_order_id',
     );
 
     /**

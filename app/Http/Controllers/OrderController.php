@@ -75,7 +75,8 @@ class OrderController extends Controller
         $ordersQuery = Order::with([
             'seller',
             'account.game', // Load game through account
-            'card'
+            'card',
+            'reports'
         ])->whereDate('created_at', Carbon::today());
 
         // Check for 'admin' role
@@ -856,6 +857,7 @@ class OrderController extends Controller
             'order_ids' => 'required|array',
             'order_ids.*' => 'exists:orders,id' // Ensure each order ID exists in the orders table
         ]);
+        
         $posSkus = [
             'offline' => '0040',
             'secondary' => '125u',
@@ -887,6 +889,16 @@ class OrderController extends Controller
         $order_key        = '';
         $line_items       = [];
         $buyer_phone      = false;
+        // Filter orders that haven't been sent to POS (pos_order_id is null)
+        $unsentOrderIds = Order::whereIn('id', $orderIds)
+        ->whereNull('pos_order_id')
+        ->pluck('id')
+        ->toArray();
+
+        // If all orders are already sent
+        if (empty($unsentOrderIds)) {
+            return redirect()->route('manager.orders')->with('info', 'All selected orders have already been sent to POS.');
+        }
         // Process each order ID (e.g., send each order to the POS system)
         foreach ($orderIds as $orderId) {
             try {
@@ -1077,6 +1089,12 @@ class OrderController extends Controller
         if ($response->successful()) {
             $body = json_decode($response->body());
             $transaction_id = $body->created->id;
+            // Loop through the order IDs and update each one
+            foreach ($unsentOrderIds as $orderId) {
+                Order::where('id', $orderId)->update([
+                    'pos_order_id' => $transaction_id
+                ]);
+            }
             // Return a success message if all orders were sent successfully
             return redirect()->route('manager.orders')->with('success', 'Orders successfully sent to POS');
         } else {
