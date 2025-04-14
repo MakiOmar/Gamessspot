@@ -40,18 +40,29 @@
             <form action="{{ route('manager.orders.export') }}" method="GET">
                 <div class="row g-2">
                     <!-- Search Input -->
-                    <div class="col-12 col-md-6">
+                    <div class="col-12 col-md-4">
                         <input type="text" class="form-control" name="searchOrder" id="searchOrder" placeholder="Search orders by buyer phone">
                         <input type="hidden" id="storeId" value="@if( ! empty( $_GET['id'] ) ){{ $_GET['id'] }}@else{{0}}@endif">
                     </div>
-        
-                    <!-- Date Range (only if not sales role) -->
+
+                    <!-- Date Range -->
                     @if( ! Auth::user()->roles->contains('name', 'sales') )
-                    <div class="col-12 col-md-6 d-flex flex-column flex-md-row align-items-md-center">
-                        <input type="date" class="form-control mb-2 mb-md-0 me-md-2" id="startDate" name="startDate" placeholder="Start Date">
-                        <input type="date" class="form-control" id="endDate" name="endDate" placeholder="End Date">
-                    </div>
+                        <div class="col-12 col-md-6 d-flex flex-column flex-md-row align-items-md-center">
+                            <input type="date" class="form-control mb-2 mb-md-0 me-md-2"
+                                id="startDate" name="startDate"
+                                placeholder="{{ request('startDate', date('Y-m-d')) }}">
+                            
+                            <input type="date" class="form-control"
+                                id="endDate" name="endDate"
+                                placeholder="{{ request('endDate', date('Y-m-d')) }}">
+                        </div>
                     @endif
+
+                    <!-- Custom Search Button -->
+                    <div class="col-12 col-md-2">
+                        <button type="button" id="customSearchBtn" class="btn btn-primary w-100">Search</button>
+                    </div>
+
                 </div>
         
                 @if(Auth::user()->roles->contains('name', 'admin') || Auth::user()->roles->contains('name', 'accountant'))
@@ -118,9 +129,12 @@
                         </tr>
                     </tfoot>
                 </table>
-                <p>
-                    <input type="submit" name="bulk_send_odoo" class="btn btn-primary" value="{{ __('Send to POS') }}" />
-                </p>
+                @unless(Auth::user()->hasRole('accountant'))
+                    <p>
+                        <input type="submit" name="bulk_send_odoo" class="btn btn-primary" value="{{ __('Send to POS') }}" />
+                    </p>
+                @endunless
+
             </form>
         </div>
         @if (isset($status))
@@ -248,6 +262,7 @@
                                 report_id: reportId
                             },
                             success: function(response) {
+                                console.log(response);
                                 if (response.success) {
                                     // Use SweetAlert2 for success notification
                                     Swal.fire({
@@ -282,59 +297,52 @@
                     }
                 });
             });
-            // Handle search input and date range filter
-            $('#searchOrder, #startDate, #endDate').on('input change', function() {
+            $('#customSearchBtn').on('click', function() {
                 let query = $('#searchOrder').val();
                 let startDate = $('#startDate').val();
                 let endDate = $('#endDate').val();
                 let storeProfileId = $('#storeId').val();
                 let status = $('#currentReportStatus').length > 0 ? $('#currentReportStatus').val() : 'all';
 
-                // Check if we have a valid date range or search query
-                if ((startDate && endDate) || query.length >= 3) {
-                    $.ajax({
-                        url: "{{ route('manager.orders.search') }}", // Search route for orders
-                        method: 'GET',
-                        data: {
-                            search: query,
-                            start_date: startDate,
-                            end_date: endDate,
-                            status: status,
-                            store_profile_id: storeProfileId,
-                        },
-                        success: function(response) {
-                            if (!response.rows || response.rows.trim() === '') {
-                                Swal.fire({
-                                    title: 'No Results',
-                                    text: 'No orders found matching your search criteria.',
-                                    icon: 'info',
-                                    confirmButtonText: 'OK'
-                                }); // Show 'No results' message
-                            } else {
-                                $('#orderTableBody').html(
-                                    response.rows); // Replace table rows with search results
-                                $('#orderPagination').html(response.pagination);
-                            }
+                $.ajax({
+                    url: "{{ route('manager.orders.search') }}",
+                    method: 'GET',
+                    data: {
+                        search: query,
+                        start_date: startDate,
+                        end_date: endDate,
+                        status: status,
+                        store_profile_id: storeProfileId,
+                    },
+                    success: function(response) {
+                        if (!response.rows || response.rows.trim() === '') {
+                            Swal.fire({
+                                title: 'No Results',
+                                text: 'No orders found matching your search criteria.',
+                                icon: 'info',
+                                confirmButtonText: 'OK'
+                            });
+                        } else {
+                            $('#orderTableBody').html(response.rows);
+                            $('#orderPagination').html(response.pagination);
                             $('.orders-responsive-table').mobileTableToggle({
                                 maxVisibleCols: 3,
                                 maxVisibleColsDesktop: 5,
                                 enableOnDesktop: true
                             });
-                            
-                        },
-                        error: function(xhr) {
-                            Swal.fire({
-                                title: 'Error',
-                                text: 'An error occurred while processing your request.',
-                                icon: 'error',
-                                confirmButtonText: 'OK'
-                            });
                         }
-                    });
-                } else if (!query && !startDate && !endDate) {
-                    location.reload(); // Reload the page if both search and date range are cleared
-                }
+                    },
+                    error: function(xhr) {
+                        Swal.fire({
+                            title: 'Error',
+                            text: 'An error occurred while processing your request.',
+                            icon: 'error',
+                            confirmButtonText: 'OK'
+                        });
+                    }
+                });
             });
+
             $(document).on('click', '#search-pagination .pagination a', function(e) {
                 e.preventDefault();
 
