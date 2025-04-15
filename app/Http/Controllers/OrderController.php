@@ -242,8 +242,14 @@ class OrderController extends Controller
 
         // Filter by date range if both start and end dates are provided
         if ($startDate && $endDate) {
-            $orders->whereBetween('created_at', array( $startDate, $endDate ));
-        }
+            if ($startDate === $endDate) {
+                // Filter orders created on the exact date (whole day)
+                $orders->whereDate('created_at', $startDate);
+            } else {
+                // Filter between the date range
+                $orders->whereBetween('created_at', [$startDate, $endDate]);
+            }
+        }        
 
         // Filter by status if it's not 'all'
         if ($status !== 'all') {
