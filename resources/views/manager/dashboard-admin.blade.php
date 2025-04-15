@@ -92,8 +92,8 @@
                                                 </tr>
                                             </thead>
                                             <tbody>
-                                                @foreach($lowStockGames as $game)
-                                                <tr>
+                                                @foreach($lowStockGames as $index => $game)
+                                                <tr class="{{ $index > 1 ? 'd-none low-stock-extra' : '' }}">
                                                     <td>
                                                         <div class="d-flex align-items-center">
                                                             <div class="me-2" style="width: 24px; height: 24px; background-color: #e9ecef; border-radius: 4px;"></div>
@@ -102,16 +102,23 @@
                                                     </td>
                                                     <td class="text-end fw-bold">{{ $game->total_stock }}</td>
                                                     <td class="text-end">
-                                                        <span class="badge bg-warning text-dark">Reorder</span>
+                                                        <span class="badge bg-warning text-dark">Low</span>
                                                     </td>
                                                 </tr>
                                                 @endforeach
                                             </tbody>
                                         </table>
+                                        @if(count($lowStockGames) > 2)
+                                            <div class="text-center mt-2">
+                                                <button class="btn btn-outline-warning btn-sm" onclick="toggleStockRows('low')">Show all</button>
+                                            </div>
+                                        @endif
                                     </div>
                                 @endif
                             </div>
+                            @if(count($lowStockGames) < 1)
                             <div style="height: 100px;"></div>
+                            @endif
                             <!-- High Stock Column -->
                             <div class="col-12 p-3">
                                 <div class="alert alert-success alert-dismissible fade show mb-3" role="alert">
@@ -138,8 +145,8 @@
                                                 </tr>
                                             </thead>
                                             <tbody>
-                                                @foreach($highStockGames as $game)
-                                                <tr>
+                                                @foreach($highStockGames as $index => $game)
+                                                <tr class="{{ $index > 1 ? 'd-none high-stock-extra' : '' }}">
                                                     <td>
                                                         <div class="d-flex align-items-center">
                                                             <div class="me-2" style="width: 24px; height: 24px; background-color: #e9ecef; border-radius: 4px;"></div>
@@ -148,12 +155,17 @@
                                                     </td>
                                                     <td class="text-end fw-bold">{{ $game->total_stock }}</td>
                                                     <td class="text-end">
-                                                        <span class="badge bg-success">In Stock</span>
+                                                        <span class="badge bg-success">High</span>
                                                     </td>
                                                 </tr>
                                                 @endforeach
                                             </tbody>
-                                        </table>
+                                            </table>
+                                            @if(count($highStockGames) > 2)
+                                                <div class="text-center mt-2">
+                                                    <button class="btn btn-outline-success btn-sm" onclick="toggleStockRows('high')">Show all</button>
+                                                </div>
+                                            @endif
                                     </div>
                                 @endif
                             </div>
@@ -286,3 +298,19 @@
         </div>
     </div>
 </div>
+
+@push('js')
+<script>
+    function toggleStockRows(type) {
+        const rows = document.querySelectorAll(`.${type}-stock-extra`);
+        rows.forEach(row => row.classList.toggle('d-none'));
+
+        const btn = event.currentTarget;
+        if (btn.innerText === 'Show all') {
+            btn.innerText = 'Hide';
+        } else {
+            btn.innerText = 'Show all';
+        }
+    }
+</script>
+@endpush

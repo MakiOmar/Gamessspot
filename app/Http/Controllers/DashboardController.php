@@ -49,8 +49,9 @@ class DashboardController extends Controller
         $storeProfiles = StoresProfile::withCount('orders')->paginate(10);
 
         $StockLevels = $this->getStockLevels();
-        $lowStockGames = $StockLevels[0] ?? collect([]);
-        $highStockGames = $StockLevels[1] ?? collect([]);
+        $lowStockGames = $StockLevels['lowStock'] ?? collect();
+        $highStockGames = $StockLevels['highStock'] ?? collect();
+
         $orders   = $this->activity();
         $newUsersCount = Cache::remember('new_users_role_5_count', 600, function () {
             return User::whereHas('roles', function ($query) {
@@ -143,38 +144,50 @@ class DashboardController extends Controller
         $results = [];
 
         foreach ($stocks as $key => $stock) {
-            // Validate columns
+            // Validate configuration
             if (empty($stock['columns']) || !is_array($stock['columns'])) {
-                $results[$key] = collect(); // Return an empty collection if invalid
+                $results[$key] = collect();
                 continue;
             }
 
-            // Generate stock aggregation logic dynamically
-            $stockColumns = array_map(fn($col) => "COALESCE(SUM(accounts.$col), 0)", $stock['columns']);
-            $stockExpression = implode(' + ', $stockColumns);
+            try {
+                // Build the stock sum expression with COALESCE for each column
+                $stockColumns = array_map(
+                    fn($col) => "COALESCE(SUM(accounts.{$col}), 0)",
+                    $stock['columns']
+                );
+                $stockExpression = implode(' + ', $stockColumns);
 
-            $results[$key] = Game::select(
-                'games.id',
-                'games.title',
-                'games.code',
-                'games.full_price',
-                'games.ps4_image_url',
-                'games.ps5_image_url',
-                DB::raw("$stockExpression as total_stock")
-            )
-            ->join('accounts', 'games.id', '=', 'accounts.game_id')
-            ->groupBy(
-                'games.id',
-                'games.title',
-                'games.code',
-                'games.full_price',
-                'games.ps4_image_url',
-                'games.ps5_image_url'
-            )
-            ->having('total_stock', $stock['condition'], $stock['threshold'])
-            ->get();
+                $query = Game::query()
+                    ->select([
+                        'games.id',
+                        'games.title',
+                        'games.code',
+                        'games.full_price',
+                        'games.ps4_image_url',
+                        'games.ps5_image_url',
+                        DB::raw("{$stockExpression} as total_stock")
+                    ])
+                    ->leftJoin('accounts', 'games.id', '=', 'accounts.game_id')
+                    ->groupBy([
+                        'games.id',
+                        'games.title',
+                        'games.code',
+                        'games.full_price',
+                        'games.ps4_image_url',
+                        'games.ps5_image_url'
+                    ]);
+
+                // Use havingRaw for more reliable comparison
+                $query->havingRaw("{$stockExpression} {$stock['condition']} ?", [$stock['threshold']]);
+
+                $results[$key] = $query->get();
+            } catch (\Exception $e) {
+                // Log error and return empty collection
+                \Log::error("Failed to get stock levels for {$key}: " . $e->getMessage());
+                $results[$key] = collect();
+            }
         }
-
         return $results;
     }
     public function topSellingStores()
