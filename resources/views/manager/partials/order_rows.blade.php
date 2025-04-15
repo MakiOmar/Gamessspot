@@ -1,6 +1,12 @@
 @foreach ($orders as $order)
     <tr>
-        <td><input type="checkbox" name="order_ids[]" value="{{ $order->id }}" /></td>
+        <td>
+            @if ($order->pos_order_id)
+                <span class="text-success font-weight-bold">POS</span>
+            @else
+                <input type="checkbox" name="order_ids[]" value="{{ $order->id }}" />
+            @endif
+        </td>
         <td>{{ $order->id }}</td>
         @if ( $order->store_profile_id === 17 )
         <td>Website</td>
@@ -38,14 +44,20 @@
             @if (isset($status) && 'needs_return' === $status)
                 <!-- Button for orders with 'needs_return' -->
                 <button class="btn btn-danger btn-sm undo-order" data-order-id="{{ $order->id }}"
-                    data-sold-item="{{ $order->sold_item }}" data-report-id="{{ $order->reports->first()->id }}">
+                    data-sold-item="{{ $order->sold_item }}" data-report-id="{{ $order->reports->id }}">
                     Undo
                 </button>
             @elseif(isset($status) && 'has_problem' === $status)
-                <button class="btn btn-success btn-sm solve-problem" data-report-id="{{ $order->reports->first()->id }}">
+                <button class="btn btn-success btn-sm solve-problem" data-report-id="{{ $order->reports->id }}">
                     Mark as Solved
                 </button>
             @elseif(isset($status) && 'solved' === $status)
+                @if ( Auth::user()->roles->contains('name', 'admin') )
+                <!-- Regular undo button -->
+                <button class="btn btn-danger btn-sm undo-order" data-order-id="{{ $order->id }}" data-sold-item="{{ $order->sold_item }}">
+                    Undo
+                </button>
+                @endif
             @else
                 @if(Auth::user()->roles->contains('name', 'admin')  || Auth::user()->roles->contains('name', 'sales'))
                     @if ( Auth::user()->roles->contains('name', 'admin') )
