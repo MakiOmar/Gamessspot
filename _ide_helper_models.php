@@ -199,7 +199,7 @@ namespace App\Models{
  * 
  *
  * @property int $id
- * @property int $seller_id
+ * @property int|null $seller_id
  * @property int|null $store_profile_id
  * @property int|null $account_id
  * @property string $buyer_phone
@@ -214,7 +214,7 @@ namespace App\Models{
  * @property-read \App\Models\Card|null $card
  * @property-read \App\Models\Game|null $game
  * @property-read \App\Models\Report|null $reports
- * @property-read \App\Models\User $seller
+ * @property-read \App\Models\User|null $seller
  * @property-read \App\Models\StoresProfile|null $storeProfile
  * @method static \Database\Factories\OrderFactory factory($count = null, $state = [])
  * @method static \Illuminate\Database\Eloquent\Builder|Order newModelQuery()
@@ -242,13 +242,13 @@ namespace App\Models{
  *
  * @property int $id
  * @property int $order_id
- * @property int $seller_id
+ * @property int|null $seller_id
  * @property string $status
  * @property string $note
  * @property \Illuminate\Support\Carbon|null $created_at
  * @property \Illuminate\Support\Carbon|null $updated_at
  * @property-read \App\Models\Order $order
- * @property-read \App\Models\User $seller
+ * @property-read \App\Models\User|null $seller
  * @method static \Illuminate\Database\Eloquent\Builder|Report newModelQuery()
  * @method static \Illuminate\Database\Eloquent\Builder|Report newQuery()
  * @method static \Illuminate\Database\Eloquent\Builder|Report query()
