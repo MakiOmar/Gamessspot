@@ -250,7 +250,7 @@ class OrderController extends Controller
                 // Filter between the date range
                 $orders->whereBetween('created_at', [$startDate, $endDate]);
             }
-        }        
+        }
 
         // Filter by status if it's not 'all'
         if ($status !== 'all') {
@@ -864,7 +864,7 @@ class OrderController extends Controller
             'order_ids' => 'required|array',
             'order_ids.*' => 'exists:orders,id' // Ensure each order ID exists in the orders table
         ]);
-        
+
         $posSkus = [
             'offline' => '0040',
             'secondary' => '125u',
