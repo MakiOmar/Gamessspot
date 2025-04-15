@@ -202,9 +202,10 @@ class OrderController extends Controller
         // Check if the user is an admin
         $user = Auth::user();
         $isAdmin = $user->roles->contains('name', 'admin');
+        $isAccountant = $user->roles->contains('name', 'accountant');
 
         // If the user is not an admin, filter by seller_id
-        if (!$isAdmin) {
+        if (!$isAdmin && !$isAccountant) {
             $orders->where('seller_id', $user->id);
         }
 
