@@ -33,7 +33,7 @@ class AuthServiceProvider extends ServiceProvider
         });
 
         Gate::define('view-sell-log', function ($user) {
-            return $user->hasRole(['admin', 'sales', 'account manager']);
+            return $user->hasRole(['admin', 'sales', 'account manager', 'accountant']);
         });
 
         Gate::define('manage-accounts', function ($user) {
