@@ -57,8 +57,16 @@ class StoreProfileController extends Controller
 
         $storeProfiles = StoresProfile::where('name', 'like', "%{$query}%")
             ->orWhere('phone_number', 'like', "%{$query}%")
-            ->get();
+            ->orderBy('id', 'desc')
+            ->paginate(10) // important: use paginate not get()
+            ->appends($request->all());
 
-        return view('manager.partials.store_profile_rows', compact('storeProfiles'))->render();
+        $showing = "<div class=\"mb-2 mb-md-0 mobile-results-count\">Showing {$storeProfiles->firstItem()} to {$storeProfiles->lastItem()} of {$storeProfiles->total()} results</div>";
+
+        return response()->json([
+            'rows' => view('manager.partials.store_profile_rows', compact('storeProfiles'))->render(),
+            'pagination' => '<div id="search-pagination">' . $showing . $storeProfiles->links('vendor.pagination.bootstrap-5')->render() . '</div>',
+        ]);
     }
+
 }

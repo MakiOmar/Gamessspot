@@ -24,8 +24,13 @@
                 <div class="alert alert-warning" id="noResultsMessage" style="display: none;">
                     No results found.
                 </div>
-                <!-- Search Box -->
-                <input type="text" class="form-control" id="searchAccount" placeholder="Search accounts by email or game name">
+                <div class="d-flex">
+                    <!-- Search Box -->
+                    <input type="text" class="form-control" id="searchAccount" placeholder="Search accounts by email or game name">
+                    <button id="searchButton" type="button" class="btn btn-primary ms-2">
+                        Search
+                    </button>
+                </div>
             </div>
             <div class="d-flex justify-content-end align-items-center">
                 <!-- Add Account Button -->
@@ -62,50 +67,14 @@
                     </tr>
                 </thead>
                 <tbody id="accountTableBody">
-                    @foreach($accounts as $account)
-                    <tr>
-                        <td style="width:30px">{{ $account->id }}</td>
-                        <td>{{ $account->mail }}</td>
-                        <td>{{ $account->game->title }}</td>
-                        <td>{{ $regionEmojis[$account->region] ?? $account->region }}</td>
-                        <td>{{ $account->ps4_offline_stock }}</td>
-                        <td>{{ $account->ps4_primary_stock }}</td>
-                        <td>{{ $account->ps4_secondary_stock }}</td>
-                        <td>{{ $account->ps5_offline_stock }}</td>
-                        <td>{{ $account->ps5_primary_stock }}</td>
-                        <td>{{ $account->ps5_secondary_stock }}</td>
-                        <td>{{ $account->cost }}</td>
-                        <td>{{ $account->password }}</td>
-                        <td>
-                            <!-- Edit Button -->
-                            <button type="button" class="btn btn-warning btn-sm editAccount" 
-                                data-id="{{ $account->id }}"
-                                data-mail="{{ $account->mail }}"
-                                data-password="{{ $account->password }}"
-                                data-game_id="{{ $account->game_id }}"
-                                data-region="{{ $account->region }}"
-                                data-cost="{{ $account->cost }}"
-                                data-birthdate="{{ $account->birthdate }}"
-                                data-login_code="{{ $account->login_code }}"
-                                data-ps4_primary="{{ $account->ps4_primary_stock }}"
-                                data-ps4_secondary="{{ $account->ps4_secondary_stock }}"
-                                data-ps4_offline="{{ $account->ps4_offline_stock }}"
-                                data-ps5_primary="{{ $account->ps5_primary_stock }}"
-                                data-ps5_secondary="{{ $account->ps5_secondary_stock }}"
-                                data-ps5_offline="{{ $account->ps5_offline_stock }}"
-                                data-bs-toggle="modal" 
-                                data-bs-target="#accountModal">
-                                Edit
-                            </button>
-                        </td>
-                    </tr>
-                    @endforeach
+                    @include('manager.partials.account_rows', ['accounts' => $accounts])
                 </tbody>
             </table>
         </div>
 
         <!-- Pagination links (if needed) -->
-        <div class="d-flex justify-content-center mt-4">
+        <!-- Wrapper to be updated by AJAX -->
+        <div id="paginationWrapper" class="d-flex justify-content-center mt-4">
             {{ $accounts->links('vendor.pagination.bootstrap-5') }}
         </div>
     @else
@@ -300,33 +269,46 @@
             });
         });
 
-        // Handle search input
-        $('#searchAccount').on('input', function() {
-            let query = $(this).val();
-
-            // Check if the input has 3 or more characters before running the search
+        $('#searchButton').on('click', function () {
+            let query = $('#searchAccount').val();
             if (query.length >= 3) {
                 $.ajax({
-                    url: "{{ route('manager.accounts.search') }}", // Add search route
+                    url: "{{ route('manager.accounts.search') }}",
                     method: 'GET',
                     data: { search: query },
-                    success: function(response) {
-                        if (response.trim() === '') { // Check if response is empty
-                            $('#noResultsMessage').show(); // Show 'No results' message
+                    success: function (response) {
+                        if (response.rows.trim() === '') {
+                            $('#noResultsMessage').show();
                         } else {
-                            $('#noResultsMessage').hide(); // Hide 'No results' message
-                            $('#accountTableBody').html(response); // Replace table rows with search results
+                            $('#noResultsMessage').hide();
+                            $('#accountTableBody').html(response.rows);
+                            $('#paginationWrapper').html(response.pagination);
                         }
-                        $('.accounts-responsive-table').mobileTableToggle({
-                            maxVisibleColsDesktop: 5,
-                            enableOnDesktop: true
-                        });
+                    },
+                    error: function () {
+                        Swal.fire('Error', 'Could not fetch data.', 'error');
                     }
                 });
-            } else if (query === '') {
-                location.reload(); // Reload the page if the search is cleared
+            } else {
+                Swal.fire('Info', 'Please enter at least 3 characters to search.', 'info');
             }
         });
+        $(document).on('click', '#search-pagination .pagination a', function(e) {
+            e.preventDefault();
+            let url = $(this).attr('href');
+            let query = $('#searchAccount').val();
+
+            $.ajax({
+                url: url,
+                method: 'GET',
+                data: { search: query },
+                success: function (response) {
+                    $('#accountTableBody').html(response.rows);
+                    $('#paginationWrapper').html(response.pagination);
+                }
+            });
+        });
+
     });
     jQuery(document).ready(function ($) {
         $('.accounts-responsive-table').mobileTableToggle({

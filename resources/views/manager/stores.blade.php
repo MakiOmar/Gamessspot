@@ -35,31 +35,16 @@
                     </tr>
                 </thead>
                 <tbody id="storeProfileTableBody">
-                    @foreach($storeProfiles as $storeProfile)
-                    <tr>
-                        <td>{{ $storeProfile->id }}</td>
-                        <td>{{ $storeProfile->name }}</td>
-                        <td>{{ $storeProfile->phone_number }}</td>
-                        <td>{{ $storeProfile->orders_count  }}</td>
-                        <td>
-                            @if(Auth::user()->roles->contains('name', 'admin'))
-                                <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#editStoreProfileModal" data-id="{{ $storeProfile->id }}">Edit</button>
-                                <a href="{{ route('manager.special-prices', $storeProfile->id) }}" class="btn btn-success">Prices</a>
-                            @endif
-                            @if(Auth::user()->roles->contains('name', 'accountant') || Auth::user()->roles->contains('name', 'admin'))
-                                <a href="{{ route('manager.orders') }}/?id={{ $storeProfile->id }}" class="btn btn-primary">Sell log</a>
-                            @endif
-                        </td>
-                    </tr>
-                    @endforeach
+                    @include('manager.partials.store_profile_rows', ['storeProfiles' => $storeProfiles])
                 </tbody>
             </table>
         </div>
 
         <!-- Pagination links (if needed) -->
-        <div class="d-flex justify-content-center mt-4">
+        <div class="d-flex justify-content-center mt-4" id="storePaginationWrapper">
             {{ $storeProfiles->links('vendor.pagination.bootstrap-5') }}
         </div>
+        
     </div>
 
     <!-- Edit Store Profile Modal -->
@@ -107,29 +92,43 @@
             maxVisibleCols: 3,
         });
         // Handle search input
-        $('#searchStoreProfile').on('input', function() {
-            let query = $(this).val();
-
-            if (query.length >= 3) {
-                $.ajax({
-                    url: "{{ route('manager.storeProfiles.search') }}", // Your search route
-                    method: 'GET',
-                    data: { search: query },
-                    success: function(response) {
-                        if (response.trim() === '') {
-                            $('#noResultsMessage').show();
-                        } else {
-                            $('#noResultsMessage').hide();
-                            $('#storeProfileTableBody').html(response);
-                        }
+        function fetchStoreProfiles(query, page = 1) {
+            $.ajax({
+                url: "{{ route('manager.storeProfiles.search') }}",
+                method: 'GET',
+                data: { search: query, page: page },
+                success: function(response) {
+                    if (response.rows.trim() === '') {
+                        $('#noResultsMessage').show();
+                        $('#storeProfileTableBody').empty();
+                        $('#storePaginationWrapper').empty();
+                    } else {
+                        $('#noResultsMessage').hide();
+                        $('#storeProfileTableBody').html(response.rows);
+                        $('#storePaginationWrapper').html(response.pagination);
                         $('.stores-responsive-table').mobileTableToggle({
                             maxVisibleCols: 3,
                         });
                     }
-                });
-            } else if (query === '') {
-                location.reload(); // Reload the page if the search is cleared
+                }
+            });
+        }
+        let currentQuery = '';
+        $('#searchStoreProfile').on('input', function() {
+            currentQuery = $(this).val();
+
+            if (currentQuery.length >= 3) {
+                fetchStoreProfiles(currentQuery);
+            } else if (currentQuery === '') {
+                location.reload();
             }
+        });
+
+        // Delegate AJAX pagination
+        $(document).on('click', '#search-pagination .pagination a', function(e) {
+            e.preventDefault();
+            const page = $(this).attr('href').split('page=')[1];
+            fetchStoreProfiles(currentQuery, page);
         });
 
         // Handle opening the Create Store Profile modal

@@ -79,40 +79,35 @@ class UserController extends Controller
         return $this->users(5);
     }
 
-    // Method to search users based on the input
     public function search(Request $request, $role = null)
     {
         $query = $request->input('search');
 
-        if (!empty($query)) {
-            $users = User::query();
+        $users = User::query();
 
-            // Filter by role if provided
-            if ($role !== null) {
-                $users->whereHas('roles', function ($q) use ($role) {
-                    $q->where('roles.id', intval($role));
-                });
-            }
+        if ($role !== null) {
+            $users->whereHas('roles', function ($q) use ($role) {
+                $q->where('roles.id', intval($role));
+            });
+        }
 
-            // Search by name, phone, or store profile name
-            $users->where(function ($q) use ($query) {
-                $q->where('users.name', 'like', "%{$query}%")
-                ->orWhere('users.phone', 'like', "%{$query}%") // Search by phone
+        $users->where(function ($q) use ($query) {
+            $q->where('users.name', 'like', "%{$query}%")
+                ->orWhere('users.phone', 'like', "%{$query}%")
                 ->orWhereHas('storeProfile', function ($q) use ($query) {
                     $q->where('stores_profile.name', 'like', "%{$query}%");
                 });
-            });
+        });
 
-            $users = $users->with('storeProfile')->get();
+        $users = $users->with('storeProfile')->paginate(15)->appends($request->all());
 
-            // Return search results as a partial view
-            return view('manager.partials.user_table_rows', compact('users'))->render();
-        }
+        $showing = "<div class=\"mb-2 mb-md-0 mobile-results-count\">Showing {$users->firstItem()} to {$users->lastItem()} of {$users->total()} results</div>";
 
-        return '';
+        return response()->json([
+            'rows' => view('manager.partials.user_table_rows', compact('users'))->render(),
+            'pagination' => '<div id="search-pagination">' . $showing . $users->links('vendor.pagination.bootstrap-5')->render() . '</div>',
+        ]);
     }
-
-
 
     public function edit($id)
     {

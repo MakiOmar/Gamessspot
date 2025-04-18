@@ -42,10 +42,14 @@ class AccountController extends Controller
                 $q->where('title', 'like', "%{$query}%");
             }
         )
-        ->orderBy('created_at', 'asc') // Order by the oldest date
-        ->get();
-
-        return view('manager.partials.account_rows', compact('accounts'))->render(); // Use a partial view to render rows
+        ->orderBy('created_at', 'asc');
+        $accounts = $accounts->paginate(20)->appends($request->all());
+        $showing = "<div class=\"mb-2 mb-md-0 mobile-results-count\">Showing {$accounts->firstItem()} to {$accounts->lastItem()} of {$accounts->total()} results</div>";
+        // Return the updated rows for the table (assuming a partial view)
+        return response()->json([
+            'rows' => view('manager.partials.account_rows', compact('accounts'))->render(),
+            'pagination' => '<div id="search-pagination">' . $showing . $accounts->links('vendor.pagination.bootstrap-5')->render() . '</div>',
+        ]);
     }
 
     public function getTotalAccountCost()

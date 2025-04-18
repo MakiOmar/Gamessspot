@@ -1,5 +1,5 @@
 @foreach ($orders as $order)
-    <tr>
+    <tr id="orderRow-{{ $order->id }}">
         <td>
             @if ($order->pos_order_id)
                 <span class="text-success font-weight-bold">POS</span>

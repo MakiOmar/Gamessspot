@@ -35,35 +35,13 @@
                 </tr>
             </thead>
             <tbody id="userTableBody">
-                @foreach($users as $user)
-                <tr>
-                    <td>{{ $user->id }}</td>
-                    <td>{{ $user->name }}</td>
-                    <td>{{ $user->storeProfile->name ?? 'No Store Profile' }}</td>
-                    <td>{{ $user->phone }}</td>
-                    <td>
-                        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#editUserModal" data-id="{{ $user->id }}">Edit</button>
-                        @if(auth()->id() !== $user->id)
-                        <!-- Delete Button -->
-                        <button type="button" class="btn btn-danger deleteUserButton" data-id="{{ $user->id }}">Delete</button>
-                        @endif
-                        @if (Auth::user()->roles->contains('name', 'admin'))
-                            @if ($user->is_active)
-                                <button type="button" class="btn btn-secondary toggleUserStatus" data-id="{{ $user->id }}" data-status="deactivate">Deactivate</button>
-                            @else
-                                <button type="button" class="btn btn-success toggleUserStatus" data-id="{{ $user->id }}" data-status="activate">Activate</button>
-                            @endif
-                        @endif
-
-                    </td>
-                </tr>
-                @endforeach
+                @include('manager.partials.user_table_rows', ['users' => $users])
             </tbody>
         </table>
     </div>
 
     <!-- Pagination links (if needed) -->
-    <div class="d-flex justify-content-center mt-4">
+    <div class="d-flex justify-content-between align-items-center mt-4" id="search-pagination">
         {{ $users->links('vendor.pagination.bootstrap-5') }}
     </div>
 </div>
@@ -200,45 +178,53 @@
             });
 
         });
-
-        // Handle search input
-        $('#searchUser').on('input', function() {
-            let query = $(this).val();
-            let currentUrl = window.location.href;
-            let role = null;
-
-            if (currentUrl.includes('/users/sales')) {
-                role = 2;
-            } else if (currentUrl.includes('/users/accountants')) {
-                role = 3;
-            } else if (currentUrl.includes('/users/admins')) {
-                role = 1;
-            } else if (currentUrl.includes('/users/account-managers')) {
-                role = 4;
-            } else if (currentUrl.includes('/users/customers')) {
-                role = 5;
-            }
-
-            if (query.length >= 3) {
-                $.ajax({
-                    url: `/manager/users/search/${role}`, // Send role dynamically
-                    method: 'GET',
-                    data: { search: query },
-                    success: function(response) {
-                        if (response.trim() === '') {
-                            $('#noResultsMessage').show();
-                        } else {
-                            $('#noResultsMessage').hide();
-                            $('#userTableBody').html(response); // Update the table dynamically
-                        }
+        // Handle search and pagination clicks
+        function loadUsers(query = '', role = null, page = 1) {
+            $.ajax({
+                url: `/manager/users/search/${role}?search=${query}&page=${page}`,
+                method: 'GET',
+                success: function (response) {
+                    if (response.rows.trim() === '') {
+                        $('#noResultsMessage').show();
+                        $('#userTableBody').html('');
+                        $('#search-pagination').html('');
+                    } else {
+                        $('#noResultsMessage').hide();
+                        $('#userTableBody').html(response.rows);
+                        $('#search-pagination').html(response.pagination);
                         $('.users-reponsive-table').mobileTableToggle({
                             maxVisibleCols: 3,
                         });
                     }
-                });
+                }
+            });
+        }
+        let currentSearch = '';
+        let currentRole = null;
+
+        $('#searchUser').on('input', function () {
+            const query = $(this).val();
+            currentSearch = query;
+
+            const url = window.location.href;
+            if (url.includes('/users/sales')) currentRole = 2;
+            else if (url.includes('/users/accountants')) currentRole = 3;
+            else if (url.includes('/users/admins')) currentRole = 1;
+            else if (url.includes('/users/account-managers')) currentRole = 4;
+            else if (url.includes('/users/customers')) currentRole = 5;
+
+            if (query.length >= 3) {
+                loadUsers(query, currentRole);
             } else if (query === '') {
                 location.reload();
             }
+        });
+
+        // Handle pagination links click
+        $(document).on('click', '#search-pagination .pagination a', function (e) {
+            e.preventDefault();
+            const page = $(this).attr('href').split('page=')[1];
+            loadUsers(currentSearch, currentRole, page);
         });
 
 

@@ -422,8 +422,9 @@
                                             icon: 'success',
                                             confirmButtonText: 'OK'
                                         }).then(() => {
-                                            $('#orderRow-' + orderId)
-                                        .remove(); // Remove the row from the table
+                                            $('#orderRow-' + orderId).next('.mobile-detail-row').remove();
+                                            $('#orderRow-' + orderId).remove(); // Remove the row from the table
+                                            
                                         });
                                     } else {
                                         Swal.fire({
