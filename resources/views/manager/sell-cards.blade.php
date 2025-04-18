@@ -74,12 +74,12 @@
                             @endif
                         </div>
                         <div class="form-group">
-                            <label>Client Name:</label>
-                            <input type="text" class="form-control" name="buyer_name" id="buyer_name" placeholder="Client name" required>
-                        </div>
-                        <div class="form-group">
                             <label>Client Phone:</label>
                             <input type="text" class="form-control" name="buyer_phone" id="buyer_phone" placeholder="Enter Client Phone" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Client Name:</label>
+                            <input type="text" class="form-control" name="buyer_name" id="buyer_name" placeholder="Client name" required>
                         </div>
                         <div class="form-group">
                             <label>Enter Price:</label>
@@ -139,6 +139,35 @@
                 }
             });
             window.iti = iti;
+            let buyPhoneRequest = false;
+            $('#buyer_phone').on('focusout', function () {
+                if (buyPhoneRequest) return;
+                buyPhoneRequest = true;
+
+                const query = $(this).val().trim();
+                if (query.length > 0) {
+                    $.ajax({
+                        url: '{{ route("manager.buyer.name") }}',
+                        type: 'GET',
+                        data: { search: query },
+                        dataType: 'json',
+                        success: function (response) {
+                            if (response.length > 0) {
+                                $('#buyer_name').val(response[0].buyer_name);
+                            } else {
+                                $('#buyer_name').val('');
+                            }
+                        },
+                        error: function (xhr) {
+                            console.error(xhr.responseText);
+                        },
+                        complete: function () {
+                            buyPhoneRequest = false;
+                        }
+                    });
+                }
+            });
+
         });
         function openOrderForm(categoryId, categoryName) {
             document.getElementById('card_category_id').value = categoryId;
@@ -192,6 +221,7 @@
                             document.getElementById('orderSuccessMessage').classList.remove('d-none');
                             showOrderModal(data.code);
                             jQuery('#orderModal').modal('hide');
+                            location.reload();
                         } else {
                             Swal.fire({
                                 icon: 'error',
