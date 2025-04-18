@@ -19,21 +19,23 @@
                                 <div class="vertical-timeline-element-content bounce-in">
                                     <h4 class="timeline-title">Order ID: {{ $order->id }}</h4>
                                     <p>
-                                        <span class="text-success">{{ $order->buyer_name }}</span> has purchased
+                                        @if($order->seller)
+                                            Seller: <span class="text-primary">{{ ucfirst($order->seller->name) }}</span> sold
+                                        @endif
+                                    
                                         @if($order->account)
-                                            an account for the game <span class="text-error"><b>{{ $order->account->game->title ?? 'Unknown Game' }}</b></span>
-                                            using the email <span class="text-warning">{{ $order->account->mail }}</span>.
+                                        <span class="text-warning">{{ $order->sold_item }}</span> account for the game <span class="text-error"><b>{{ $order->account->game->title ?? 'Unknown Game' }}</b></span>.
                                         @elseif($order->card)
                                             a card in the category <span class="text-error"><b>{{ $order->card->category->name ?? 'Unknown Category' }}</b></span>.
                                             @if(! Auth::user()->roles->contains('name', 'accountant'))
                                                 The card code is <span class="text-primary"><b>{{ $order->card->code }}</b></span>
                                             @endif
                                         @endif
+                                    
+                                        to <span class="text-success">{{ $order->buyer_name }}</span>
                                         for {{ $order->price }} EGP.
-                                        @if($order->seller)
-                                            Seller: <span class="text-primary">{{ ucfirst($order->seller->name) }}</span>.
-                                        @endif
                                     </p>
+                                    
                                     <span class="vertical-timeline-element-date">
                                         {{ $order->created_at->format('h:i A') }} <br> {{ $order->created_at->format('M d Y') }}
                                     </span>
