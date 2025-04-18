@@ -92,11 +92,10 @@ Route::prefix('manager')->group(function () {
         Route::middleware(['checkRole:admin', 'can:manage-options'])->group(function () {
             Route::post('/orders/undo', [OrderController::class, 'undo'])->name('manager.orders.undo');
         });
-
+        Route::post('/reports/store', [ReportsController::class, 'store'])->name('manager.reports.store');
         // Routes with 'can:view-reports' middleware
         Route::middleware('can:view-reports')->group(function () {
             Route::post('/reports/solve-problem', [ReportsController::class, 'solveProblem'])->name('reports.solve_problem');
-            Route::post('/reports/store', [ReportsController::class, 'store'])->name('manager.reports.store');
             Route::get('/reports/{order_id}', [ReportsController::class, 'getReportsForOrder']);
             
             Route::prefix('special-prices')->group(function () {
