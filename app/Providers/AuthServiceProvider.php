@@ -61,7 +61,7 @@ class AuthServiceProvider extends ServiceProvider
         });
 
         Gate::define('manage-store-profiles', function ($user) {
-            return !$user->hasRole(['account manager', 'sales']);
+            return $user->hasRole(['admin', 'account manager', 'sales']);
         });
     }
 }
