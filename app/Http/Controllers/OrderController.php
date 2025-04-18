@@ -262,7 +262,7 @@ class OrderController extends Controller
             );
         }
         if ($storeProfileId != 0) {
-            $orders->where('orders.store_profile_id', $storeProfileId)->orderBy('buyer_name', 'asc');
+            $orders->where('orders.store_profile_id', $storeProfileId)->orderBy('buyer_name', 'asc')->orderBy('created_at', 'desc');
         }
         // Execute the query and paginate or get the results
         $orders = $orders->paginate(20)->appends($request->all());
@@ -969,7 +969,7 @@ class OrderController extends Controller
                     $basic_details = array(
                         "id" => $order->id,
                         "parent_id" => 0,
-                        "status" => "processing",
+                        "status" => "on-hold",
                         "currency" => "EGP",
                         "version" => "9.7.1",
                         "prices_include_tax" => false,
@@ -992,9 +992,9 @@ class OrderController extends Controller
                         "date_completed" => null,
                         "date_paid" => null,
                         "meta_data" => [],
-                        "is_editable" => false,
-                        "needs_payment" => false,
-                        "needs_processing" => true,
+                        "is_editable" => true,
+                        "needs_payment" => true,
+                        "needs_processing" => false,
                         "currency_symbol" => "EGP",
                         "shipping_lines" => array(),
                     );
