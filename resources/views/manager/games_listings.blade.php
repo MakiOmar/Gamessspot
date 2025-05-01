@@ -64,6 +64,7 @@
                 
                         <div class="card-body text-center">
                             <h5 class="card-title float-none">{{ $game->title }}</h5>
+                            <br>
                             @if (!$isBlocked)
                                 @foreach (['offline', 'primary', 'secondary'] as $type)
                                     @php
@@ -290,28 +291,10 @@
         });
     </script>
     
-    
-    <script>
-        jQuery(document).ready(function ($) {
-            // Monitor changes in the report status radio buttons
-            $('input[name="status"]').on('change', function () {
-                // Check the selected value
-                if ($(this).val() === 'has_problem') {
-                    // Make the note field required
-                    $('textarea[name="note"]').prop('required', true);
-                } else {
-                    // Make the note field optional
-                    $('textarea[name="note"]').prop('required', false);
-                }
-            });
 
-            // Trigger the change event on page load to handle default state
-            $('input[name="status"]:checked').trigger('change');
-        });
-
-    </script>
     <script>
         jQuery(document).ready(function($) {
+
             function copyToClipboard(selector) {
                 // Get the element by selector
                 const element = document.querySelector(selector);
@@ -364,7 +347,21 @@
             window.iti = iti;
             var gameModal = new bootstrap.Modal(document.getElementById('gameModal'));
             let reportFormSubmitting = false;
-            $('#reportForm').on('submit', function(e) {
+            // Monitor changes in the report status radio buttons
+            $('input[name="status"]').on('change', function () {
+                // Check the selected value
+                if ($(this).val() === 'has_problem') {
+                    // Make the note field required
+                    $('textarea[name="note"]').prop('required', true);
+                } else {
+                    // Make the note field optional
+                    $('textarea[name="note"]').prop('required', false);
+                }
+            });
+
+            // Trigger the change event on page load to handle default state
+            $('input[name="status"]:checked').trigger('change');
+            $(document).on('submit', '#reportForm', function(e) {
                 e.preventDefault();
                 if (reportFormSubmitting) return; // Prevent multiple submissions
                 reportFormSubmitting = true; // Set flag before sending request
@@ -400,7 +397,7 @@
             });
 
             // Handle opening the modal and setting dynamic data
-            $('.open-modal').on('click', function() {
+            $(document).on('click', '.open-modal', function() {
                 var gameTitle = $(this).data('game-title');
                 var gameId = $(this).data('game-id');
                 var stock = $(this).data('stock');
@@ -418,7 +415,7 @@
             });
             let orderFormSubmitting = false; // Flag to prevent duplicate submissions
             // Handle form submission with AJAX
-            $('#orderForm').on('submit', function(e) {
+            $(document).on('submit', '#orderForm',function(e) {
                 e.preventDefault();
                 if (orderFormSubmitting) return; // Prevent multiple submissions
                 orderFormSubmitting = true; // Set flag before sending request
@@ -511,7 +508,7 @@
             });
 
             // Confirmation before closing the accountModal
-            $('#accountModal').on('hide.bs.modal', function (e) {
+            $(document).on('hide.bs.modal', '#accountModal',function (e) {
                 e.preventDefault(); // Prevent the modal from closing automatically
 
                 Swal.fire({

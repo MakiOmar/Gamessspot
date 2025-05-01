@@ -17,7 +17,8 @@
         <div class="card">
             <div class="card-img-top" style="background-image: url('{{ asset($game->$image_url) }}');"></div>
             <div class="card-body text-center">
-                <h5 class="card-title">{{ $game->title }}</h5>
+                <h5 class="card-title float-none">{{ $game->title }}</h5>
+                <br>
                 @foreach (['offline', 'primary', 'secondary'] as $type)
                     @php
                         $stock = ${"{$type}_stock"};
