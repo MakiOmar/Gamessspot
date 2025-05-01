@@ -85,7 +85,7 @@ Route::prefix('manager')->group(function () {
             Route::get('/export', [OrderController::class, 'customersExport'])->name('manager.customers.export');
             Route::get('/', [OrderController::class, 'uniqueBuyers'])->middleware('can:manage-users')->name('manager.uniqueBuyers');
             Route::get('/search', [OrderController::class, 'searchCustomers'])->name('manager.orders.searchCustomers');
-            Route::get('/buyer-name', [UserController::class, 'searchUserHelper'])->middleware('can:manage-users')->name('manager.buyer.name');
+            Route::get('/buyer-name', [UserController::class, 'searchUserHelper'])->name('manager.buyer.name');
         });
 
         // Admin-only order routes

@@ -201,10 +201,11 @@ class UserController extends Controller
 
         // Ensure admin-only access
         $user = Auth::user();
-        if (!$user->roles->contains('name', 'admin')) {
+        /*
+        if (!$user->roles->contains('name', 'admin') ) {
             abort(403, 'Unauthorized action.');
         }
-
+        */
         // Query for users based on phone number or name
         $users = User::query()
             ->select('name as buyer_name', 'phone as buyer_phone')
