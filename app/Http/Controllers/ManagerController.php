@@ -47,20 +47,62 @@ class ManagerController extends Controller
      */
     public function getGameById($id)
     {
-        // Find the game by ID or return 404 error
-        $game = Game::find($id);
+        $game = DB::table('games')
+        ->leftJoin('accounts', 'accounts.game_id', '=', 'games.id')
+        ->where('games.id', $id)
+        ->select(
+            'games.id',
+            'games.title',
+            'games.code',
+            'games.full_price',
+            'games.ps4_image_url',
+            'games.ps5_image_url',
+            'games.created_at',
+            'games.updated_at',
+            "games.ps4_primary_price",
+            "games.ps4_secondary_price",
+            "games.ps4_offline_price",
+            "games.ps5_primary_price",
+            "games.ps5_secondary_price",
+            "games.ps5_offline_price",
+            DB::raw('SUM(accounts.ps4_primary_stock) as ps4_primary_stock'),
+            DB::raw('SUM(accounts.ps4_secondary_stock) as ps4_secondary_stock'),
+            DB::raw('SUM(accounts.ps4_offline_stock) as ps4_offline_stock'),
+            DB::raw('SUM(accounts.ps5_primary_stock) as ps5_primary_stock'),
+            DB::raw('SUM(accounts.ps5_secondary_stock) as ps5_secondary_stock'),
+            DB::raw('SUM(accounts.ps5_offline_stock) as ps5_offline_stock')
+        )
+        ->groupBy(
+            'games.id',
+            'games.title',
+            'games.code',
+            'games.full_price',
+            'games.ps4_image_url',
+            'games.ps5_image_url',
+            'games.created_at',
+            'games.updated_at',
+            "games.ps4_primary_price",
+            "games.ps4_secondary_price",
+            "games.ps4_offline_price",
+            "games.ps5_primary_price",
+            "games.ps5_secondary_price",
+            "games.ps5_offline_price",
+        )
+        ->first();
+
 
         if (!$game) {
             return response()->json([
-            'error' => 'Game not found'
+                'error' => 'Game not found'
             ], 404);
         }
 
         return response()->json([
-        'success' => true,
-        'data'    => $game
+            'success' => true,
+            'data' => $game
         ]);
     }
+
 
     private function clearPaginatedGameCache()
     {
@@ -379,7 +421,7 @@ class ManagerController extends Controller
             "games.ps{$platform}_primary_status",
             "games.ps{$platform}_secondary_status"
         )
-        ->havingRaw("SUM(accounts.ps{$platform}_offline_stock) = 0") // Filter only games where offline stock = 0
+        ->havingRaw("SUM(accounts.ps{$platform}_offline_stock) = 0 AND (SUM(accounts.ps{$platform}_primary_stock) > 0 OR SUM(accounts.ps{$platform}_secondary_stock) > 0)") // Filter only games where offline stock = 0
         ->paginate(10);  // Paginate 10 results per page
 
         return response()->json($psGames);
