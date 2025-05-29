@@ -50,11 +50,11 @@
                         <div class="col-12 col-md-6 d-flex flex-column flex-md-row align-items-md-center">
                             <input type="date" class="form-control mb-2 mb-md-0 me-md-2"
                                 id="startDate" name="startDate"
-                                placeholder="{{ request('startDate', date('Y-m-d')) }}">
+                                value="{{ request('startDate', date('Y-m-d')) }}">
                             
                             <input type="date" class="form-control"
                                 id="endDate" name="endDate"
-                                placeholder="{{ request('endDate', date('Y-m-d')) }}">
+                                value="{{ request('endDate', date('Y-m-d')) }}">
                         </div>
                     @endif
 
