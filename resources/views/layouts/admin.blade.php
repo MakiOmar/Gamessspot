@@ -52,6 +52,7 @@
     <script src="{{ asset('assets/js/fontawesome-all.js') }}"></script>
     <script src="{{ asset('build/assets/app-CrG75o6_.js') }}"></script>
     <script src="https://cdn.jsdelivr.net/npm/chosen-js@1.8.7/chosen.jquery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 
     <script>
         (function ($) {
@@ -101,8 +102,9 @@
             };
         })(jQuery);
         jQuery(document).ready(function ($) {
-            $('#game,#region').chosen({
-                width: '100%'
+            $('#game,#region').select2({
+                width: '100%',
+                dropdownParent: $('#accountModal'),
             });
             const columnThreshold = 7; // Number of columns to keep visible
             // Target all tables with more than the threshold columns
@@ -195,6 +197,7 @@
 {{-- Add common CSS customizations --}}
 
 @push('css')
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
 <script src="{{ asset('assets/js/sweetalert2.js') }}"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/chosen-js@1.8.7/chosen.min.css">
 <link rel="stylesheet" href="{{ asset('assets/css/flatpickr.css') }}">
@@ -224,6 +227,9 @@
 </style>
 
 <style type="text/css">
+    .select2-container--default .select2-selection--single .select2-selection__rendered {
+        line-height: 18.6px;
+    }
     a{
         text-decoration:none;
     }
