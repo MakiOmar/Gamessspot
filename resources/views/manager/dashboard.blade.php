@@ -1,7 +1,12 @@
 @extends('layouts.admin')
 @push('css')
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
+        input,
+        select,
+        textarea {
+            font-size: 17px;
+        }
+
         .stock-level-card {
             border: none;
             box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.05);
@@ -295,7 +300,8 @@
 {{-- Push extra scripts --}}
 
 @push('js')
-    <script> console.log("Hi, I'm using the Laravel-AdminLTE package!"); </script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             // Animate circles on load
@@ -349,7 +355,7 @@
         </script>
         <script>
             let idleTime = 0;
-            const maxIdleMinutes = 5;
+            const maxIdleMinutes = @json(config('session.lifetime'));;
         
             const idleInterval = setInterval(() => {
                 idleTime++;
