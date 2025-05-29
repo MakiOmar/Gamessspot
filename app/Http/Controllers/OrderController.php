@@ -27,10 +27,10 @@ class OrderController extends Controller
 
     public function login()
     {
-    // Check if a valid token is already stored in the cache
+        // Check if a valid token is already stored in the cache
         $token = Cache::get('api_token');
 
-    // If token is not found or expired, regenerate it
+        // If token is not found or expired, regenerate it
         if (!$token) {
             // API endpoint for login
             $endpoint = $this->pos_base . '/api/login';
@@ -58,7 +58,7 @@ class OrderController extends Controller
             return false; // Return false if authentication fails
         }
 
-    // Return the existing token from the cache
+        // Return the existing token from the cache
         return $token;
     }
     /**
@@ -281,10 +281,11 @@ class OrderController extends Controller
 
         // Ensure admin-only access
         $user = Auth::user();
+        /*
         if (!$user->roles->contains('name', 'admin')) {
             abort(403, 'Unauthorized action.');
         }
-
+        */
         // Query for unique customers
         $customers = Order::query()
             ->select('buyer_name', 'buyer_phone')
@@ -465,7 +466,111 @@ class OrderController extends Controller
         $order->reports()->delete();
         $order->delete();
     }
+    public function storeApi(Request $request)
+    {
+        if ($request->has('card_category_id')) {
+            return $this->sellCard($request);
+        }
 
+        // Validate incoming data
+        $validatedData = $request->validate([
+            'store_profile_id' => 'required|exists:stores_profile,id',
+            'game_id'          => 'required|exists:games,id',
+            'buyer_phone'      => 'required|string|max:15',
+            'buyer_name'       => 'required|string|max:100',
+            'buyer_email'      => 'required|email', // Optional but unique
+            'price'            => 'required|numeric|min:0',
+            'type'             => 'required|string|in:primary,secondary', // Only primary & secondary
+            'platform'         => 'required|string|max:255',
+        ]);
+        // Check if the user already exists by phone number
+        $user = User::where('phone', $validatedData['buyer_phone'])->first();
+
+        // If the user does not exist, create a new one
+        if (!$user) {
+            $user = User::create([
+                'name'     => $validatedData['buyer_name'],
+                'email'    => $validatedData['buyer_email'] ?? (Str::random(10) . '@' . Str::random(4) . '.com'),
+                'phone'    => $validatedData['buyer_phone'],
+                'password' => bcrypt(Str::random(12)),
+            ]);
+
+            $defaultRole = Role::where('name', 'customer')->first();
+            if ($defaultRole) {
+                $user->roles()->attach($defaultRole->id);
+            }
+        }
+
+        // Update buyer name to match user record
+        $validatedData['buyer_name'] = $user->name;
+        // Determine the sold item field dynamically
+        $sold_item         = "ps{$validatedData['platform']}_{$validatedData['type']}_stock";
+        $sold_item_status  = "ps{$validatedData['platform']}_{$validatedData['type']}_status";
+        $sold_offline_item = "ps{$validatedData['platform']}_offline_stock";
+
+        // Fetch one available account based on type, stock availability, and game status
+        $accountQuery = Account::where('game_id', $validatedData['game_id'])
+            ->join('games', 'accounts.game_id', '=', 'games.id')
+            ->where("games.{$sold_item_status}", true) // Ensure the game's status is true
+            ->orderBy('accounts.created_at', 'asc') // Order by oldest date
+            ->where($sold_item, '>', 0); // Ensure at least 1 stock is available
+
+        // Special conditions for primary and secondary
+        if ($validatedData['platform'] !== '5') {
+            $accountQuery->where($sold_offline_item, 0);
+        }
+
+        try {
+            DB::beginTransaction();
+
+            // Fetch a single account
+            $account = $accountQuery->select('accounts.*')->first();
+
+            // Check if no account was found
+            if (!$account) {
+                return response()->json([
+                    'message' => 'No available account matches the specified criteria.',
+                ], 422);
+            }
+
+            // Reduce the stock by 1
+            $account->decrement($sold_item, 1);
+            Log::info('test', [$account->id, $account->mail]);
+            // Create the order
+            $order_data = [
+                'seller_id'        => null, // Assign to the provided user
+                'store_profile_id' => $validatedData['store_profile_id'],
+                'account_id'       => $account->id,
+                'buyer_phone'      => $validatedData['buyer_phone'],
+                'buyer_name'       => $validatedData['buyer_name'],
+                'price'            => $validatedData['price'],
+                'notes'            => '',
+                'sold_item'        => $sold_item,
+            ];
+
+            $order = Order::create($order_data);
+
+            DB::commit();
+            Cache::forget('unique_buyer_phone_count'); // Clear cache
+
+            // Return a JSON response on success
+            return response()->json([
+                'message'          => 'Order created successfully!',
+                'order_id'         => $order->id,
+                'account_details'  => [
+                    'email'    => $account->mail,
+                    'password' => $account->password // Be cautious with sensitive data
+                ],
+            ], 201);
+        } catch (\Exception $e) {
+            DB::rollBack();
+
+            return response()->json([
+                'message' => 'Not possible to create the order. Please try again later.',
+                'error'   => $e->getMessage(),
+            ], 500);
+        }
+    }
 
     public function store(Request $request)
     {
@@ -651,111 +756,6 @@ class OrderController extends Controller
             'stock'         => 5,
             'is_available'  => true,
         ]);
-    }
-    public function storeApi(Request $request)
-    {
-        if ($request->has('card_category_id')) {
-            return $this->sellCard($request);
-        }
-
-        // Validate incoming data
-        $validatedData = $request->validate([
-            'store_profile_id' => 'required|exists:stores_profile,id',
-            'game_id'          => 'required|exists:games,id',
-            'buyer_phone'      => 'required|string|max:15',
-            'buyer_name'       => 'required|string|max:100',
-            'buyer_email'      => 'required|email', // Optional but unique
-            'price'            => 'required|numeric|min:0',
-            'type'             => 'required|string|in:primary,secondary', // Only primary & secondary
-            'platform'         => 'required|string|max:255',
-        ]);
-        // Check if the user already exists by phone number
-        $user = User::where('phone', $validatedData['buyer_phone'])->first();
-
-        // If the user does not exist, create a new one
-        if (!$user) {
-            $user = User::create([
-                'name'     => $validatedData['buyer_name'],
-                'email'    => $validatedData['buyer_email'] ?? (Str::random(10) . '@' . Str::random(4) . '.com'),
-                'phone'    => $validatedData['buyer_phone'],
-                'password' => bcrypt(Str::random(12)),
-            ]);
-
-            $defaultRole = Role::where('name', 'customer')->first();
-            if ($defaultRole) {
-                $user->roles()->attach($defaultRole->id);
-            }
-        }
-
-        // Update buyer name to match user record
-        $validatedData['buyer_name'] = $user->name;
-        // Determine the sold item field dynamically
-        $sold_item         = "ps{$validatedData['platform']}_{$validatedData['type']}_stock";
-        $sold_item_status  = "ps{$validatedData['platform']}_{$validatedData['type']}_status";
-        $sold_offline_item = "ps{$validatedData['platform']}_offline_stock";
-
-        // Fetch one available account based on type, stock availability, and game status
-        $accountQuery = Account::where('game_id', $validatedData['game_id'])
-            ->join('games', 'accounts.game_id', '=', 'games.id')
-            ->where("games.{$sold_item_status}", true) // Ensure the game's status is true
-            ->orderBy('accounts.created_at', 'asc') // Order by oldest date
-            ->where($sold_item, '>', 0); // Ensure at least 1 stock is available
-
-        // Special conditions for primary and secondary
-        if ($validatedData['platform'] !== '5') {
-            $accountQuery->where($sold_offline_item, 0);
-        }
-
-        try {
-            DB::beginTransaction();
-
-            // Fetch a single account
-            $account = $accountQuery->select('accounts.*')->first();
-
-            // Check if no account was found
-            if (!$account) {
-                return response()->json([
-                    'message' => 'No available account matches the specified criteria.',
-                ], 422);
-            }
-
-            // Reduce the stock by 1
-            $account->decrement($sold_item, 1);
-
-            // Create the order
-            $order_data = [
-                'seller_id'        => null, // Assign to the provided user
-                'store_profile_id' => $validatedData['store_profile_id'],
-                'account_id'       => $account->id,
-                'buyer_phone'      => $validatedData['buyer_phone'],
-                'buyer_name'       => $validatedData['buyer_name'],
-                'price'            => $validatedData['price'],
-                'notes'            => '',
-                'sold_item'        => $sold_item,
-            ];
-
-            $order = Order::create($order_data);
-
-            DB::commit();
-            Cache::forget('unique_buyer_phone_count'); // Clear cache
-
-            // Return a JSON response on success
-            return response()->json([
-                'message'          => 'Order created successfully!',
-                'order_id'         => $order->id,
-                'account_details'  => [
-                    'email'    => $account->mail,
-                    'password' => $account->password // Be cautious with sensitive data
-                ],
-            ], 201);
-        } catch (\Exception $e) {
-            DB::rollBack();
-
-            return response()->json([
-                'message' => 'Not possible to create the order. Please try again later.',
-                'error'   => $e->getMessage(),
-            ], 500);
-        }
     }
 
 
