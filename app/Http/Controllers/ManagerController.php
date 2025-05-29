@@ -358,6 +358,15 @@ class ManagerController extends Controller
             ->get();
 
         // Determine if the primary stock is active
+        $this->isPrimaryActive($psGames, $primary_stock, $offline_stock, $n);
+
+        $storeProfiles = StoresProfile::all(); // Fetch all store profiles
+
+        // Return the view with the games, platform indicator, and store profiles
+        return view('manager.games_listings', compact('psGames', 'n', 'storeProfiles'));
+    }
+    protected function isPrimaryActive(&$psGames, $primary_stock, $offline_stock, $n)
+    {
         foreach ($psGames as $game) {
             $oldestAccount = DB::table('accounts')
                 ->where('game_id', $game->id)
@@ -375,13 +384,7 @@ class ManagerController extends Controller
                 $game->is_primary_active = true;
             }
         }
-
-        $storeProfiles = StoresProfile::all(); // Fetch all store profiles
-
-        // Return the view with the games, platform indicator, and store profiles
-        return view('manager.games_listings', compact('psGames', 'n', 'storeProfiles'));
     }
-
     /**
      * Get games by platform (PS4 or PS5) via API, filtering only those with offline stock = 0.
      *
@@ -470,6 +473,10 @@ class ManagerController extends Controller
         $query = $request->get('query', '');
         $n = 4; // Define the platform as PS4
         $psGames = $this->filterGames($n, $query);
+        $offline_stock   = "ps{$n}_offline_stock";
+        $primary_stock   = "ps{$n}_primary_stock";
+        // Determine if the primary stock is active
+        $this->isPrimaryActive($psGames, $primary_stock, $offline_stock, $n);
         $image_url       = "ps{$n}_image_url";
         return view('manager.partials.games_list', compact('psGames', 'n'))->render();
     }
@@ -479,6 +486,10 @@ class ManagerController extends Controller
         $query = $request->get('query', '');
         $n = 5; // Define the platform as PS5
         $psGames = $this->filterGames($n, $query);
+        $offline_stock   = "ps{$n}_offline_stock";
+        $primary_stock   = "ps{$n}_primary_stock";
+        // Determine if the primary stock is active
+        $this->isPrimaryActive($psGames, $primary_stock, $offline_stock, $n);
         $image_url       = "ps{$n}_image_url";
 
         return view('manager.partials.games_list', compact('psGames', 'n'))->render();

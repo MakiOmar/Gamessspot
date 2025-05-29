@@ -129,7 +129,6 @@ class SpecialPriceController extends Controller
             'ps5_secondary_price' => 'nullable|numeric|min:0',
             'ps5_offline_price'   => 'nullable|numeric|min:0',
         ]);
-        Log::info('test', $_POST);
         // Create or update special prices
         SpecialPrice::updateOrCreate(
             [

@@ -535,7 +535,6 @@ class OrderController extends Controller
 
             // Reduce the stock by 1
             $account->decrement($sold_item, 1);
-            Log::info('test', [$account->id, $account->mail]);
             // Create the order
             $order_data = [
                 'seller_id'        => null, // Assign to the provided user
