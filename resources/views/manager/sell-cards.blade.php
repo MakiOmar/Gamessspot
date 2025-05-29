@@ -201,6 +201,9 @@
                 jQuery('#codeDetails').modal('hide');
             });
         }
+        $('#codeDetails').on('hidden.bs.modal', function () {
+            location.reload();
+        });
         function submitOrder() {
             let formElement = document.getElementById('orderForm');
             let formData = new FormData(formElement);
@@ -221,7 +224,6 @@
                             document.getElementById('orderSuccessMessage').classList.remove('d-none');
                             showOrderModal(data.code);
                             jQuery('#orderModal').modal('hide');
-                            location.reload();
                         } else {
                             Swal.fire({
                                 icon: 'error',
