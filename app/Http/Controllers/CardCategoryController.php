@@ -50,6 +50,31 @@ class CardCategoryController extends Controller
             'data' => $this->getCategories()
         ]);
     }
+    public function searchCategories($search)
+    {
+        return CardCategory::whereHas('cards', function ($query) {
+            $query->where('status', true); // Only include categories with active cards
+        })
+        ->where('name', 'like', '%' . $search . '%') // ✅ شرط البحث بالاسم
+        ->with(['cards' => function ($query) {
+            $query->where('status', true);
+        }])
+        ->get();
+    }
+
+    public function searchSellCategories(Request $request)
+    {
+        $query = $request->input('q');
+        $categories = $this->searchCategories($query);
+        $storeProfiles = StoresProfile::all();
+
+        return view('manager.sell-cards', [
+        'categories'    => $categories,
+        'storeProfiles' => $storeProfiles,
+        'query'         => $query,
+        ]);
+    }
+
 
 
     /**
