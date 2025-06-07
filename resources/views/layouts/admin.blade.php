@@ -175,7 +175,11 @@
                             $(this).find('.chevron').toggleClass('chevron-down chevron-up');
                         });
 
-                        $cells.eq(maxVisible - 1).append($toggleBtn);
+                        // داخل each row loop:
+                        if ($cells.eq(maxVisible - 1).find('.toggle-details-btn').length === 0) {
+                            $cells.eq(maxVisible - 1).append($toggleBtn);
+                        }
+
 
                         let detailHTML = '<tr class="mobile-detail-row"><td colspan="' + maxVisible + '">';
                         hiddenIndexes.forEach(function (i) {
@@ -245,6 +249,9 @@
         }
     }
     @media screen and ( max-width:480px ){
+        table.dataTable.table-striped > tbody > tr > * {
+            font-size: 12px;
+        }
         .small-box h3, .small-box .h3 {
             font-size: 18px;
         }

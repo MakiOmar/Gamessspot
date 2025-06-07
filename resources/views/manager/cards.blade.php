@@ -1,4 +1,12 @@
 @extends('layouts.admin')
+@push('css')
+<link href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css" rel="stylesheet">
+@endpush
+
+@push('js')
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+@endpush
 
 @section('content')
 <div class="container">
@@ -10,7 +18,7 @@
     </div>
 
     <!-- Table listing the cards -->
-    <table class="table table-bordered table-striped">
+    <table class="table table-bordered table-striped cards-table-responsive">
         <thead>
             <tr>
                 <th>Category Name</th>
@@ -80,6 +88,42 @@
     </div>
 </div>
 @endsection
+
+@push('js')
+<script>
+    $(document).ready(function () {
+        const table = $('.cards-table-responsive').DataTable({
+            responsive: false,
+            autoWidth: false,
+            pageLength: 10,
+            language: {
+                search: "🔍 Search:",
+                lengthMenu: "Show _MENU_ entries",
+                info: "Showing _START_ to _END_ of _TOTAL_ cards",
+                paginate: {
+                    next: "Next",
+                    previous: "Previous"
+                },
+                zeroRecords: "No matching cards found"
+            }
+        });
+
+        // تفعيل ميزة الأعمدة المخفية
+        $('.cards-table-responsive').mobileTableToggle({
+            maxVisibleCols: 2
+        });
+
+        // إعادة تفعيل الميزة عند كل redraw
+        table.on('draw', function () {
+            $('.cards-table-responsive').mobileTableToggle({
+                maxVisibleCols: 2
+            });
+        });
+    });
+</script>
+@endpush
+
+
 @push('js')
 <script>
     function submitCardForm() {

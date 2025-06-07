@@ -139,6 +139,9 @@ Route::prefix('manager')->group(function () {
         // Routes with 'can:manage-gift-cards' middleware
         Route::middleware('can:manage-gift-cards')->group(function () {
             Route::get('/cards/sell', [CardCategoryController::class, 'sell'])->name('manager.sell-cards');
+            Route::get('/cards/search', [CardCategoryController::class, 'searchSellCategories'])
+            ->name('manager.sell-cards.search');
+
         });
 
         // Resource routes

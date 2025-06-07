@@ -13,7 +13,17 @@
 @section('content')
     <div class="container">
         <h1 class="mb-4">Card Categories</h1>
-        
+        <div class="mb-4">
+            <form method="GET" action="{{ route('manager.sell-cards.search') }}" class="row g-2 align-items-center">
+                <div class="col-md-6">
+                    <input type="text" name="q" class="form-control" placeholder="Search category..." value="{{ $query ?? '' }}">
+                </div>
+                <div class="col-auto">
+                    <button type="submit" class="btn btn-primary">Search</button>
+                </div>
+            </form>
+        </div>
+
         @if($categories->isEmpty())
             <div class="alert alert-warning" role="alert">
                 No card categories with available codes are currently found.
@@ -119,6 +129,21 @@
 @endsection
 
 @push('js')
+    <script>
+        jQuery(document).ready(function ($) {
+            const $searchInput = $('input[name="q"]');
+
+            $searchInput.on('input', function () {
+                if ($(this).val().trim() === '') {
+                    // إعادة التوجيه للصفحة الأصلية إذا أصبح الحقل فارغًا
+                    setTimeout(function () {
+                        window.location.href = "{{ route('manager.sell-cards') }}";
+                    }, 300); // التأخير اختياري
+                }
+            });
+        });
+    </script>
+
     <script src="{{ asset('assets/js/intlTelInput.min.js') }}"></script>
     <script src="{{ asset('assets/js/utils.js') }}"></script>
     <script>

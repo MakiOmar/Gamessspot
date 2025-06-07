@@ -1,4 +1,12 @@
 @extends('layouts.admin')
+@push('css')
+<link href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css" rel="stylesheet">
+@endpush
+
+@push('js')
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+@endpush
 
 @section('content')
 <div class="container">
@@ -7,8 +15,9 @@
     <!-- Button to create a new category -->
     <button type="button" class="btn btn-success mb-3" onclick="openCreateModal()">Create New Category</button>
 
-    <!-- Card Categories Table -->
-    <table class="table table-striped table-hover card-categories-reponsive">
+    <!-- Card Categories Table 
+    <table class="table table-striped table-hover card-categories-reponsive">-->
+        <table id="categoriesTable" class="table table-striped table-hover card-categories-reponsive">
         <thead>
             <tr>
                 <th>#</th>
@@ -78,10 +87,33 @@
 @endsection
 
 @push('js')
+
     <script>
-        jQuery(document).ready(function($){
-            $('.card-categories-reponsive').mobileTableToggle({
-                maxVisibleCols: 4,
+        jQuery(document).ready(function($) {
+            // Initialize DataTables
+            const table = $('#categoriesTable').DataTable({
+                            responsive: false, // نلغي responsive المدمج
+                            autoWidth: false,
+                            pageLength: 10,
+                            language: {
+                                search: "🔍 Search:",
+                                lengthMenu: "Show _MENU_ entries",
+                                info: "Showing _START_ to _END_ of _TOTAL_ categories",
+                                paginate: {
+                                    next: "Next",
+                                    previous: "Previous"
+                                },
+                                zeroRecords: "No matching categories found"
+                            }
+                        });
+
+            // (اختياري) لتعطيل mobileTableToggle إذا كنت تستخدم DataTables بدلاً منه
+            $('.card-categories-reponsive').mobileTableToggle({ maxVisibleCols: 4 });
+
+            table.on('draw', function () {
+                $('#categoriesTable').mobileTableToggle({
+                    maxVisibleCols: 2
+                });
             });
         });
         // Open Create Modal
