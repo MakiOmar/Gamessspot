@@ -370,18 +370,16 @@ class ManagerController extends Controller
         foreach ($psGames as $game) {
             $oldestAccount = DB::table('accounts')
                 ->where('game_id', $game->id)
+                ->where($offline_stock, 0)
                 ->where($primary_stock, '>', 0)
                 ->orderBy('created_at', 'asc')
                 ->first();
-
-            $game->is_primary_active = false;
             if ($oldestAccount && 5 !== $n) {
-                // Check if offline stock is 0 for the oldest account
-                if ($oldestAccount->$offline_stock == 0) {
-                    $game->is_primary_active = true;
-                }
+                $game->is_primary_active = true;
             } elseif (5 === $n) {
                 $game->is_primary_active = true;
+            } else {
+                $game->is_primary_active = false;
             }
         }
     }
