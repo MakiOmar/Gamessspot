@@ -865,16 +865,16 @@ class OrderController extends Controller
         ]);
 
         $posSkus = [
-            'offline' => '0040',
-            'secondary' => '125u',
-            'primary' => '0039',
-            'card' => '0041',
+            'offline' => '0140',
+            'secondary' => '0141',
+            'primary' => '0139',
+            'card' => '0142',
         ];
         $posIds = [
-            'offline' => '40',
-            'secondary' => '45',
-            'primary' => '39',
-            'card' => '47',
+            'offline' => '140',
+            'secondary' => '141',
+            'primary' => '139',
+            'card' => '142',
         ];
         $store_profile_ids = [
             'profile_13' => 1, // New Cairo
@@ -882,6 +882,7 @@ class OrderController extends Controller
             'profile_15' => 4, // Elserag mall.
             'profile_16' => 5, // City stars.
             'profile_17' => 6, // WooComerce
+            'profile_18' => 7, // El shorouk city
         ];
         //$user = auth()->user();
         $user = User::findOrFail(44);
