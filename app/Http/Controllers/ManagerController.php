@@ -48,48 +48,65 @@ class ManagerController extends Controller
     public function getGameById($id)
     {
         $game = DB::table('games')
-        ->leftJoin('accounts', 'accounts.game_id', '=', 'games.id')
-        ->where('games.id', $id)
-        ->select(
-            'games.id',
-            'games.title',
-            'games.code',
-            'games.full_price',
-            'games.ps4_image_url',
-            'games.ps5_image_url',
-            'games.created_at',
-            'games.updated_at',
-            "games.ps4_primary_price",
-            "games.ps4_secondary_price",
-            "games.ps4_offline_price",
-            "games.ps5_primary_price",
-            "games.ps5_secondary_price",
-            "games.ps5_offline_price",
-            DB::raw('SUM(accounts.ps4_primary_stock) as ps4_primary_stock'),
-            DB::raw('SUM(accounts.ps4_secondary_stock) as ps4_secondary_stock'),
-            DB::raw('SUM(accounts.ps4_offline_stock) as ps4_offline_stock'),
-            DB::raw('SUM(accounts.ps5_primary_stock) as ps5_primary_stock'),
-            DB::raw('SUM(accounts.ps5_secondary_stock) as ps5_secondary_stock'),
-            DB::raw('SUM(accounts.ps5_offline_stock) as ps5_offline_stock')
-        )
-        ->groupBy(
-            'games.id',
-            'games.title',
-            'games.code',
-            'games.full_price',
-            'games.ps4_image_url',
-            'games.ps5_image_url',
-            'games.created_at',
-            'games.updated_at',
-            "games.ps4_primary_price",
-            "games.ps4_secondary_price",
-            "games.ps4_offline_price",
-            "games.ps5_primary_price",
-            "games.ps5_secondary_price",
-            "games.ps5_offline_price",
-        )
-        ->first();
-
+            ->leftJoin('accounts', 'accounts.game_id', '=', 'games.id')
+            ->leftJoin('special_prices', function ($join) {
+                $join->on('games.id', '=', 'special_prices.game_id')
+                    ->where('special_prices.store_profile_id', '=', 17);
+            })
+            ->where('games.id', $id)
+            ->select(
+                'games.id',
+                'games.title',
+                'games.code',
+                'games.full_price',
+                'games.ps4_image_url',
+                'games.ps5_image_url',
+                'games.created_at',
+                'games.updated_at',
+                'games.ps4_primary_status',
+                'games.ps4_secondary_status',
+                'games.ps5_primary_status',
+                'games.ps5_secondary_status',
+                DB::raw("COALESCE(special_prices.ps4_primary_price, games.ps4_primary_price) as ps4_primary_price"),
+                DB::raw("COALESCE(special_prices.ps4_secondary_price, games.ps4_secondary_price) as ps4_secondary_price"),
+                DB::raw("COALESCE(special_prices.ps4_offline_price, games.ps4_offline_price) as ps4_offline_price"),
+                DB::raw("COALESCE(special_prices.ps5_primary_price, games.ps5_primary_price) as ps5_primary_price"),
+                DB::raw("COALESCE(special_prices.ps5_secondary_price, games.ps5_secondary_price) as ps5_secondary_price"),
+                DB::raw("COALESCE(special_prices.ps5_offline_price, games.ps5_offline_price) as ps5_offline_price"),
+                DB::raw('COALESCE(SUM(accounts.ps4_primary_stock), 0) as ps4_primary_stock'),
+                DB::raw('COALESCE(SUM(accounts.ps4_secondary_stock), 0) as ps4_secondary_stock'),
+                DB::raw('COALESCE(SUM(accounts.ps4_offline_stock), 0) as ps4_offline_stock'),
+                DB::raw('COALESCE(SUM(accounts.ps5_primary_stock), 0) as ps5_primary_stock'),
+                DB::raw('COALESCE(SUM(accounts.ps5_secondary_stock), 0) as ps5_secondary_stock'),
+                DB::raw('COALESCE(SUM(accounts.ps5_offline_stock), 0) as ps5_offline_stock')
+            )
+            ->groupBy(
+                'games.id',
+                'games.title',
+                'games.code',
+                'games.full_price',
+                'games.ps4_image_url',
+                'games.ps5_image_url',
+                'games.created_at',
+                'games.updated_at',
+                'games.ps4_primary_price',
+                'games.ps4_secondary_price',
+                'games.ps4_offline_price',
+                'games.ps5_primary_price',
+                'games.ps5_secondary_price',
+                'games.ps5_offline_price',
+                'games.ps4_primary_status',
+                'games.ps4_secondary_status',
+                'games.ps5_primary_status',
+                'games.ps5_secondary_status',
+                'special_prices.ps4_primary_price',
+                'special_prices.ps4_secondary_price',
+                'special_prices.ps4_offline_price',
+                'special_prices.ps5_primary_price',
+                'special_prices.ps5_secondary_price',
+                'special_prices.ps5_offline_price'
+            )
+            ->first();
 
         if (!$game) {
             return response()->json([
@@ -362,7 +379,7 @@ class ManagerController extends Controller
 
         $storeProfiles = StoresProfile::all(); // Fetch all store profiles
 
-        // Return the view with the games, platform indicator, and store profiles
+        // Return the view with the games, platform indicator, and store profiles.
         return view('manager.games_listings', compact('psGames', 'n', 'storeProfiles'));
     }
     protected function isPrimaryActive(&$psGames, $primary_stock, $offline_stock, $n)
