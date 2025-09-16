@@ -5,8 +5,9 @@ namespace App\Exports;
 use App\Models\Account;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithHeadings;
+use Maatwebsite\Excel\Concerns\WithMapping;
 
-class AccountsExport implements FromCollection, WithHeadings
+class AccountsExport implements FromCollection, WithHeadings, WithMapping
 {
     /**
      * Return the collection of accounts.
@@ -15,22 +16,7 @@ class AccountsExport implements FromCollection, WithHeadings
      */
     public function collection()
     {
-        return Account::with('game')
-            ->select(
-                'id',
-                'mail',
-                'game_id',
-                'region',
-                'ps4_offline_stock',
-                'ps4_primary_stock',
-                'ps4_secondary_stock',
-                'ps5_offline_stock',
-                'ps5_primary_stock',
-                'ps5_secondary_stock',
-                'cost',
-                'password'
-            )
-            ->get();
+        return Account::with('game')->get();
     }
 
     /**
@@ -40,19 +26,33 @@ class AccountsExport implements FromCollection, WithHeadings
      */
     public function headings(): array
     {
-        return array(
-            'ID',
+        return [
             'Mail',
+            'Password',
             'Game',
             'Region',
-            'PS4 Offline',
-            'PS4 Primary',
-            'PS4 Secondary',
-            'PS5 Offline',
-            'PS5 Primary',
-            'PS5 Secondary',
             'Cost',
-            'Password',
-        );
+            'Birthdate',
+            'Login Code'
+        ];
+    }
+
+    /**
+     * Map the data to match the import format.
+     *
+     * @param $account
+     * @return array
+     */
+    public function map($account): array
+    {
+        return [
+            $account->mail,
+            $account->password,
+            $account->game->title ?? 'N/A',
+            $account->region,
+            $account->cost,
+            $account->birthdate,
+            $account->login_code
+        ];
     }
 }

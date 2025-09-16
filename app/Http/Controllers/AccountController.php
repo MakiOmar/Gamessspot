@@ -6,6 +6,7 @@ use App\Models\Account; // Assuming Account is the model
 use Illuminate\Http\Request;
 use App\Models\Game;
 use App\Exports\AccountsExport;
+use App\Imports\AccountsImport;
 use Maatwebsite\Excel\Facades\Excel;
 use Illuminate\Support\Facades\Cache;
 
@@ -28,6 +29,56 @@ class AccountController extends Controller
     public function export()
     {
         return Excel::download(new AccountsExport(), 'accounts.xlsx');
+    }
+
+    public function import(Request $request)
+    {
+        $request->validate([
+            'file' => 'required|file|mimes:xlsx,xls,csv|max:10240' // 10MB max
+        ]);
+
+        try {
+            Excel::import(new AccountsImport, $request->file('file'));
+            
+            // Clear the cache after import
+            Cache::forget('total_account_cost');
+            
+            return response()->json([
+                'success' => 'Accounts imported successfully!'
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => 'Import failed: ' . $e->getMessage()
+            ], 422);
+        }
+    }
+
+    public function template()
+    {
+        $templateData = [
+            [
+                'Mail', 'Password', 'Game', 'Region', 'Cost', 'Birthdate', 'Login Code'
+            ],
+            [
+                'example@email.com', 'password123', 'Game Title', 'US', '25.00', '1990-01-01', 'ABC123'
+            ]
+        ];
+
+        return Excel::download(new class($templateData) implements \Maatwebsite\Excel\Concerns\FromArray, \Maatwebsite\Excel\Concerns\WithHeadings {
+            private $data;
+            
+            public function __construct($data) {
+                $this->data = $data;
+            }
+            
+            public function array(): array {
+                return $this->data;
+            }
+            
+            public function headings(): array {
+                return $this->data[0];
+            }
+        }, 'accounts_template.xlsx');
     }
 
     public function search(Request $request)

@@ -58,6 +58,8 @@ Route::prefix('manager')->group(function () {
                 Route::post('/store', [AccountController::class, 'store'])->name('manager.accounts.store');
                 Route::get('/search', [AccountController::class, 'search'])->name('manager.accounts.search');
                 Route::get('/export', [AccountController::class, 'export'])->name('manager.accounts.export');
+                Route::post('/import', [AccountController::class, 'import'])->name('manager.accounts.import');
+                Route::get('/template', [AccountController::class, 'template'])->name('manager.accounts.template');
                 Route::get('/{id}/edit', [AccountController::class, 'edit'])->name('manager.accounts.edit');
                 Route::put('/{id}', [AccountController::class, 'update'])->name('manager.accounts.update');
             });
