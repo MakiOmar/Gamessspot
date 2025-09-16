@@ -38,9 +38,26 @@
                     <svg xmlns="http://www.w3.org/2000/svg"  viewBox="0 0 512 512" width="32px" height="32px"><path fill="#32BEA6" d="M7.9,256C7.9,119,119,7.9,256,7.9C393,7.9,504.1,119,504.1,256c0,137-111.1,248.1-248.1,248.1C119,504.1,7.9,393,7.9,256z"/><path fill="#FFF" d="M391.5,214.5H297v-93.9c0-4-3.2-7.2-7.2-7.2h-68.1c-4,0-7.2,3.2-7.2,7.2v93.9h-93.9c-4,0-7.2,3.2-7.2,7.2v69.2c0,4,3.2,7.2,7.2,7.2h93.9v93.4c0,4,3.2,7.2,7.2,7.2h68.1c4,0,7.2-3.2,7.2-7.2v-93.4h94.5c4,0,7.2-3.2,7.2-7.2v-69.2C398.7,217.7,395.4,214.5,391.5,214.5z"/></svg>
                 </a>
                 @if( Auth::user()->roles->contains('name', 'admin') )
+                    <!-- Import Button -->
+                    <button type="button" class="btn btn-info me-2" data-bs-toggle="modal" data-bs-target="#importModal" title="Import Accounts">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20px" height="20px" fill="white">
+                            <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"/>
+                        </svg>
+                        Import
+                    </button>
                     <!-- Export Button -->
-                    <a href="{{ route('manager.accounts.export') }}" class="d-flex -4 float-right">
-                        <svg xmlns="http://www.w3.org/2000/svg"  viewBox="0 0 48 48" width="36px" height="36px"><path fill="#4CAF50" d="M41,10H25v28h16c0.553,0,1-0.447,1-1V11C42,10.447,41.553,10,41,10z"/><path fill="#FFF" d="M32 15H39V18H32zM32 25H39V28H32zM32 30H39V33H32zM32 20H39V23H32zM25 15H30V18H25zM25 25H30V28H25zM25 30H30V33H25zM25 20H30V23H25z"/><path fill="#2E7D32" d="M27 42L6 38 6 10 27 6z"/><path fill="#FFF" d="M19.129,31l-2.411-4.561c-0.092-0.171-0.186-0.483-0.284-0.938h-0.037c-0.046,0.215-0.154,0.541-0.324,0.979L13.652,31H9.895l4.462-7.001L10.274,17h3.837l2.001,4.196c0.156,0.331,0.296,0.725,0.42,1.179h0.04c0.078-0.271,0.224-0.68,0.439-1.22L19.237,17h3.515l-4.199,6.939l4.316,7.059h-3.74V31z"/></svg>
+                    <a href="{{ route('manager.accounts.export') }}" class="btn btn-success me-2" title="Export Accounts">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20px" height="20px" fill="white">
+                            <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"/>
+                        </svg>
+                        Export
+                    </a>
+                    <!-- Template Button -->
+                    <a href="{{ route('manager.accounts.template') }}" class="btn btn-outline-secondary" title="Download Template">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20px" height="20px" fill="currentColor">
+                            <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"/>
+                        </svg>
+                        Template
                     </a>
                 @endif
             </div>
@@ -200,7 +217,55 @@
     </div>
 </div>
 
-
+<!-- Import Modal -->
+<div class="modal fade" id="importModal" tabindex="-1" aria-labelledby="importModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form id="importForm" method="POST" enctype="multipart/form-data">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="importModalLabel">Import Accounts</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    @csrf
+                    <div class="mb-3">
+                        <label for="importFile" class="form-label">Select Excel/CSV File</label>
+                        <input type="file" class="form-control" id="importFile" name="file" 
+                               accept=".xlsx,.xls,.csv" required>
+                        <div class="form-text">
+                            <strong>Supported formats:</strong> Excel (.xlsx, .xls) and CSV files<br>
+                            <strong>Max size:</strong> 10MB<br>
+                            <strong>Note:</strong> Stock values are set automatically - you only need to provide the basic account information.
+                        </div>
+                    </div>
+                    
+                    <div class="alert alert-info">
+                        <h6><i class="fas fa-info-circle"></i> Import Format</h6>
+                        <p class="mb-1">Your Excel/CSV file should have these columns:</p>
+                        <ul class="mb-0">
+                            <li><strong>Mail</strong> - Email address (must be unique)</li>
+                            <li><strong>Password</strong> - Account password</li>
+                            <li><strong>Game</strong> - Game title (must exist in system)</li>
+                            <li><strong>Region</strong> - Region code (e.g., US, EU)</li>
+                            <li><strong>Cost</strong> - Account cost</li>
+                            <li><strong>Birthdate</strong> - Birth date (YYYY-MM-DD)</li>
+                            <li><strong>Login Code</strong> - Login code</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <a href="{{ route('manager.accounts.template') }}" class="btn btn-outline-primary me-auto">
+                        <i class="fas fa-download"></i> Download Template
+                    </a>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-upload"></i> Import Accounts
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 
 @endsection
 @push('js')
@@ -305,6 +370,65 @@
                 success: function (response) {
                     $('#accountTableBody').html(response.rows);
                     $('#paginationWrapper').html(response.pagination);
+                }
+            });
+        });
+
+        // Handle Import Form Submission
+        $('#importForm').on('submit', function(e) {
+            e.preventDefault();
+            
+            let formData = new FormData(this);
+            let fileInput = $('#importFile')[0];
+            
+            // Validate file selection
+            if (!fileInput.files.length) {
+                Swal.fire('Error', 'Please select a file to import.', 'error');
+                return;
+            }
+            
+            // Show loading state
+            let submitBtn = $(this).find('button[type="submit"]');
+            let originalText = submitBtn.html();
+            submitBtn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Importing...');
+            
+            $.ajax({
+                url: "{{ route('manager.accounts.import') }}",
+                method: 'POST',
+                data: formData,
+                contentType: false,
+                processData: false,
+                success: function(response) {
+                    $('#importModal').modal('hide');
+                    Swal.fire({
+                        title: 'Success!',
+                        text: response.success,
+                        icon: 'success',
+                        confirmButtonText: 'OK'
+                    }).then(() => {
+                        location.reload(); // Reload to show new accounts
+                    });
+                },
+                error: function(xhr) {
+                    let errorMessage = 'Import failed. Please check your file format.';
+                    
+                    if (xhr.responseJSON && xhr.responseJSON.error) {
+                        errorMessage = xhr.responseJSON.error;
+                    } else if (xhr.responseJSON && xhr.responseJSON.errors) {
+                        let errors = xhr.responseJSON.errors;
+                        errorMessage = Object.values(errors).flat().join('<br>');
+                    }
+                    
+                    Swal.fire({
+                        title: 'Import Failed',
+                        html: errorMessage,
+                        icon: 'error',
+                        confirmButtonText: 'OK'
+                    });
+                },
+                complete: function() {
+                    // Reset button state
+                    submitBtn.prop('disabled', false).html(originalText);
                 }
             });
         });
