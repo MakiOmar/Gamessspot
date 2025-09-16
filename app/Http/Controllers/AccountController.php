@@ -64,7 +64,7 @@ class AccountController extends Controller
             ]
         ];
 
-        return Excel::download(new class($templateData) implements \Maatwebsite\Excel\Concerns\FromArray, \Maatwebsite\Excel\Concerns\WithHeadings {
+        return Excel::download(new class($templateData) implements \Maatwebsite\Excel\Concerns\FromArray {
             private $data;
             
             public function __construct($data) {
@@ -73,10 +73,6 @@ class AccountController extends Controller
             
             public function array(): array {
                 return $this->data;
-            }
-            
-            public function headings(): array {
-                return $this->data[0];
             }
         }, 'accounts_template.xlsx');
     }
