@@ -143,32 +143,33 @@ class AccountController extends Controller
         $ps4_offline_stock   = 2; // Default offline stock should be 2
         $ps5_offline_stock   = 1;
 
-        // If any of the stocks are checked, set them to zero (except offline logic)
-        if ($request->has('ps4_primary')) {
-            $ps4_primary_stock = 0;
-        }
-        if ($request->has('ps4_secondary')) {
-            $ps4_secondary_stock = 0;
-        }
-        if ($request->has('ps5_primary')) {
-            $ps5_primary_stock = 0;
-        }
-        if ($request->has('ps5_secondary')) {
-            $ps5_secondary_stock = 0;
-        }
-
-        // Special PS5 Offline Logic: If "PS5 Only" is checked, set PS5 offline stock to 2
+        // Special PS5 Only Logic: If "PS5 Only" is checked, ignore all PS4 stock logic
         if ($request->has('ps5_only')) {
-            // If "PS5 Only" is checked (all PS4 checkboxes are checked), set PS5 offline stock to 2
+            // If "PS5 Only" is checked, set PS5 offline stock to 2 and ignore PS4 logic
             $ps5_offline_stock = 2;
-        }
+            // PS4 stocks remain at default values (1, 1, 2) - no changes
+        } else {
+            // Normal logic: If any of the stocks are checked, set them to zero (except offline logic)
+            if ($request->has('ps4_primary')) {
+                $ps4_primary_stock = 0;
+            }
+            if ($request->has('ps4_secondary')) {
+                $ps4_secondary_stock = 0;
+            }
+            if ($request->has('ps5_primary')) {
+                $ps5_primary_stock = 0;
+            }
+            if ($request->has('ps5_secondary')) {
+                $ps5_secondary_stock = 0;
+            }
 
-        // Offline stock logic for PS4
-        if ($request->has('ps4_offline1')) {
-            $ps4_offline_stock = 1; // Add 1 to the default stock if ps4_offline1 is checked
-        }
-        if ($request->has('ps4_offline2')) {
-            $ps4_offline_stock = 0; // Set stock to zero if ps4_offline2 is checked
+            // Offline stock logic for PS4 (only when not in PS5 Only mode)
+            if ($request->has('ps4_offline1')) {
+                $ps4_offline_stock = 1; // Add 1 to the default stock if ps4_offline1 is checked
+            }
+            if ($request->has('ps4_offline2')) {
+                $ps4_offline_stock = 0; // Set stock to zero if ps4_offline2 is checked
+            }
         }
 
         // Create the new account with adjusted stock values
