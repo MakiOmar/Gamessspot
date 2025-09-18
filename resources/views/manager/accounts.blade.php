@@ -172,7 +172,7 @@
                             <!-- PS5 Only Checkbox -->
                             <div class="mb-2">
                                 <label class="checkbox">
-                                    <input type="checkbox" id="ps5_only" value="1">
+                                    <input type="checkbox" id="ps5_only" name="ps5_only" value="1">
                                     <span></span> <strong>PS5 Only</strong>
                                 </label>
                             </div>
