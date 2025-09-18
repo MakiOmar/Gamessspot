@@ -166,46 +166,64 @@
                     <!-- PS4 and PS5 Stock Fields -->
                     <div id="stock-availability">
                         <!-- PS4 Availability -->
-                    <div class="form-group">
-                        <label for="ps4Availability">PS4 Availability</label>
-                        <div class="checkbox-inline">
-                            <label class="checkbox">
-                                <input type="checkbox" name="ps4_primary" value="1">
-                                <span></span> Primary
-                            </label>
-                            <label class="checkbox">
-                                <input type="checkbox" name="ps4_secondary" value="1">
-                                <span></span> Secondary
-                            </label>
-                            <label class="checkbox">
-                                <input type="checkbox" name="ps4_offline1" value="1">
-                                <span></span> Offline 1
-                            </label>
-                            <label class="checkbox">
-                                <input type="checkbox" name="ps4_offline2" value="1">
-                                <span></span> Offline 2
-                            </label>
+                        <div class="form-group">
+                            <label for="ps4Availability">PS4 Availability</label>
+                            
+                            <!-- PS4 Master Checkbox -->
+                            <div class="mb-2">
+                                <label class="checkbox">
+                                    <input type="checkbox" id="ps4_all" value="1">
+                                    <span></span> <strong>Check All PS4 Stocks</strong>
+                                </label>
+                            </div>
+                            
+                            <div class="checkbox-inline">
+                                <label class="checkbox">
+                                    <input type="checkbox" name="ps4_primary" value="1" class="ps4-checkbox">
+                                    <span></span> Primary
+                                </label>
+                                <label class="checkbox">
+                                    <input type="checkbox" name="ps4_secondary" value="1" class="ps4-checkbox">
+                                    <span></span> Secondary
+                                </label>
+                                <label class="checkbox">
+                                    <input type="checkbox" name="ps4_offline1" value="1" class="ps4-checkbox">
+                                    <span></span> Offline 1
+                                </label>
+                                <label class="checkbox">
+                                    <input type="checkbox" name="ps4_offline2" value="1" class="ps4-checkbox">
+                                    <span></span> Offline 2
+                                </label>
+                            </div>
                         </div>
-                    </div>
 
-                    <!-- PS5 Availability -->
-                    <div class="form-group">
-                        <label for="ps5Availability">PS5 Availability</label>
-                        <div class="checkbox-inline">
-                            <label class="checkbox">
-                                <input type="checkbox" name="ps5_primary" value="1">
-                                <span></span> Primary
-                            </label>
-                            <label class="checkbox">
-                                <input type="checkbox" name="ps5_secondary" value="1">
-                                <span></span> Secondary
-                            </label>
-                            <label class="checkbox">
-                                <input type="checkbox" name="ps5_offline" value="1">
-                                <span></span> Offline
-                            </label>
+                        <!-- PS5 Availability -->
+                        <div class="form-group">
+                            <label for="ps5Availability">PS5 Availability</label>
+                            
+                            <!-- PS5 Master Checkbox -->
+                            <div class="mb-2">
+                                <label class="checkbox">
+                                    <input type="checkbox" id="ps5_all" value="1">
+                                    <span></span> <strong>Check All PS5 Stocks</strong>
+                                </label>
+                            </div>
+                            
+                            <div class="checkbox-inline">
+                                <label class="checkbox">
+                                    <input type="checkbox" name="ps5_primary" value="1" class="ps5-checkbox">
+                                    <span></span> Primary
+                                </label>
+                                <label class="checkbox">
+                                    <input type="checkbox" name="ps5_secondary" value="1" class="ps5-checkbox">
+                                    <span></span> Secondary
+                                </label>
+                                <label class="checkbox">
+                                    <input type="checkbox" name="ps5_offline" value="1" class="ps5-checkbox">
+                                    <span></span> Offline
+                                </label>
+                            </div>
                         </div>
-                    </div>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -431,6 +449,86 @@
                     submitBtn.prop('disabled', false).html(originalText);
                 }
             });
+        });
+
+        // Handle PS4 Master Checkbox
+        $('#ps4_all').on('change', function() {
+            const isChecked = $(this).is(':checked');
+            $('.ps4-checkbox').prop('checked', isChecked);
+        });
+
+        // Handle PS5 Master Checkbox
+        $('#ps5_all').on('change', function() {
+            const isChecked = $(this).is(':checked');
+            $('.ps5-checkbox').prop('checked', isChecked);
+        });
+
+        // Handle individual PS4 checkbox changes
+        $('.ps4-checkbox').on('change', function() {
+            const totalPs4Checkboxes = $('.ps4-checkbox').length;
+            const checkedPs4Checkboxes = $('.ps4-checkbox:checked').length;
+            
+            // Update master checkbox state
+            if (checkedPs4Checkboxes === 0) {
+                $('#ps4_all').prop('indeterminate', false).prop('checked', false);
+            } else if (checkedPs4Checkboxes === totalPs4Checkboxes) {
+                $('#ps4_all').prop('indeterminate', false).prop('checked', true);
+            } else {
+                $('#ps4_all').prop('indeterminate', true);
+            }
+        });
+
+        // Handle individual PS5 checkbox changes
+        $('.ps5-checkbox').on('change', function() {
+            const totalPs5Checkboxes = $('.ps5-checkbox').length;
+            const checkedPs5Checkboxes = $('.ps5-checkbox:checked').length;
+            
+            // Update master checkbox state
+            if (checkedPs5Checkboxes === 0) {
+                $('#ps5_all').prop('indeterminate', false).prop('checked', false);
+            } else if (checkedPs5Checkboxes === totalPs5Checkboxes) {
+                $('#ps5_all').prop('indeterminate', false).prop('checked', true);
+            } else {
+                $('#ps5_all').prop('indeterminate', true);
+            }
+        });
+
+        // Special PS5 Offline Logic: If only PS5 offline is checked, add two offline stocks
+        $('input[name="ps5_offline"]').on('change', function() {
+            const ps5OfflineChecked = $(this).is(':checked');
+            const ps5PrimaryChecked = $('input[name="ps5_primary"]').is(':checked');
+            const ps5SecondaryChecked = $('input[name="ps5_secondary"]').is(':checked');
+            
+            // If only PS5 offline is checked (and no primary/secondary), add a second offline checkbox
+            if (ps5OfflineChecked && !ps5PrimaryChecked && !ps5SecondaryChecked) {
+                // Add a second PS5 offline checkbox if it doesn't exist
+                if ($('input[name="ps5_offline2"]').length === 0) {
+                    const ps5OfflineContainer = $(this).closest('.checkbox-inline');
+                    ps5OfflineContainer.append(`
+                        <label class="checkbox">
+                            <input type="checkbox" name="ps5_offline2" value="1" class="ps5-checkbox">
+                            <span></span> Offline 2
+                        </label>
+                    `);
+                    
+                    // Re-bind the change event for the new checkbox
+                    $('input[name="ps5_offline2"]').on('change', function() {
+                        const totalPs5Checkboxes = $('.ps5-checkbox').length;
+                        const checkedPs5Checkboxes = $('.ps5-checkbox:checked').length;
+                        
+                        if (checkedPs5Checkboxes === 0) {
+                            $('#ps5_all').prop('indeterminate', false).prop('checked', false);
+                        } else if (checkedPs5Checkboxes === totalPs5Checkboxes) {
+                            $('#ps5_all').prop('indeterminate', false).prop('checked', true);
+                        } else {
+                            $('#ps5_all').prop('indeterminate', true);
+                        }
+                    });
+                }
+            } else if (!ps5OfflineChecked || ps5PrimaryChecked || ps5SecondaryChecked) {
+                // Remove the second offline checkbox if it exists
+                $('input[name="ps5_offline2"]').closest('label').remove();
+            }
         });
 
     });

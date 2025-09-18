@@ -126,6 +126,7 @@ class AccountController extends Controller
                 'ps4_offline1'  => 'nullable|boolean',
                 'ps4_offline2'  => 'nullable|boolean',
                 'ps5_offline'   => 'nullable|boolean',
+                'ps5_offline2'  => 'nullable|boolean',
             ],
             [
                 'mail.required' => 'The email field is required.',
@@ -165,6 +166,12 @@ class AccountController extends Controller
         }
         if ($request->has('ps4_offline2')) {
             $ps4_offline_stock = 0; // Set stock to zero if ps4_offline2 is checked
+        }
+
+        // Special PS5 Offline Logic: If only PS5 offline is checked, add two offline stocks
+        if ($request->has('ps5_offline') && !$request->has('ps5_primary') && !$request->has('ps5_secondary')) {
+            // If only PS5 offline is checked, set stock to 2 (two offline stocks)
+            $ps5_offline_stock = 2;
         }
 
         // Create the new account with adjusted stock values
