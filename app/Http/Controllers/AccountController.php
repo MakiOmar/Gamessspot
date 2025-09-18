@@ -157,22 +157,10 @@ class AccountController extends Controller
             $ps5_secondary_stock = 0;
         }
 
-        // Debug: Log what we're receiving
-        \Log::info('PS5 Debug - Request data:', [
-            'ps5_offline' => $request->has('ps5_offline'),
-            'ps5_primary' => $request->has('ps5_primary'),
-            'ps5_secondary' => $request->has('ps5_secondary'),
-            'ps5_offline2' => $request->has('ps5_offline2'),
-            'all_request' => $request->all()
-        ]);
-
         // Special PS5 Offline Logic: If PS4 "Check All" is checked, set PS5 offline stock to 2
         if ($request->has('ps4_primary') && $request->has('ps4_secondary') && $request->has('ps4_offline1') && $request->has('ps4_offline2')) {
             // If all PS4 checkboxes are checked (PS4 "Check All"), set PS5 offline stock to 2
             $ps5_offline_stock = 2;
-            \Log::info('PS4 Check All logic applied: ps5_offline_stock = 2');
-        } else {
-            \Log::info('PS5 Default logic: ps5_offline_stock = 1');
         }
 
         // Offline stock logic for PS4
@@ -182,16 +170,6 @@ class AccountController extends Controller
         if ($request->has('ps4_offline2')) {
             $ps4_offline_stock = 0; // Set stock to zero if ps4_offline2 is checked
         }
-
-        // Debug: Log final stock values
-        \Log::info('Final stock values:', [
-            'ps4_primary_stock' => $ps4_primary_stock,
-            'ps4_secondary_stock' => $ps4_secondary_stock,
-            'ps4_offline_stock' => $ps4_offline_stock,
-            'ps5_primary_stock' => $ps5_primary_stock,
-            'ps5_secondary_stock' => $ps5_secondary_stock,
-            'ps5_offline_stock' => $ps5_offline_stock,
-        ]);
 
         // Create the new account with adjusted stock values
         $account = Account::create(
