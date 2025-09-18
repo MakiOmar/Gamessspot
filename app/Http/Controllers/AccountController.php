@@ -143,11 +143,13 @@ class AccountController extends Controller
         $ps4_offline_stock   = 2; // Default offline stock should be 2
         $ps5_offline_stock   = 1;
 
-        // Special PS5 Only Logic: If "PS5 Only" is checked, ignore all PS4 stock logic
+        // Special PS5 Only Logic: If "PS5 Only" is checked, set all PS4 stocks to 0
         if ($request->has('ps5_only')) {
-            // If "PS5 Only" is checked, set PS5 offline stock to 2 and ignore PS4 logic
+            // If "PS5 Only" is checked, set all PS4 stocks to 0 and PS5 offline stock to 2
+            $ps4_primary_stock = 0;
+            $ps4_secondary_stock = 0;
+            $ps4_offline_stock = 0;
             $ps5_offline_stock = 2;
-            // PS4 stocks remain at default values (1, 1, 2) - no changes
         } else {
             // Normal logic: If any of the stocks are checked, set them to zero (except offline logic)
             if ($request->has('ps4_primary')) {
