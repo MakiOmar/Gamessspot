@@ -166,15 +166,11 @@ class AccountController extends Controller
             'all_request' => $request->all()
         ]);
 
-        // Special PS5 Offline Logic: If only PS5 offline is checked, add two offline stocks
-        if ($request->has('ps5_offline') && !$request->has('ps5_primary') && !$request->has('ps5_secondary')) {
-            // If only PS5 offline is checked, set stock to 2 (two offline stocks)
+        // Special PS5 Offline Logic: If PS4 "Check All" is checked, set PS5 offline stock to 2
+        if ($request->has('ps4_primary') && $request->has('ps4_secondary') && $request->has('ps4_offline1') && $request->has('ps4_offline2')) {
+            // If all PS4 checkboxes are checked (PS4 "Check All"), set PS5 offline stock to 2
             $ps5_offline_stock = 2;
-            \Log::info('PS5 Special logic applied: ps5_offline_stock = 2');
-        } elseif ($request->has('ps5_offline')) {
-            // If PS5 offline is checked with other options, set to 0
-            $ps5_offline_stock = 0;
-            \Log::info('PS5 General logic applied: ps5_offline_stock = 0');
+            \Log::info('PS4 Check All logic applied: ps5_offline_stock = 2');
         } else {
             \Log::info('PS5 Default logic: ps5_offline_stock = 1');
         }
