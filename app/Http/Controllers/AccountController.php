@@ -157,9 +157,9 @@ class AccountController extends Controller
             $ps5_secondary_stock = 0;
         }
 
-        // Special PS5 Offline Logic: If PS4 "Check All" is checked, set PS5 offline stock to 2
-        if ($request->has('ps4_primary') && $request->has('ps4_secondary') && $request->has('ps4_offline1') && $request->has('ps4_offline2')) {
-            // If all PS4 checkboxes are checked (PS4 "Check All"), set PS5 offline stock to 2
+        // Special PS5 Offline Logic: If "PS5 Only" is checked, set PS5 offline stock to 2
+        if ($request->has('ps5_only')) {
+            // If "PS5 Only" is checked (all PS4 checkboxes are checked), set PS5 offline stock to 2
             $ps5_offline_stock = 2;
         }
 

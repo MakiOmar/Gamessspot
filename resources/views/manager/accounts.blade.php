@@ -169,11 +169,11 @@
                         <div class="form-group">
                             <label for="ps4Availability">PS4 Availability</label>
                             
-                            <!-- PS4 Master Checkbox -->
+                            <!-- PS5 Only Checkbox -->
                             <div class="mb-2">
                                 <label class="checkbox">
-                                    <input type="checkbox" id="ps4_all" value="1">
-                                    <span></span> <strong>Check All PS4 Stocks</strong>
+                                    <input type="checkbox" id="ps5_only" value="1">
+                                    <span></span> <strong>PS5 Only</strong>
                                 </label>
                             </div>
                             
@@ -200,14 +200,6 @@
                         <!-- PS5 Availability -->
                         <div class="form-group">
                             <label for="ps5Availability">PS5 Availability</label>
-                            
-                            <!-- PS5 Master Checkbox -->
-                            <div class="mb-2">
-                                <label class="checkbox">
-                                    <input type="checkbox" id="ps5_all" value="1">
-                                    <span></span> <strong>Check All PS5 Stocks</strong>
-                                </label>
-                            </div>
                             
                             <div class="checkbox-inline">
                                 <label class="checkbox">
@@ -451,45 +443,24 @@
             });
         });
 
-        // Handle PS4 Master Checkbox
-        $('#ps4_all').on('change', function() {
+        // Handle PS5 Only Checkbox
+        $('#ps5_only').on('change', function() {
             const isChecked = $(this).is(':checked');
-            $('.ps4-checkbox').prop('checked', isChecked);
-        });
-
-        // Handle PS5 Master Checkbox
-        $('#ps5_all').on('change', function() {
-            const isChecked = $(this).is(':checked');
-            $('.ps5-checkbox').prop('checked', isChecked);
-        });
-
-        // Handle individual PS4 checkbox changes
-        $('.ps4-checkbox').on('change', function() {
-            const totalPs4Checkboxes = $('.ps4-checkbox').length;
-            const checkedPs4Checkboxes = $('.ps4-checkbox:checked').length;
             
-            // Update master checkbox state
-            if (checkedPs4Checkboxes === 0) {
-                $('#ps4_all').prop('indeterminate', false).prop('checked', false);
-            } else if (checkedPs4Checkboxes === totalPs4Checkboxes) {
-                $('#ps4_all').prop('indeterminate', false).prop('checked', true);
+            if (isChecked) {
+                // When PS5 Only is checked, check all PS4 checkboxes and disable them
+                $('.ps4-checkbox').prop('checked', true).prop('disabled', true);
             } else {
-                $('#ps4_all').prop('indeterminate', true);
+                // When PS5 Only is unchecked, enable PS4 checkboxes
+                $('.ps4-checkbox').prop('disabled', false);
             }
         });
 
-        // Handle individual PS5 checkbox changes
-        $('.ps5-checkbox').on('change', function() {
-            const totalPs5Checkboxes = $('.ps5-checkbox').length;
-            const checkedPs5Checkboxes = $('.ps5-checkbox:checked').length;
-            
-            // Update master checkbox state
-            if (checkedPs5Checkboxes === 0) {
-                $('#ps5_all').prop('indeterminate', false).prop('checked', false);
-            } else if (checkedPs5Checkboxes === totalPs5Checkboxes) {
-                $('#ps5_all').prop('indeterminate', false).prop('checked', true);
-            } else {
-                $('#ps5_all').prop('indeterminate', true);
+        // Handle individual PS4 checkbox changes (only when not disabled)
+        $('.ps4-checkbox').on('change', function() {
+            // Only process if the checkbox is not disabled
+            if (!$(this).prop('disabled')) {
+                // No master checkbox logic needed anymore
             }
         });
 
@@ -513,16 +484,7 @@
                     
                     // Re-bind the change event for the new checkbox
                     $('input[name="ps5_offline2"]').on('change', function() {
-                        const totalPs5Checkboxes = $('.ps5-checkbox').length;
-                        const checkedPs5Checkboxes = $('.ps5-checkbox:checked').length;
-                        
-                        if (checkedPs5Checkboxes === 0) {
-                            $('#ps5_all').prop('indeterminate', false).prop('checked', false);
-                        } else if (checkedPs5Checkboxes === totalPs5Checkboxes) {
-                            $('#ps5_all').prop('indeterminate', false).prop('checked', true);
-                        } else {
-                            $('#ps5_all').prop('indeterminate', true);
-                        }
+                        // No master checkbox logic needed anymore
                     });
                 }
             } else if (!ps5OfflineChecked || ps5PrimaryChecked || ps5SecondaryChecked) {
