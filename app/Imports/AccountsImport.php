@@ -25,13 +25,13 @@ class AccountsImport implements ToModel, WithHeadingRow, WithValidation, SkipsOn
             throw new \Exception("Game '{$row['game']}' not found. Please create the game first.");
         }
 
-        // Set default stock values automatically (same logic as in AccountController)
-        $ps4_primary_stock = 1;
-        $ps4_secondary_stock = 1;
-        $ps5_primary_stock = 1;
-        $ps5_secondary_stock = 1;
-        $ps4_offline_stock = 2; // Default offline stock should be 2
-        $ps5_offline_stock = 1;
+        // Use stock values from Excel file, with defaults if not provided
+        $ps4_primary_stock = isset($row['ps4_primary_stock']) ? (int)$row['ps4_primary_stock'] : 1;
+        $ps4_secondary_stock = isset($row['ps4_secondary_stock']) ? (int)$row['ps4_secondary_stock'] : 1;
+        $ps4_offline_stock = isset($row['ps4_offline_stock']) ? (int)$row['ps4_offline_stock'] : 2;
+        $ps5_primary_stock = isset($row['ps5_primary_stock']) ? (int)$row['ps5_primary_stock'] : 1;
+        $ps5_secondary_stock = isset($row['ps5_secondary_stock']) ? (int)$row['ps5_secondary_stock'] : 1;
+        $ps5_offline_stock = isset($row['ps5_offline_stock']) ? (int)$row['ps5_offline_stock'] : 1;
 
         return new Account([
             'mail' => $row['mail'],
@@ -41,12 +41,12 @@ class AccountsImport implements ToModel, WithHeadingRow, WithValidation, SkipsOn
             'cost' => $row['cost'],
             'birthdate' => $row['birthdate'],
             'login_code' => $row['login_code'],
-            'ps4_offline_stock' => $ps4_offline_stock,
             'ps4_primary_stock' => $ps4_primary_stock,
             'ps4_secondary_stock' => $ps4_secondary_stock,
-            'ps5_offline_stock' => $ps5_offline_stock,
+            'ps4_offline_stock' => $ps4_offline_stock,
             'ps5_primary_stock' => $ps5_primary_stock,
             'ps5_secondary_stock' => $ps5_secondary_stock,
+            'ps5_offline_stock' => $ps5_offline_stock,
         ]);
     }
 
@@ -60,7 +60,12 @@ class AccountsImport implements ToModel, WithHeadingRow, WithValidation, SkipsOn
             '*.cost' => 'required|numeric',
             '*.birthdate' => 'required|date',
             '*.login_code' => 'required|string',
-            // Note: Stock fields are not validated as they are set automatically
+            '*.ps4_primary_stock' => 'nullable|integer|min:0',
+            '*.ps4_secondary_stock' => 'nullable|integer|min:0',
+            '*.ps4_offline_stock' => 'nullable|integer|min:0',
+            '*.ps5_primary_stock' => 'nullable|integer|min:0',
+            '*.ps5_secondary_stock' => 'nullable|integer|min:0',
+            '*.ps5_offline_stock' => 'nullable|integer|min:0',
         ];
     }
 }

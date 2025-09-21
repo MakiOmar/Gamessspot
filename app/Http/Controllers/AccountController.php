@@ -57,10 +57,13 @@ class AccountController extends Controller
     {
         $templateData = [
             [
-                'Mail', 'Password', 'Game', 'Region', 'Cost', 'Birthdate', 'Login Code'
+                'Mail', 'Password', 'Game', 'Region', 'Cost', 'Birthdate', 'Login Code',
+                'PS4 Primary Stock', 'PS4 Secondary Stock', 'PS4 Offline Stock',
+                'PS5 Primary Stock', 'PS5 Secondary Stock', 'PS5 Offline Stock'
             ],
             [
-                'example@email.com', 'password123', 'Game Title', 'US', '25.00', '1990-01-01', 'ABC123'
+                'example@email.com', 'password123', 'Game Title', 'US', '25.00', '1990-01-01', 'ABC123',
+                '1', '1', '2', '1', '1', '1'
             ]
         ];
 
