@@ -16,3 +16,7 @@ yarn-error.log
 /.idea
 /.vscode
 public/assets/uploads/
+.htaccess
+.DS_Store
+Thumbs.db
+.ftpquota
