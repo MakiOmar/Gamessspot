@@ -16,6 +16,8 @@ yarn-error.log
 /.idea
 /.vscode
 public/assets/uploads/
+public/assets/ps4/
+public/assets/ps5/
 .htaccess
 .DS_Store
 Thumbs.db
