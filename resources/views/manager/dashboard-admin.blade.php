@@ -8,7 +8,7 @@
                 <p>Mails Assets</p>
             </div>
             <svg class="small-box-icon" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <path d="M2.25 2.25a.75.75 0 000 1.5h1.386..."></path>
+                <path d="M2.25 2.25a.75.75 0 000 1.5h1.386c.17 0 .318.114.362.278l2.558 9.58a.75.75 0 00.705.522H17.25a.75.75 0 000-1.5H7.5l-.5-1.5h9.25a.75.75 0 000-1.5H6.75l-.5-1.5h11.25a.75.75 0 000-1.5H5.25a.75.75 0 00-.705.522L2.25 2.25zM3.75 20.25a1.5 1.5 0 100-3 1.5 1.5 0 000 3zm13.5 0a1.5 1.5 0 100-3 1.5 1.5 0 000 3z"></path>
             </svg>
             <a href="#" class="small-box-footer toggle-stats link-light link-underline-opacity-0 link-underline-opacity-50-hover">
                 More info <i class="bi bi-link-45deg"></i>
@@ -24,7 +24,7 @@
                 <p>Codes Assets</p>
             </div>
             <svg class="small-box-icon" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <path d="M18.375 2.25c-1.035 0-1.875..."></path>
+                <path d="M18.375 2.25c-1.035 0-1.875.84-1.875 1.875v7.5c0 1.036.84 1.875 1.875 1.875h.75a3 3 0 013 3v.75H3v-.75a3 3 0 013-3h.75v-7.5A1.875 1.875 0 016.375 2.25h12zM9.75 8.25a.75.75 0 00-.75.75v2.25c0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75V9a.75.75 0 00-.75-.75h-4.5z"></path>
             </svg>
             <a href="#" class="small-box-footer toggle-stats link-light link-underline-opacity-0 link-underline-opacity-50-hover">
                 More info <i class="bi bi-link-45deg"></i>
@@ -40,7 +40,7 @@
                 <p>Total</p>
             </div>
             <svg class="small-box-icon" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <path d="M6.25 6.375a4.125 4.125..."></path>
+                <path d="M6.25 6.375a4.125 4.125 0 118.25 0 4.125 4.125 0 01-8.25 0zM3.25 19.125a7.125 7.125 0 0114.25 0v.004l-.001.119a.75.75 0 01-.363.63 13.067 13.067 0 01-6.761 1.873c-2.472 0-4.786-.684-6.76-1.873a.75.75 0 01-.364-.63l-.001-.122zM16.9 19.024c.087-.124.163-.251.227-.382 1.546-2.97 1.546-6.57 0-9.551A6.986 6.986 0 0018 5.25a6.986 6.986 0 00-1.653 2.129c-.087.124-.163.251-.227.382-1.546 2.97-1.546 6.57 0 9.551a6.986 6.986 0 001.653 2.129z"></path>
             </svg>
             <a href="#" class="small-box-footer toggle-stats link-dark link-underline-opacity-0 link-underline-opacity-50-hover">
                 More info <i class="bi bi-link-45deg"></i>
@@ -56,7 +56,7 @@
                 <p>Today orders</p>
             </div>
             <svg class="small-box-icon" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <path clip-rule="evenodd" fill-rule="evenodd" d="M2.25 13.5a8.25..."></path>
+                <path clip-rule="evenodd" fill-rule="evenodd" d="M2.25 13.5a8.25 8.25 0 0116.5 0V15a.75.75 0 01-.75.75h-15a.75.75 0 01-.75-.75v-1.5zm8.25-3a.75.75 0 01.75-.75h3a.75.75 0 010 1.5h-3a.75.75 0 01-.75-.75zM3.75 9a.75.75 0 000 1.5h.75a.75.75 0 000-1.5h-.75zm0 3a.75.75 0 000 1.5h.75a.75.75 0 000-1.5h-.75zM6 9a.75.75 0 01.75-.75h.75a.75.75 0 010 1.5h-.75A.75.75 0 016 9zm0 3a.75.75 0 01.75-.75h.75a.75.75 0 010 1.5h-.75A.75.75 0 016 12z"></path>
             </svg>
             <a href="#" class="small-box-footer toggle-stats link-light link-underline-opacity-0 link-underline-opacity-50-hover">
                 More info <i class="bi bi-link-45deg"></i>
