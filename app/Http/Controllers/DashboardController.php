@@ -11,6 +11,7 @@ use App\Models\Order;
 use App\Models\Game;
 use Illuminate\Support\Facades\DB;
 use App\Models\StoresProfile;
+use App\Models\DeviceRepair;
 use Carbon\Carbon;
 
 class DashboardController extends Controller
@@ -62,6 +63,18 @@ class DashboardController extends Controller
                 ->count();
         });
 
+        // Get device repair statistics
+        $deviceRepairStats = Cache::remember('device_repair_stats', 300, function () {
+            return [
+                'total_repairs' => DeviceRepair::count(),
+                'active_repairs' => DeviceRepair::active()->count(),
+                'delivered_today' => DeviceRepair::where('status', 'delivered')
+                    ->whereDate('status_updated_at', today())
+                    ->count(),
+                'processing_repairs' => DeviceRepair::where('status', 'processing')->count()
+            ];
+        });
+
         $total = $totalCodeCost + $accountsCost;
         return view(
             'manager.dashboard',
@@ -80,7 +93,8 @@ class DashboardController extends Controller
                 'branchesWithOrders',
                 'orders',
                 'newUsersCount',
-                'totalOrderCount'
+                'totalOrderCount',
+                'deviceRepairStats'
             )
         );
     }

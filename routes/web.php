@@ -14,6 +14,8 @@ use App\Http\Controllers\MasterController;
 use App\Http\Controllers\CardCategoryController;
 use App\Http\Controllers\CardController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\DeviceRepairController;
+use App\Http\Controllers\PublicDeviceController;
 
 Route::get('/', function () {
     return view('welcome');
@@ -150,5 +152,29 @@ Route::prefix('manager')->group(function () {
         Route::resource('masters', MasterController::class);
         Route::resource('card-categories', CardCategoryController::class);
         Route::resource('cards', CardController::class);
+        
+        // Device Repair Management Routes
+        Route::middleware('can:manage-device-repairs')->group(function () {
+            Route::prefix('device-repairs')->group(function () {
+                Route::get('/', [DeviceRepairController::class, 'index'])->name('device-repairs.index');
+                Route::get('/create', [DeviceRepairController::class, 'create'])->name('device-repairs.create');
+                Route::post('/', [DeviceRepairController::class, 'store'])->name('device-repairs.store');
+                Route::get('/{deviceRepair}', [DeviceRepairController::class, 'show'])->name('device-repairs.show');
+                Route::get('/{deviceRepair}/edit', [DeviceRepairController::class, 'edit'])->name('device-repairs.edit');
+                Route::put('/{deviceRepair}', [DeviceRepairController::class, 'update'])->name('device-repairs.update');
+                Route::delete('/{deviceRepair}', [DeviceRepairController::class, 'destroy'])->name('device-repairs.destroy');
+                Route::patch('/{deviceRepair}/status', [DeviceRepairController::class, 'updateStatus'])->name('device-repairs.update-status');
+                Route::get('/api/stats', [DeviceRepairController::class, 'getStats'])->name('device-repairs.stats');
+            });
+        });
     });
+});
+
+// Public Device Repair Routes
+Route::prefix('device')->group(function () {
+    Route::get('/submit', [PublicDeviceController::class, 'showSubmissionForm'])->name('device.submit');
+    Route::post('/submit', [PublicDeviceController::class, 'submitDevice'])->name('device.submit.store');
+    Route::get('/track', [PublicDeviceController::class, 'trackDevice'])->name('device.tracking');
+    Route::post('/search', [PublicDeviceController::class, 'searchByPhone'])->name('device.search');
+    Route::get('/api/country-codes', [PublicDeviceController::class, 'getCountryCodes'])->name('device.country-codes');
 });

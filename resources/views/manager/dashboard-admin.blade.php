@@ -65,6 +65,69 @@
     </div>
 </div>
 
+<!-- Device Repair Statistics Row -->
+<div class="row">
+    <div class="col-lg-3 col-6">
+        <div class="small-box text-bg-info">
+            <div class="inner">
+                        <h3 class="stat-value d-none">{{ $deviceRepairStats['total_repairs'] ?? 0 }}</h3>
+                        <p>Total Services</p>
+            </div>
+            <svg class="small-box-icon" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path d="M11.25 4.533A9.707 9.707 0 006 3a9.735 9.735 0 00-3.25.555.75.75 0 00-.5.707v14.25a.75.75 0 001 .707A8.237 8.237 0 016 18.75c1.995 0 3.823.707 5.25 1.886V4.533zM12.75 20.636A8.214 8.214 0 0118 18.75c.966 0 1.89.166 2.75.47a.75.75 0 001-.708V4.262a.75.75 0 00-.5-.707A9.735 9.735 0 0018 3a9.707 9.707 0 00-5.25 1.533v16.103z"></path>
+            </svg>
+            <a href="{{ route('device-repairs.index') }}" class="small-box-footer link-light link-underline-opacity-0 link-underline-opacity-50-hover">
+                More info <i class="bi bi-link-45deg"></i>
+            </a>
+        </div>
+    </div>
+
+    <div class="col-lg-3 col-6">
+        <div class="small-box text-bg-warning">
+            <div class="inner">
+                        <h3 class="stat-value d-none">{{ $deviceRepairStats['active_repairs'] ?? 0 }}</h3>
+                        <p>Active Services</p>
+            </div>
+            <svg class="small-box-icon" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path d="M4.5 12a7.5 7.5 0 0015 0m-15 0a7.5 7.5 0 1115 0m-15 0H3m16.5 0H21m-1.5 0H12m-8.457 3.077l1.41-.513m14.095-5.13l1.41-.513M5.106 17.785l1.15-.964m11.49-9.642l1.149-.964M7.501 19.795l.75-1.3m7.5-12.99l.75-1.3m-6.063 16.658l.26-1.477m2.605-14.772l.26-1.477m0 17.726l-.26-1.477M10.698 4.614l-.26-1.477M16.5 19.794l-.75-1.299M7.5 4.205L12 12m6.894 5.785l-1.149-.964M6.256 7.178l-1.15-.964m15.352 8.864l-1.41-.513M4.954 9.435l-1.41-.514M12.002 12l-3.75 6.495"></path>
+            </svg>
+            <a href="{{ route('device-repairs.index', ['status' => 'processing']) }}" class="small-box-footer link-light link-underline-opacity-0 link-underline-opacity-50-hover">
+                More info <i class="bi bi-link-45deg"></i>
+            </a>
+        </div>
+    </div>
+
+    <div class="col-lg-3 col-6">
+        <div class="small-box text-bg-success">
+            <div class="inner">
+                <h3 class="stat-value d-none">{{ $deviceRepairStats['delivered_today'] ?? 0 }}</h3>
+                <p>Delivered Today</p>
+            </div>
+            <svg class="small-box-icon" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+            <a href="{{ route('device-repairs.index', ['status' => 'delivered']) }}" class="small-box-footer link-light link-underline-opacity-0 link-underline-opacity-50-hover">
+                More info <i class="bi bi-link-45deg"></i>
+            </a>
+        </div>
+    </div>
+
+    <div class="col-lg-3 col-6">
+        <div class="small-box text-bg-primary">
+            <div class="inner">
+                <h3 class="stat-value d-none">{{ $deviceRepairStats['processing_repairs'] ?? 0 }}</h3>
+                <p>In Processing</p>
+            </div>
+            <svg class="small-box-icon" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 3v17.25m0 0c-1.472 0-2.882.265-4.185.75M12 20.25c1.472 0 2.882.265 4.185.75M18.75 4.97A48.414 48.414 0 0012 4.5c-2.291 0-4.545.16-6.75.47m13.5 0c1.01.143 2.01.317 3 .52m-3-.52l2.62 10.726c.122.499-.106 1.028-.589 1.202a5.988 5.988 0 01-2.031.352 5.988 5.988 0 01-2.031-.352c-.483-.174-.711-.703-.589-1.202L18.75 4.97zm-16.5.52c.99-.203 1.99-.377 3-.52m0 0l2.62 10.726c.122.499-.106 1.028-.589 1.202a5.988 5.988 0 01-2.031.352 5.988 5.988 0 01-2.031-.352c-.483-.174-.711-.703-.589-1.202L5.25 4.97z"></path>
+            </svg>
+            <a href="{{ route('device-repairs.index', ['status' => 'processing']) }}" class="small-box-footer link-light link-underline-opacity-0 link-underline-opacity-50-hover">
+                More info <i class="bi bi-link-45deg"></i>
+            </a>
+        </div>
+    </div>
+</div>
+
 <div class="row">
     <!-- Sales Stat Card -->
     <div class="col-12 col-lg-8">

@@ -59,6 +59,7 @@ class User extends Authenticatable
         'password',
         'store_profile_id',
         'phone',
+        'country_code',
     );
 
     /**
