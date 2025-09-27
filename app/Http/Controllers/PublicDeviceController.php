@@ -56,6 +56,14 @@ class PublicDeviceController extends Controller
                 ]
             );
 
+            // Assign customer role if user is newly created and doesn't have any roles
+            if ($user->wasRecentlyCreated && $user->roles()->count() === 0) {
+                $customerRole = \App\Models\Role::where('name', 'customer')->first();
+                if ($customerRole) {
+                    $user->roles()->attach($customerRole);
+                }
+            }
+
             // Create device repair
             $deviceRepair = DeviceRepair::create([
                 'client_name' => $validated['client_name'],
