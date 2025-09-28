@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\ManagerController;
 use App\Http\Controllers\CardCategoryController;
+use App\Http\Controllers\UserController;
 
 /*
 |--------------------------------------------------------------------------
@@ -46,3 +47,6 @@ Route::middleware('auth:sanctum')->post('/orders/check_card_stock', [OrderContro
 Route::get('/games/platform/{platform}', [ManagerController::class, 'getGamesByPlatformApi']);
 Route::get('/games/{id}', [ManagerController::class, 'getGameById']);
 Route::get('/card-ctegories/list', [CardCategoryController::class, 'sellApi']);
+
+// Customer Management API
+Route::post('/customers', [UserController::class, 'createCustomerApi'])->name('api.customers.create');

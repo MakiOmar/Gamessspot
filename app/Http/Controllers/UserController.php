@@ -194,6 +194,46 @@ class UserController extends Controller
         return response()->json(array( 'message' => 'User created successfully' ));
     }
 
+    public function createCustomerApi(Request $request)
+    {
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => 'required|email|max:255|unique:users',
+            'phone' => 'required|string|max:20|unique:users',
+            'password' => 'nullable|string|min:8',
+        ]);
+
+        // Set default password if not provided
+        if (empty($validated['password'])) {
+            $validated['password'] = 'temp_password_' . uniqid();
+        }
+
+        $validated['password'] = bcrypt($validated['password']);
+
+        // Create the user
+        $user = User::create($validated);
+
+        // Assign customer role
+        $customerRole = Role::where('name', 'customer')->first();
+        if ($customerRole) {
+            $user->roles()->attach($customerRole);
+        }
+
+        Cache::forget('total_user_count'); // Clear the cache
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Customer created successfully',
+            'data' => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'phone' => $user->phone,
+                'created_at' => $user->created_at
+            ]
+        ], 201);
+    }
+
     public function searchUserHelper(Request $request)
     {
         // Extract search query

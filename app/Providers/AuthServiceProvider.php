@@ -65,7 +65,7 @@ class AuthServiceProvider extends ServiceProvider
         });
 
         Gate::define('manage-device-repairs', function ($user) {
-            return $user->hasRole(['admin', 'sales']);
+            return $user->hasRole(['admin', 'sales', 'account manager']);
         });
 
         Gate::define('submit-device-request', function ($user) {
