@@ -11,9 +11,6 @@ class DeviceRepair extends Model
     use HasFactory;
 
     protected $fillable = [
-        'client_name',
-        'phone_number',
-        'country_code',
         'device_model',
         'device_serial_number',
         'notes',
@@ -38,11 +35,19 @@ class DeviceRepair extends Model
     }
 
     /**
-     * Get the full phone number with country code.
+     * Get the client name from the user relationship.
+     */
+    public function getClientNameAttribute(): string
+    {
+        return $this->user ? $this->user->name : '';
+    }
+
+    /**
+     * Get the full phone number from the user relationship.
      */
     public function getFullPhoneNumberAttribute(): string
     {
-        return $this->country_code . $this->phone_number;
+        return $this->user ? $this->user->phone : '';
     }
 
     /**
@@ -104,14 +109,4 @@ class DeviceRepair extends Model
         return $query->where('status', '!=', 'delivered');
     }
 
-    /**
-     * Scope for repairs by phone number.
-     */
-    public function scopeByPhone($query, string $phoneNumber, string $countryCode = '+20')
-    {
-        return $query->whereHas('user', function ($q) use ($phoneNumber, $countryCode) {
-            $q->where('phone', $phoneNumber)
-              ->where('country_code', $countryCode);
-        });
-    }
 }

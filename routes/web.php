@@ -21,6 +21,25 @@ Route::get('/', function () {
     return view('welcome');
 });
 
+// Debug route for testing phone number handling
+Route::get('/debug-phone', function () {
+    $countryCode = '+20';
+    $phoneNumber = '1234567890';
+    $fullPhone = $countryCode . $phoneNumber;
+    
+    // Check existing users
+    $existingUsers = \App\Models\User::where('phone', $fullPhone)
+        ->orWhere('phone', $phoneNumber)
+        ->get();
+    
+    return response()->json([
+        'country_code' => $countryCode,
+        'phone_number' => $phoneNumber,
+        'full_phone' => $fullPhone,
+        'existing_users' => $existingUsers->toArray()
+    ]);
+});
+
 Route::prefix('manager')->group(function () {
     // Manager login routes (no middleware needed here)
     Route::get('/login', [AdminLoginController::class, 'showLoginForm'])->name('manager.login');

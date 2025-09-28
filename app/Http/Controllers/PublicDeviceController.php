@@ -43,12 +43,11 @@ class PublicDeviceController extends Controller
         $deviceRepair = null;
 
         DB::transaction(function () use ($validated, $phoneNumber, $countryCode, &$deviceRepair) {
-            // Find or create user
+            // Create or find user first
+            $fullPhoneNumber = $countryCode . $phoneNumber;
+            
             $user = User::firstOrCreate(
-                [
-                    'phone' => $phoneNumber,
-                    'country_code' => $countryCode
-                ],
+                ['phone' => $fullPhoneNumber],
                 [
                     'name' => $validated['client_name'],
                     'email' => $phoneNumber . '@gamesspoteg.com',
@@ -56,7 +55,7 @@ class PublicDeviceController extends Controller
                 ]
             );
 
-            // Assign customer role if user is newly created and doesn't have any roles
+            // Assign customer role if user is newly created
             if ($user->wasRecentlyCreated && $user->roles()->count() === 0) {
                 $customerRole = \App\Models\Role::where('name', 'customer')->first();
                 if ($customerRole) {
@@ -64,15 +63,11 @@ class PublicDeviceController extends Controller
                 }
             }
 
-            // Create device repair
-            $deviceRepair = DeviceRepair::create([
-                'client_name' => $validated['client_name'],
-                'phone_number' => $phoneNumber,
-                'country_code' => $countryCode,
+            // Create device repair and link to user
+            $deviceRepair = $user->deviceRepairs()->create([
                 'device_model' => $validated['device_model'],
                 'device_serial_number' => $validated['device_serial_number'],
                 'notes' => $validated['notes'],
-                'user_id' => $user->id,
                 'tracking_code' => DeviceRepair::generateTrackingCode(),
                 'submitted_at' => now(),
                 'status_updated_at' => now()
@@ -120,7 +115,10 @@ class PublicDeviceController extends Controller
         }
 
         $deviceRepairs = DeviceRepair::with('user')
-            ->byPhone($phoneNumber, $countryCode)
+            ->whereHas('user', function($query) use ($phoneNumber, $countryCode) {
+                $query->where('phone', $countryCode . $phoneNumber)
+                      ->orWhere('phone', $phoneNumber);
+            })
             ->active()
             ->orderBy('created_at', 'desc')
             ->get();

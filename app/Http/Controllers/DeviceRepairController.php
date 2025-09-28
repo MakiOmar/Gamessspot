@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\DeviceRepair;
 use App\Models\User;
+use App\Models\Role;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
@@ -71,12 +72,11 @@ class DeviceRepairController extends Controller
         ]);
 
         DB::transaction(function () use ($validated) {
-            // Find or create user
+            // Create or find user first
+            $fullPhoneNumber = $validated['country_code'] . $validated['phone_number'];
+            
             $user = User::firstOrCreate(
-                [
-                    'phone' => $validated['phone_number'],
-                    'country_code' => $validated['country_code']
-                ],
+                ['phone' => $fullPhoneNumber],
                 [
                     'name' => $validated['client_name'],
                     'email' => $validated['phone_number'] . '@gamesspoteg.com',
@@ -84,7 +84,7 @@ class DeviceRepairController extends Controller
                 ]
             );
 
-            // Assign customer role if user is newly created and doesn't have any roles
+            // Assign customer role if user is newly created
             if ($user->wasRecentlyCreated && $user->roles()->count() === 0) {
                 $customerRole = Role::where('name', 'customer')->first();
                 if ($customerRole) {
@@ -92,10 +92,12 @@ class DeviceRepairController extends Controller
                 }
             }
 
-            // Create device repair
-            DeviceRepair::create([
-                ...$validated,
-                'user_id' => $user->id,
+            // Create device repair and link to user
+            $deviceRepair = $user->deviceRepairs()->create([
+                'device_model' => $validated['device_model'],
+                'device_serial_number' => $validated['device_serial_number'],
+                'notes' => $validated['notes'],
+                'status' => $validated['status'],
                 'tracking_code' => DeviceRepair::generateTrackingCode(),
                 'submitted_at' => now(),
                 'status_updated_at' => now()

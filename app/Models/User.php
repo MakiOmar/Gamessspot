@@ -8,6 +8,7 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 use App\Models\StoresProfile;
+use App\Models\DeviceRepair;
 
 /**
  *
@@ -59,7 +60,6 @@ class User extends Authenticatable
         'password',
         'store_profile_id',
         'phone',
-        'country_code',
     );
 
     /**
@@ -89,6 +89,11 @@ class User extends Authenticatable
     public function roles()
     {
         return $this->belongsToMany(Role::class, 'role_user', 'user_id', 'role_id');
+    }
+
+    public function deviceRepairs()
+    {
+        return $this->hasMany(DeviceRepair::class);
     }
     /**
      * Check if the user has one or more roles by their names.
