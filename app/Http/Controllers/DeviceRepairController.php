@@ -64,7 +64,6 @@ class DeviceRepairController extends Controller
         $validated = $request->validate([
             'client_name' => 'required|string|max:255',
             'phone_number' => 'required|string|max:20',
-            'country_code' => 'required|string|max:5',
             'device_model' => 'required|string|max:255',
             'device_serial_number' => 'required|string|max:255',
             'notes' => 'nullable|string',
@@ -72,14 +71,25 @@ class DeviceRepairController extends Controller
         ]);
 
         DB::transaction(function () use ($validated) {
+            // Extract country code and phone number from the full international number
+            $phoneNumber = $validated['phone_number'];
+            $countryCode = '+20'; // Default to Egypt
+            $phoneNumberOnly = $phoneNumber;
+            
+            // Try to extract country code from phone number (intlTelInput format)
+            if (preg_match('/^\+(\d{1,4})/', $phoneNumber, $matches)) {
+                $countryCode = '+' . $matches[1];
+                $phoneNumberOnly = substr($phoneNumber, strlen($matches[0]));
+            }
+            
             // Create or find user first
-            $fullPhoneNumber = $validated['country_code'] . $validated['phone_number'];
+            $fullPhoneNumber = $phoneNumber;
             
             $user = User::firstOrCreate(
                 ['phone' => $fullPhoneNumber],
                 [
                     'name' => $validated['client_name'],
-                    'email' => $validated['phone_number'] . '@gamesspoteg.com',
+                    'email' => $phoneNumberOnly . '@gamesspoteg.com',
                     'password' => bcrypt('temp_password_' . uniqid())
                 ]
             );

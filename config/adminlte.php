@@ -458,6 +458,45 @@ return [
             'icon' => 'bi bi-palette',
             'can' => 'manage-store-profiles',
         ],
+
+        // Device Services
+        [
+            'text' => 'Device Services',
+            'icon' => 'bi bi-tools',
+            'can' => 'manage-device-repairs',
+            'submenu' => [
+                [
+                    'text' => 'All Repairs',
+                    'route' => 'device-repairs.index',
+                    'icon' => 'bi bi-circle',
+                ],
+                [
+                    'text' => 'Add New Repair',
+                    'route' => 'device-repairs.create',
+                    'icon' => 'bi bi-circle',
+                ],
+                [
+                    'text' => 'Received',
+                    'url' => 'manager/device-repairs?status=received',
+                    'icon' => 'bi bi-circle',
+                ],
+                [
+                    'text' => 'Processing',
+                    'url' => 'manager/device-repairs?status=processing',
+                    'icon' => 'bi bi-circle',
+                ],
+                [
+                    'text' => 'Ready',
+                    'url' => 'manager/device-repairs?status=ready',
+                    'icon' => 'bi bi-circle',
+                ],
+                [
+                    'text' => 'Delivered',
+                    'url' => 'manager/device-repairs?status=delivered',
+                    'icon' => 'bi bi-circle',
+                ],
+            ],
+        ],
     ],
 
     'navbar-left' => [

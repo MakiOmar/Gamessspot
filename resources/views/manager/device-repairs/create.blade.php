@@ -2,6 +2,18 @@
 
 @section('title', 'Add New Device Repair')
 
+@push('css')
+<link rel="stylesheet" href="{{ asset('assets/css/intlTelInput.min.css') }}">
+<style>
+    label{
+        display:block
+    }
+    div.iti{
+        width: 100%
+    }
+</style>
+@endpush
+
 @section('content_body')
 <div class="container-fluid">
     <div class="row">
@@ -49,30 +61,9 @@
                         </div>
                         
                         <div class="row">
-                            <div class="col-md-3">
+                            <div class="col-md-12">
                                 <div class="form-group">
-                                    <label for="country_code">Country Code <span class="text-danger">*</span></label>
-                                    <select class="form-control @error('country_code') is-invalid @enderror" 
-                                            id="country_code" name="country_code" required>
-                                        <option value="">Select Country</option>
-                                        <option value="+20" {{ old('country_code', '+20') == '+20' ? 'selected' : '' }}>Egypt (+20)</option>
-                                        <option value="+1" {{ old('country_code') == '+1' ? 'selected' : '' }}>USA (+1)</option>
-                                        <option value="+44" {{ old('country_code') == '+44' ? 'selected' : '' }}>UK (+44)</option>
-                                        <option value="+33" {{ old('country_code') == '+33' ? 'selected' : '' }}>France (+33)</option>
-                                        <option value="+49" {{ old('country_code') == '+49' ? 'selected' : '' }}>Germany (+49)</option>
-                                        <option value="+966" {{ old('country_code') == '+966' ? 'selected' : '' }}>Saudi Arabia (+966)</option>
-                                        <option value="+971" {{ old('country_code') == '+971' ? 'selected' : '' }}>UAE (+971)</option>
-                                        <option value="+90" {{ old('country_code') == '+90' ? 'selected' : '' }}>Turkey (+90)</option>
-                                    </select>
-                                    @error('country_code')
-                                        <div class="invalid-feedback">{{ $message }}</div>
-                                    @enderror
-                                </div>
-                            </div>
-                            
-                            <div class="col-md-9">
-                                <div class="form-group">
-                                    <label for="phone_number">Phone Number <span class="text-danger">*</span></label>
+                                    <label for="phone_number">Client Phone <span class="text-danger">*</span></label>
                                     <input type="tel" class="form-control @error('phone_number') is-invalid @enderror" 
                                            id="phone_number" name="phone_number" value="{{ old('phone_number') }}" required>
                                     @error('phone_number')
@@ -138,16 +129,76 @@
 </div>
 @endsection
 
-@push('scripts')
+@push('js')
+<script src="{{ asset('assets/js/intlTelInput.min.js') }}"></script>
+<script src="{{ asset('assets/js/utils.js') }}"></script>
 <script>
-document.getElementById('phone_number').addEventListener('input', function(e) {
-    // Remove any non-numeric characters
-    e.target.value = e.target.value.replace(/[^0-9]/g, '');
-});
-
-document.getElementById('device_serial_number').addEventListener('input', function(e) {
-    // Convert to uppercase
-    e.target.value = e.target.value.toUpperCase();
+jQuery(document).ready(function($) {
+    // Initialize intlTelInput
+    const $form = $('form');
+    const $input = $("#phone_number");
+    
+    if ($input.length && window.intlTelInput) {
+        const iti = window.intlTelInput($input[0], {
+            initialCountry: "auto",
+            separateDialCode: true,
+            countrySearch: true,
+            preferredCountries: ["us", "gb", "eg"],
+            allowDropdown: true,
+            geoIpLookup: function(success, failure) {
+                fetch("https://ipinfo.io/json", {mode: "cors"})
+                .then(response => response.json())
+                .then((response) => {
+                    const countryCode = (response && response.country) ? response.country : "eg";
+                    success(countryCode);
+                })
+                .catch(() => failure());
+            }
+        });
+        
+        window.iti = iti;
+        
+        // Update phone number on input change
+        $input.on('input', function() {
+            const phoneNumber = iti.getNumber();
+        });
+        
+        // Update phone number on country change
+        $input.on('countrychange', function() {
+            const phoneNumber = iti.getNumber();
+        });
+        
+        // Handle form submission
+        $form.on('submit', function(e) {
+            let finalPhoneNumber = '';
+            
+            // Check if the phone number is valid
+            if (iti.isValidNumber()) {
+                finalPhoneNumber = iti.getNumber();
+            } else {
+                const phoneNumber = iti.getNumber();
+                
+                if (phoneNumber) {
+                    finalPhoneNumber = phoneNumber;
+                } else {
+                    // If getNumber() fails, try to get the full number manually
+                    const selectedCountry = iti.getSelectedCountryData();
+                    const dialCode = selectedCountry.dialCode;
+                    const nationalNumber = $input.val().replace(/\D/g, '');
+                    const fullNumber = '+' + dialCode + nationalNumber;
+                    finalPhoneNumber = fullNumber;
+                }
+            }
+            
+            // Update the input value directly
+            $input.val(finalPhoneNumber);
+        });
+    }
+    
+    // Convert device serial number to uppercase
+    $('#device_serial_number').on('input', function() {
+        $(this).val($(this).val().toUpperCase());
+    });
 });
 </script>
 @endpush
