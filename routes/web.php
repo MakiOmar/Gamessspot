@@ -184,6 +184,7 @@ Route::prefix('manager')->group(function () {
                 Route::delete('/{deviceRepair}', [DeviceRepairController::class, 'destroy'])->name('device-repairs.destroy');
                 Route::patch('/{deviceRepair}/status', [DeviceRepairController::class, 'updateStatus'])->name('device-repairs.update-status');
                 Route::get('/api/stats', [DeviceRepairController::class, 'getStats'])->name('device-repairs.stats');
+                Route::post('/check-user', [DeviceRepairController::class, 'checkUser'])->name('device-repairs.check-user');
             });
         });
     });

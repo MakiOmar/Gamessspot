@@ -221,4 +221,29 @@ class DeviceRepairController extends Controller
 
         return response()->json($stats);
     }
+
+    /**
+     * Check if user exists by phone number.
+     */
+    public function checkUser(Request $request)
+    {
+        $request->validate([
+            'phone_number' => 'required|string|max:20'
+        ]);
+
+        $phoneNumber = $request->phone_number;
+        $user = User::where('phone', $phoneNumber)->first();
+
+        if ($user) {
+            return response()->json([
+                'user' => [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'phone' => $user->phone
+                ]
+            ]);
+        }
+
+        return response()->json(['user' => null]);
+    }
 }

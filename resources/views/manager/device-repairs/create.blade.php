@@ -39,10 +39,10 @@
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="form-group">
-                                    <label for="client_name">Client Name <span class="text-danger">*</span></label>
-                                    <input type="text" class="form-control @error('client_name') is-invalid @enderror" 
-                                           id="client_name" name="client_name" value="{{ old('client_name') }}" required>
-                                    @error('client_name')
+                                    <label for="phone_number">Client Phone <span class="text-danger">*</span></label>
+                                    <input type="tel" class="form-control @error('phone_number') is-invalid @enderror" 
+                                           id="phone_number" name="phone_number" value="{{ old('phone_number') }}" required>
+                                    @error('phone_number')
                                         <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
                                 </div>
@@ -50,10 +50,10 @@
                             
                             <div class="col-md-6">
                                 <div class="form-group">
-                                    <label for="device_model">Device Model <span class="text-danger">*</span></label>
-                                    <input type="text" class="form-control @error('device_model') is-invalid @enderror" 
-                                           id="device_model" name="device_model" value="{{ old('device_model') }}" required>
-                                    @error('device_model')
+                                    <label for="client_name">Client Name <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control @error('client_name') is-invalid @enderror" 
+                                           id="client_name" name="client_name" value="{{ old('client_name') }}" required>
+                                    @error('client_name')
                                         <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
                                 </div>
@@ -63,10 +63,10 @@
                         <div class="row">
                             <div class="col-md-12">
                                 <div class="form-group">
-                                    <label for="phone_number">Client Phone <span class="text-danger">*</span></label>
-                                    <input type="tel" class="form-control @error('phone_number') is-invalid @enderror" 
-                                           id="phone_number" name="phone_number" value="{{ old('phone_number') }}" required>
-                                    @error('phone_number')
+                                    <label for="device_model">Device Model <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control @error('device_model') is-invalid @enderror" 
+                                           id="device_model" name="device_model" value="{{ old('device_model') }}" required>
+                                    @error('device_model')
                                         <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
                                 </div>
@@ -166,6 +166,30 @@ jQuery(document).ready(function($) {
         // Update phone number on country change
         $input.on('countrychange', function() {
             const phoneNumber = iti.getNumber();
+        });
+        
+        // Check for existing user when phone number loses focus
+        $input.on('blur', function() {
+            const phoneNumber = iti.getNumber();
+            if (phoneNumber && iti.isValidNumber()) {
+                // Make AJAX request to check if user exists
+                $.ajax({
+                    url: '{{ route("device-repairs.check-user") }}',
+                    method: 'POST',
+                    data: {
+                        _token: $('meta[name="csrf-token"]').attr('content'),
+                        phone_number: phoneNumber
+                    },
+                    success: function(response) {
+                        if (response.user) {
+                            $('#client_name').val(response.user.name);
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        // Handle error silently
+                    }
+                });
+            }
         });
         
         // Handle form submission
