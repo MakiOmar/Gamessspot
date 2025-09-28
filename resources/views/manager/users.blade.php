@@ -180,8 +180,15 @@
         });
         // Handle search and pagination clicks
         function loadUsers(query = '', role = null, page = 1) {
+            let searchUrl;
+            if (role !== null) {
+                searchUrl = `/manager/users/search/${role}?search=${query}&page=${page}`;
+            } else {
+                searchUrl = `/manager/users/search?search=${query}&page=${page}`;
+            }
+            
             $.ajax({
-                url: `/manager/users/search/${role}?search=${query}&page=${page}`,
+                url: searchUrl,
                 method: 'GET',
                 success: function (response) {
                     if (response.rows.trim() === '') {
