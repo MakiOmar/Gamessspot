@@ -198,10 +198,38 @@ class UserController extends Controller
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'email' => 'required|email|max:255|unique:users',
-            'phone' => 'required|string|max:20|unique:users',
+            'email' => 'required|email|max:255',
+            'phone' => 'required|string|max:20',
             'password' => 'nullable|string|min:8',
         ]);
+
+        // Check if user already exists by phone
+        $existingUser = User::where('phone', $validated['phone'])->first();
+        
+        if ($existingUser) {
+            // User exists, return their information
+            return response()->json([
+                'success' => true,
+                'message' => 'Customer already exists',
+                'data' => [
+                    'id' => $existingUser->id,
+                    'name' => $existingUser->name,
+                    'email' => $existingUser->email,
+                    'phone' => $existingUser->phone,
+                    'created_at' => $existingUser->created_at
+                ]
+            ], 200);
+        }
+
+        // Check if email is unique (only if user doesn't exist by phone)
+        $emailExists = User::where('email', $validated['email'])->exists();
+        if ($emailExists) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Email already exists',
+                'errors' => ['email' => ['The email has already been taken.']]
+            ], 422);
+        }
 
         // Set default password if not provided
         if (empty($validated['password'])) {
