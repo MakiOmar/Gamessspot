@@ -61,6 +61,19 @@
                         </div>
                         
                         <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="client_email">Client Email <span class="text-danger">*</span></label>
+                                    <input type="email" class="form-control @error('client_email') is-invalid @enderror" 
+                                           id="client_email" name="client_email" value="{{ old('client_email') }}" required>
+                                    @error('client_email')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
                             <div class="col-md-12">
                                 <div class="form-group">
                                     <label for="device_model">Device Model <span class="text-danger">*</span></label>

@@ -299,6 +299,19 @@
                     
                     <div class="col-md-6">
                         <div class="form-group">
+                            <label for="client_email" class="form-label">
+                                <i class="fas fa-envelope icon"></i>
+                                Email Address
+                            </label>
+                            <input type="email" class="form-control" id="client_email" name="client_email" 
+                                   value="{{ old('client_email') }}" placeholder="Enter your email address" required>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
                             <label for="device_model" class="form-label">
                                 <i class="fas fa-laptop icon"></i>
                                 Device Model

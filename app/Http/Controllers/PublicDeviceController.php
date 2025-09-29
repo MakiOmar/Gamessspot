@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\DeviceRepair;
 use App\Models\User;
+use App\Notifications\DeviceServiceNotification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -24,6 +25,7 @@ class PublicDeviceController extends Controller
     {
         $validated = $request->validate([
             'client_name' => 'required|string|max:255',
+            'client_email' => 'required|email|max:255|unique:users,email',
             'phone_number' => 'required|string|max:20',
             'device_model' => 'required|string|max:255',
             'device_serial_number' => 'required|string|max:255',
@@ -42,18 +44,29 @@ class PublicDeviceController extends Controller
 
         $deviceRepair = null;
 
-        DB::transaction(function () use ($validated, $phoneNumber, $countryCode, &$deviceRepair) {
+        try {
+            DB::transaction(function () use ($validated, $phoneNumber, $countryCode, &$deviceRepair) {
             // Create or find user first
             $fullPhoneNumber = $countryCode . $phoneNumber;
             
-            $user = User::firstOrCreate(
-                ['phone' => $fullPhoneNumber],
-                [
+            // Check if user exists by phone
+            $existingUser = User::where('phone', $fullPhoneNumber)->first();
+            
+            if ($existingUser) {
+                // User exists by phone, check if email matches
+                if ($existingUser->email !== $validated['client_email']) {
+                    throw new \Exception('A user with this phone number already exists with a different email address.');
+                }
+                $user = $existingUser;
+            } else {
+                // Create new user
+                $user = User::create([
                     'name' => $validated['client_name'],
-                    'email' => $phoneNumber . '@gamesspoteg.com',
+                    'email' => $validated['client_email'],
+                    'phone' => $fullPhoneNumber,
                     'password' => bcrypt('temp_password_' . uniqid())
-                ]
-            );
+                ]);
+            }
 
             // Assign customer role if user is newly created
             if ($user->wasRecentlyCreated && $user->roles()->count() === 0) {
@@ -72,10 +85,19 @@ class PublicDeviceController extends Controller
                 'submitted_at' => now(),
                 'status_updated_at' => now()
             ]);
-        });
+            });
 
-        return redirect()->route('device.tracking', ['code' => $deviceRepair->tracking_code])
-            ->with('success', 'Your device has been submitted successfully! Your tracking code is: ' . $deviceRepair->tracking_code);
+            // Send email notification after transaction
+            if ($deviceRepair) {
+                $deviceRepair->load('user');
+                $deviceRepair->user->notify(new DeviceServiceNotification($deviceRepair, 'created'));
+            }
+
+            return redirect()->route('device.tracking', ['code' => $deviceRepair->tracking_code])
+                ->with('success', 'Your device has been submitted successfully! Your tracking code is: ' . $deviceRepair->tracking_code);
+        } catch (\Exception $e) {
+            return back()->withErrors(['client_email' => $e->getMessage()])->withInput();
+        }
     }
 
     /**
