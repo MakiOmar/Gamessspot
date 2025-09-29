@@ -49,4 +49,4 @@ Route::get('/games/{id}', [ManagerController::class, 'getGameById']);
 Route::get('/card-ctegories/list', [CardCategoryController::class, 'sellApi']);
 
 // Customer Management API
-Route::post('/customers', [UserController::class, 'createCustomerApi'])->name('api.customers.create');
+Route::middleware('auth:sanctum')->post('/customers', [UserController::class, 'createCustomerApi'])->name('api.customers.create');
