@@ -497,6 +497,14 @@ return [
                 ],
             ],
         ],
+
+        // Settings
+        [
+            'text' => 'Settings',
+            'route' => 'settings.index',
+            'icon' => 'bi bi-gear-fill',
+            'can' => 'manage-options',
+        ],
     ],
 
     'navbar-left' => [
