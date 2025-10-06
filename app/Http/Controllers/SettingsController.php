@@ -81,14 +81,14 @@ class SettingsController extends Controller
         Settings::set('business.address', $request->input('business.address'));
 
         // Update order settings
-        Settings::set('orders.auto_approve', $request->boolean('orders.auto_approve'));
+        Settings::set('orders.auto_approve', $request->has('orders.auto_approve'));
         Settings::set('orders.notification_email', $request->input('orders.notification_email'));
         Settings::set('orders.max_order_amount', $request->input('orders.max_order_amount'));
 
         // Update notification settings
-        Settings::set('notifications.email_enabled', $request->boolean('notifications.email_enabled'));
-        Settings::set('notifications.sms_enabled', $request->boolean('notifications.sms_enabled'));
-        Settings::set('notifications.order_notifications', $request->boolean('notifications.order_notifications'));
+        Settings::set('notifications.email_enabled', $request->has('notifications.email_enabled'));
+        Settings::set('notifications.sms_enabled', $request->has('notifications.sms_enabled'));
+        Settings::set('notifications.order_notifications', $request->has('notifications.order_notifications'));
 
         return redirect()->route('settings.index')
             ->with('success', 'Settings updated successfully!');
