@@ -37,6 +37,16 @@ class SettingsController extends Controller
                 'sms_enabled' => Settings::get('notifications.sms_enabled', false),
                 'order_notifications' => Settings::get('notifications.order_notifications', true),
             ],
+            'pos' => [
+                'offline_sku' => Settings::get('pos.offline_sku', '0140'),
+                'secondary_sku' => Settings::get('pos.secondary_sku', '0141'),
+                'primary_sku' => Settings::get('pos.primary_sku', '0139'),
+                'card_sku' => Settings::get('pos.card_sku', '0142'),
+                'offline_id' => Settings::get('pos.offline_id', '140'),
+                'secondary_id' => Settings::get('pos.secondary_id', '141'),
+                'primary_id' => Settings::get('pos.primary_id', '139'),
+                'card_id' => Settings::get('pos.card_id', '142'),
+            ],
         ];
 
         return view('manager.settings', compact('settings'));
@@ -61,6 +71,14 @@ class SettingsController extends Controller
             'notifications.email_enabled' => 'boolean',
             'notifications.sms_enabled' => 'boolean',
             'notifications.order_notifications' => 'boolean',
+            'pos.offline_sku' => 'required|string|max:10',
+            'pos.secondary_sku' => 'required|string|max:10',
+            'pos.primary_sku' => 'required|string|max:10',
+            'pos.card_sku' => 'required|string|max:10',
+            'pos.offline_id' => 'required|string|max:10',
+            'pos.secondary_id' => 'required|string|max:10',
+            'pos.primary_id' => 'required|string|max:10',
+            'pos.card_id' => 'required|string|max:10',
         ]);
 
         if ($validator->fails()) {
@@ -90,6 +108,16 @@ class SettingsController extends Controller
         Settings::set('notifications.sms_enabled', $request->has('notifications.sms_enabled'));
         Settings::set('notifications.order_notifications', $request->has('notifications.order_notifications'));
 
+        // Update POS settings
+        Settings::set('pos.offline_sku', $request->input('pos.offline_sku'));
+        Settings::set('pos.secondary_sku', $request->input('pos.secondary_sku'));
+        Settings::set('pos.primary_sku', $request->input('pos.primary_sku'));
+        Settings::set('pos.card_sku', $request->input('pos.card_sku'));
+        Settings::set('pos.offline_id', $request->input('pos.offline_id'));
+        Settings::set('pos.secondary_id', $request->input('pos.secondary_id'));
+        Settings::set('pos.primary_id', $request->input('pos.primary_id'));
+        Settings::set('pos.card_id', $request->input('pos.card_id'));
+
         return redirect()->route('settings.index')
             ->with('success', 'Settings updated successfully!');
     }
@@ -113,6 +141,14 @@ class SettingsController extends Controller
         Settings::forget('notifications.email_enabled');
         Settings::forget('notifications.sms_enabled');
         Settings::forget('notifications.order_notifications');
+        Settings::forget('pos.offline_sku');
+        Settings::forget('pos.secondary_sku');
+        Settings::forget('pos.primary_sku');
+        Settings::forget('pos.card_sku');
+        Settings::forget('pos.offline_id');
+        Settings::forget('pos.secondary_id');
+        Settings::forget('pos.primary_id');
+        Settings::forget('pos.card_id');
 
         return redirect()->route('settings.index')
             ->with('success', 'Settings reset to default values!');

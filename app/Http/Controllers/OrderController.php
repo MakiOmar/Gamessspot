@@ -20,6 +20,7 @@ use Illuminate\Support\Str;
 use App\Models\Role;
 use Illuminate\Support\Facades\Http;
 use App\Services\SettingsService;
+use Rawilk\Settings\Facades\Settings;
 
 class OrderController extends Controller
 {
@@ -872,18 +873,9 @@ class OrderController extends Controller
             'order_ids.*' => 'exists:orders,id' // Ensure each order ID exists in the orders table
         ]);
 
-        $posSkus = [
-            'offline' => '0140',
-            'secondary' => '0141',
-            'primary' => '0139',
-            'card' => '0142',
-        ];
-        $posIds = [
-            'offline' => '140',
-            'secondary' => '141',
-            'primary' => '139',
-            'card' => '142',
-        ];
+        // Get POS settings from database
+        $posSkus = SettingsService::getPosSkus();
+        $posIds = SettingsService::getPosIds();
         $store_profile_ids = [
             'profile_13' => 1, // New Cairo
             'profile_14' => 3, // Beverly Hills.

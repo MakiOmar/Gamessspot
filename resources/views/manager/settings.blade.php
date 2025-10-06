@@ -226,6 +226,115 @@
             </div>
         </div>
 
+        <!-- POS Settings -->
+        <div class="settings-section">
+            <h4><i class="fas fa-cash-register"></i> POS (Point of Sale) Settings</h4>
+            <div class="row">
+                <div class="col-md-6">
+                    <h6 class="text-muted mb-3">SKU Codes</h6>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="pos_offline_sku" class="form-label">Offline SKU</label>
+                                <input type="text" class="form-control @error('pos.offline_sku') is-invalid @enderror" 
+                                       id="pos_offline_sku" name="pos[offline_sku]" 
+                                       value="{{ old('pos.offline_sku', $settings['pos']['offline_sku']) }}">
+                                @error('pos.offline_sku')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="pos_secondary_sku" class="form-label">Secondary SKU</label>
+                                <input type="text" class="form-control @error('pos.secondary_sku') is-invalid @enderror" 
+                                       id="pos_secondary_sku" name="pos[secondary_sku]" 
+                                       value="{{ old('pos.secondary_sku', $settings['pos']['secondary_sku']) }}">
+                                @error('pos.secondary_sku')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="pos_primary_sku" class="form-label">Primary SKU</label>
+                                <input type="text" class="form-control @error('pos.primary_sku') is-invalid @enderror" 
+                                       id="pos_primary_sku" name="pos[primary_sku]" 
+                                       value="{{ old('pos.primary_sku', $settings['pos']['primary_sku']) }}">
+                                @error('pos.primary_sku')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="pos_card_sku" class="form-label">Card SKU</label>
+                                <input type="text" class="form-control @error('pos.card_sku') is-invalid @enderror" 
+                                       id="pos_card_sku" name="pos[card_sku]" 
+                                       value="{{ old('pos.card_sku', $settings['pos']['card_sku']) }}">
+                                @error('pos.card_sku')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <h6 class="text-muted mb-3">POS IDs</h6>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="pos_offline_id" class="form-label">Offline ID</label>
+                                <input type="text" class="form-control @error('pos.offline_id') is-invalid @enderror" 
+                                       id="pos_offline_id" name="pos[offline_id]" 
+                                       value="{{ old('pos.offline_id', $settings['pos']['offline_id']) }}">
+                                @error('pos.offline_id')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="pos_secondary_id" class="form-label">Secondary ID</label>
+                                <input type="text" class="form-control @error('pos.secondary_id') is-invalid @enderror" 
+                                       id="pos_secondary_id" name="pos[secondary_id]" 
+                                       value="{{ old('pos.secondary_id', $settings['pos']['secondary_id']) }}">
+                                @error('pos.secondary_id')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="pos_primary_id" class="form-label">Primary ID</label>
+                                <input type="text" class="form-control @error('pos.primary_id') is-invalid @enderror" 
+                                       id="pos_primary_id" name="pos[primary_id]" 
+                                       value="{{ old('pos.primary_id', $settings['pos']['primary_id']) }}">
+                                @error('pos.primary_id')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="pos_card_id" class="form-label">Card ID</label>
+                                <input type="text" class="form-control @error('pos.card_id') is-invalid @enderror" 
+                                       id="pos_card_id" name="pos[card_id]" 
+                                       value="{{ old('pos.card_id', $settings['pos']['card_id']) }}">
+                                @error('pos.card_id')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Action Buttons -->
         <div class="d-flex justify-content-between">
             <a href="{{ route('settings.reset') }}" class="btn btn-warning" 

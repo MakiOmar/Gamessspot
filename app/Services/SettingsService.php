@@ -164,4 +164,58 @@ class SettingsService
         $maxAmount = self::getMaxOrderAmount();
         return "Order amount ({$amount}) exceeds maximum allowed amount ({$maxAmount}).";
     }
+
+    /**
+     * Get POS SKU codes.
+     */
+    public static function getPosSkus(): array
+    {
+        return [
+            'offline' => Settings::get('pos.offline_sku', '0140'),
+            'secondary' => Settings::get('pos.secondary_sku', '0141'),
+            'primary' => Settings::get('pos.primary_sku', '0139'),
+            'card' => Settings::get('pos.card_sku', '0142'),
+        ];
+    }
+
+    /**
+     * Get POS IDs.
+     */
+    public static function getPosIds(): array
+    {
+        return [
+            'offline' => Settings::get('pos.offline_id', '140'),
+            'secondary' => Settings::get('pos.secondary_id', '141'),
+            'primary' => Settings::get('pos.primary_id', '139'),
+            'card' => Settings::get('pos.card_id', '142'),
+        ];
+    }
+
+    /**
+     * Get specific POS SKU.
+     */
+    public static function getPosSku(string $type): string
+    {
+        return Settings::get("pos.{$type}_sku", match($type) {
+            'offline' => '0140',
+            'secondary' => '0141',
+            'primary' => '0139',
+            'card' => '0142',
+            default => ''
+        });
+    }
+
+    /**
+     * Get specific POS ID.
+     */
+    public static function getPosId(string $type): string
+    {
+        return Settings::get("pos.{$type}_id", match($type) {
+            'offline' => '140',
+            'secondary' => '141',
+            'primary' => '139',
+            'card' => '142',
+            default => ''
+        });
+    }
 }
