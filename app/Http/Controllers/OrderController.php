@@ -25,10 +25,15 @@ use Rawilk\Settings\Facades\Settings;
 class OrderController extends Controller
 {
     protected $pagination = 10;
-    protected $pos_base   = 'https://pos.gamesspoteg.com';
+    protected $pos_base;
 
     public function login()
     {
+        // Get POS settings from database
+        $this->pos_base = SettingsService::getPosBaseUrl();
+        $username = SettingsService::getPosUsername();
+        $password = SettingsService::getPosPassword();
+        
         // Check if a valid token is already stored in the cache
         $token = Cache::get('api_token');
 
@@ -39,8 +44,8 @@ class OrderController extends Controller
 
             // Request body data
             $data = [
-            'username' => 'admin',
-            'password' => 'pos@123'
+                'username' => $username,
+                'password' => $password
             ];
 
             // Make a POST request to the API

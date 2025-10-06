@@ -46,6 +46,9 @@ class SettingsController extends Controller
                 'secondary_id' => Settings::get('pos.secondary_id', '141'),
                 'primary_id' => Settings::get('pos.primary_id', '139'),
                 'card_id' => Settings::get('pos.card_id', '142'),
+                'username' => Settings::get('pos.username', 'admin'),
+                'password' => Settings::get('pos.password', 'pos@123'),
+                'base_url' => Settings::get('pos.base_url', 'https://pos.gamesspoteg.com'),
             ],
         ];
 
@@ -79,6 +82,9 @@ class SettingsController extends Controller
             'pos.secondary_id' => 'required|string|max:10',
             'pos.primary_id' => 'required|string|max:10',
             'pos.card_id' => 'required|string|max:10',
+            'pos.username' => 'required|string|max:50',
+            'pos.password' => 'required|string|max:100',
+            'pos.base_url' => 'required|url|max:255',
         ]);
 
         if ($validator->fails()) {
@@ -117,6 +123,9 @@ class SettingsController extends Controller
         Settings::set('pos.secondary_id', $request->input('pos.secondary_id'));
         Settings::set('pos.primary_id', $request->input('pos.primary_id'));
         Settings::set('pos.card_id', $request->input('pos.card_id'));
+        Settings::set('pos.username', $request->input('pos.username'));
+        Settings::set('pos.password', $request->input('pos.password'));
+        Settings::set('pos.base_url', $request->input('pos.base_url'));
 
         return redirect()->route('settings.index')
             ->with('success', 'Settings updated successfully!');
@@ -149,6 +158,9 @@ class SettingsController extends Controller
         Settings::forget('pos.secondary_id');
         Settings::forget('pos.primary_id');
         Settings::forget('pos.card_id');
+        Settings::forget('pos.username');
+        Settings::forget('pos.password');
+        Settings::forget('pos.base_url');
 
         return redirect()->route('settings.index')
             ->with('success', 'Settings reset to default values!');

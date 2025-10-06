@@ -218,4 +218,40 @@ class SettingsService
             default => ''
         });
     }
+
+    /**
+     * Get POS username.
+     */
+    public static function getPosUsername(): string
+    {
+        return Settings::get('pos.username', 'admin');
+    }
+
+    /**
+     * Get POS password.
+     */
+    public static function getPosPassword(): string
+    {
+        return Settings::get('pos.password', 'pos@123');
+    }
+
+    /**
+     * Get POS base URL.
+     */
+    public static function getPosBaseUrl(): string
+    {
+        return Settings::get('pos.base_url', 'https://pos.gamesspoteg.com');
+    }
+
+    /**
+     * Get all POS credentials.
+     */
+    public static function getPosCredentials(): array
+    {
+        return [
+            'username' => self::getPosUsername(),
+            'password' => self::getPosPassword(),
+            'base_url' => self::getPosBaseUrl(),
+        ];
+    }
 }

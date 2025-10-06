@@ -445,6 +445,48 @@
                                     </div>
                                 </div>
                             </div>
+                            
+                            <!-- POS Credentials Section -->
+                            <div class="row mt-4">
+                                <div class="col-12">
+                                    <h6 class="text-muted mb-3">POS Credentials</h6>
+                                    <div class="row">
+                                        <div class="col-md-4">
+                                            <div class="mb-3">
+                                                <label for="pos_username" class="form-label">Username</label>
+                                                <input type="text" class="form-control @error('pos.username') is-invalid @enderror" 
+                                                       id="pos_username" name="pos[username]" 
+                                                       value="{{ old('pos.username', $settings['pos']['username']) }}">
+                                                @error('pos.username')
+                                                    <div class="invalid-feedback">{{ $message }}</div>
+                                                @enderror
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="mb-3">
+                                                <label for="pos_password" class="form-label">Password</label>
+                                                <input type="password" class="form-control @error('pos.password') is-invalid @enderror" 
+                                                       id="pos_password" name="pos[password]" 
+                                                       value="{{ old('pos.password', $settings['pos']['password']) }}">
+                                                @error('pos.password')
+                                                    <div class="invalid-feedback">{{ $message }}</div>
+                                                @enderror
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="mb-3">
+                                                <label for="pos_base_url" class="form-label">Base URL</label>
+                                                <input type="url" class="form-control @error('pos.base_url') is-invalid @enderror" 
+                                                       id="pos_base_url" name="pos[base_url]" 
+                                                       value="{{ old('pos.base_url', $settings['pos']['base_url']) }}">
+                                                @error('pos.base_url')
+                                                    <div class="invalid-feedback">{{ $message }}</div>
+                                                @enderror
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
 
                         <!-- Action Buttons -->
