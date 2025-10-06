@@ -9,6 +9,7 @@ use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 use App\Models\StoresProfile;
 use App\Models\DeviceRepair;
+use App\Services\SettingsService;
 
 /**
  *
@@ -110,6 +111,37 @@ class User extends Authenticatable
         return $this->roles->contains(function ($role) use ($roles) {
             return in_array($role->name, $roles);
         });
+    }
+
+    /**
+     * Check if email notifications are enabled for this user.
+     * This demonstrates how to use Laravel Settings in models.
+     *
+     * @return bool
+     */
+    public function canReceiveEmailNotifications(): bool
+    {
+        return SettingsService::isEmailNotificationEnabled();
+    }
+
+    /**
+     * Check if SMS notifications are enabled for this user.
+     *
+     * @return bool
+     */
+    public function canReceiveSmsNotifications(): bool
+    {
+        return SettingsService::isSmsNotificationEnabled();
+    }
+
+    /**
+     * Get the company name from settings.
+     *
+     * @return string
+     */
+    public function getCompanyName(): string
+    {
+        return SettingsService::getCompanyName();
     }
 
 }

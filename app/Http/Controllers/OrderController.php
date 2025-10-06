@@ -19,6 +19,7 @@ use Carbon\Carbon;
 use Illuminate\Support\Str;
 use App\Models\Role;
 use Illuminate\Support\Facades\Http;
+use App\Services\SettingsService;
 
 class OrderController extends Controller
 {
@@ -583,6 +584,13 @@ class OrderController extends Controller
             'type'             => 'required|string|max:255',
             'platform'         => 'required|string|max:255',
         ]);
+
+        // Validate order amount against settings
+        if (!SettingsService::validateOrderAmount($validatedData['price'])) {
+            return redirect()->back()
+                ->withErrors(['price' => SettingsService::getOrderAmountErrorMessage($validatedData['price'])])
+                ->withInput();
+        }
 
         // Check if the user already exists by phone number
         $user = User::where('phone', $validatedData['buyer_phone'])->first();

@@ -1,0 +1,73 @@
+{
+    "name": "rawilk/laravel-settings",
+    "description": "Store Laravel application settings in the database.",
+    "keywords": [
+        "rawilk",
+        "laravel-settings",
+        "settings",
+        "database settings",
+        "eloquent model settings"
+    ],
+    "homepage": "https://github.com/rawilk/laravel-settings",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Randall Wilk",
+            "email": "randall@randallwilk.dev",
+            "homepage": "https://randallwilk.dev",
+            "role": "Developer"
+        }
+    ],
+    "require": {
+        "php": "^8.1",
+        "illuminate/database": "^10.0|^11.0|^12.0",
+        "illuminate/support": "^10.0|^11.0|^12.0",
+        "spatie/laravel-package-tools": "^1.13"
+    },
+    "require-dev": {
+        "laravel/pint": "^1.2",
+        "orchestra/testbench": "^8.0|^9.0|^10.0",
+        "pestphp/pest": "^2.10|^3.0",
+        "pestphp/pest-plugin-laravel": "^2.2|^3.0",
+        "spatie/laravel-ray": "^1.31"
+    },
+    "autoload": {
+        "psr-4": {
+            "Rawilk\\Settings\\": "src"
+        },
+        "files": [
+            "src/helpers.php"
+        ]
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Rawilk\\Settings\\Tests\\": "tests"
+        }
+    },
+    "scripts": {
+        "post-autoload-dump": [
+            "@php ./vendor/bin/testbench package:discover --ansi"
+        ],
+        "test": "vendor/bin/pest -p",
+        "format": "vendor/bin/pint --dirty"
+    },
+    "config": {
+        "sort-packages": true,
+        "allow-plugins": {
+            "pestphp/pest-plugin": true
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Rawilk\\Settings\\SettingsServiceProvider"
+            ],
+            "aliases": {
+                "Settings": "Rawilk\\Settings\\Facades\\Settings",
+                "SettingsFactory": "Rawilk\\Settings\\Drivers\\Factory"
+            }
+        }
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true
+}

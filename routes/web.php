@@ -16,6 +16,7 @@ use App\Http\Controllers\CardController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DeviceRepairController;
 use App\Http\Controllers\PublicDeviceController;
+use App\Http\Controllers\SettingsController;
 
 Route::get('/', function () {
     return view('welcome');
@@ -185,6 +186,17 @@ Route::prefix('manager')->group(function () {
                 Route::patch('/{deviceRepair}/status', [DeviceRepairController::class, 'updateStatus'])->name('device-repairs.update-status');
                 Route::get('/api/stats', [DeviceRepairController::class, 'getStats'])->name('device-repairs.stats');
                 Route::post('/check-user', [DeviceRepairController::class, 'checkUser'])->name('device-repairs.check-user');
+            });
+        });
+
+        // Settings Management Routes (Admin only)
+        Route::middleware(['checkRole:admin', 'can:manage-options'])->group(function () {
+            Route::prefix('settings')->group(function () {
+                Route::get('/', [SettingsController::class, 'index'])->name('settings.index');
+                Route::post('/update', [SettingsController::class, 'update'])->name('settings.update');
+                Route::post('/reset', [SettingsController::class, 'reset'])->name('settings.reset');
+                Route::get('/get/{key}', [SettingsController::class, 'get'])->name('settings.get');
+                Route::post('/set/{key}', [SettingsController::class, 'set'])->name('settings.set');
             });
         });
     });

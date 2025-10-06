@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\DB;
 use App\Models\StoresProfile;
 use App\Models\DeviceRepair;
 use Carbon\Carbon;
+use App\Services\SettingsService;
 
 class DashboardController extends Controller
 {
@@ -76,6 +77,11 @@ class DashboardController extends Controller
         });
 
         $total = $totalCodeCost + $accountsCost;
+        
+        // Get settings for the dashboard
+        $companyName = SettingsService::getCompanyName();
+        $businessSettings = SettingsService::getBusinessSettings();
+        
         return view(
             'manager.dashboard',
             compact(
@@ -94,7 +100,9 @@ class DashboardController extends Controller
                 'orders',
                 'newUsersCount',
                 'totalOrderCount',
-                'deviceRepairStats'
+                'deviceRepairStats',
+                'companyName',
+                'businessSettings'
             )
         );
     }
