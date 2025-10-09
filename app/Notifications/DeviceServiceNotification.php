@@ -34,53 +34,13 @@ class DeviceServiceNotification extends Notification
      */
     public function via(object $notifiable): array
     {
-        // Log the notifiable user details
-        Log::info('DeviceServiceNotification via() called', [
-            'user_id' => $notifiable->id ?? 'null',
-            'user_email' => $notifiable->email ?? 'null',
-            'user_name' => $notifiable->name ?? 'null',
-            'device_repair_id' => $this->deviceRepair->id,
-            'tracking_code' => $this->deviceRepair->tracking_code,
-            'notification_type' => $this->type
-        ]);
-        
-        // Check if email exists
-        $emailExists = !empty($notifiable->email);
-        Log::info('Email existence check', [
-            'email' => $notifiable->email ?? 'null',
-            'exists' => $emailExists,
-            'is_empty' => empty($notifiable->email)
-        ]);
-        
-        // Validate email format
-        $emailValid = false;
-        if ($emailExists) {
-            $emailValid = filter_var($notifiable->email, FILTER_VALIDATE_EMAIL);
-            Log::info('Email validation check', [
-                'email' => $notifiable->email,
-                'filter_var_result' => $emailValid !== false ? 'valid' : 'invalid',
-                'validation_result' => $emailValid
-            ]);
+        // Only send via mail if the user has a valid email
+        if (!empty($notifiable->email) && filter_var($notifiable->email, FILTER_VALIDATE_EMAIL)) {
+            return ['mail'];
         }
         
-        // Determine channels
-        $channels = [];
-        if ($emailExists && $emailValid !== false) {
-            $channels = ['mail'];
-            Log::info('Notification will be sent via mail', [
-                'channels' => $channels,
-                'email' => $notifiable->email
-            ]);
-        } else {
-            Log::warning('Notification skipped - invalid or missing email', [
-                'email' => $notifiable->email ?? 'null',
-                'email_exists' => $emailExists,
-                'email_valid' => $emailValid !== false,
-                'channels' => []
-            ]);
-        }
-        
-        return $channels;
+        // Return empty array to skip notification
+        return [];
     }
 
     /**
@@ -88,15 +48,6 @@ class DeviceServiceNotification extends Notification
      */
     public function toMail(object $notifiable)
     {
-        Log::info('DeviceServiceNotification toMail() called', [
-            'user_id' => $notifiable->id,
-            'user_email' => $notifiable->email,
-            'user_name' => $notifiable->name,
-            'device_repair_id' => $this->deviceRepair->id,
-            'tracking_code' => $this->deviceRepair->tracking_code,
-            'notification_type' => $this->type
-        ]);
-        
         return new DeviceServiceMail($this->deviceRepair, $this->type);
     }
 
