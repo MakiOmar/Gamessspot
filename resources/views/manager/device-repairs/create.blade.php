@@ -196,6 +196,7 @@ jQuery(document).ready(function($) {
                     success: function(response) {
                         if (response.user) {
                             $('#client_name').val(response.user.name);
+                            $('#client_email').val(response.user.email);
                         }
                     },
                     error: function(xhr, status, error) {
