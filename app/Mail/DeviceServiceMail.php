@@ -40,6 +40,7 @@ class DeviceServiceMail extends Mailable
             : 'Device Service Status Update - ' . $this->deviceRepair->tracking_code;
 
         return new Envelope(
+            to: [$this->deviceRepair->user->email],
             subject: $subject,
         );
     }
