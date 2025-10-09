@@ -104,8 +104,14 @@ class DeviceRepairController extends Controller
             $existingUser = User::where('phone', $fullPhoneNumber)->first();
             
             if ($existingUser) {
-                // User exists by phone, check if email matches
-                if ($existingUser->email !== $validated['client_email']) {
+                // User exists by phone
+                // Update email if it's null or empty, or if it matches the submitted email
+                if (empty($existingUser->email) || $existingUser->email === $validated['client_email']) {
+                    $existingUser->email = $validated['client_email'];
+                    $existingUser->name = $validated['client_name']; // Update name as well
+                    $existingUser->save();
+                } elseif ($existingUser->email !== $validated['client_email']) {
+                    // Different email already exists for this phone
                     throw new \Exception('A user with this phone number already exists with a different email address.');
                 }
                 $user = $existingUser;
@@ -142,7 +148,10 @@ class DeviceRepairController extends Controller
             // Send email notification after transaction
             if ($deviceRepair) {
                 $deviceRepair->load('user');
-                $deviceRepair->user->notify(new DeviceServiceNotification($deviceRepair, 'created'));
+                // Only send notification if user has a valid email
+                if ($deviceRepair->user && !empty($deviceRepair->user->email) && filter_var($deviceRepair->user->email, FILTER_VALIDATE_EMAIL)) {
+                    $deviceRepair->user->notify(new DeviceServiceNotification($deviceRepair, 'created'));
+                }
             }
 
             return redirect()->route('device-repairs.index')
@@ -216,7 +225,10 @@ class DeviceRepairController extends Controller
             // Send email notification if status actually changed
             if ($oldStatus !== $deviceRepair->status) {
                 $deviceRepair->load('user');
-                $deviceRepair->user->notify(new DeviceServiceNotification($deviceRepair, 'status_changed'));
+                // Only send notification if user has a valid email
+                if ($deviceRepair->user && !empty($deviceRepair->user->email) && filter_var($deviceRepair->user->email, FILTER_VALIDATE_EMAIL)) {
+                    $deviceRepair->user->notify(new DeviceServiceNotification($deviceRepair, 'status_changed'));
+                }
             }
 
             return response()->json([
