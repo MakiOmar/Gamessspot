@@ -62,9 +62,19 @@ class DeviceRepairController extends Controller
      */
     public function store(Request $request)
     {
+        // First, check if user exists by phone number
+        $existingUserByPhone = User::where('phone', $request->phone_number)->first();
+        
+        // Conditionally validate email based on whether user exists
+        $emailRule = 'required|email|max:255';
+        if (!$existingUserByPhone) {
+            // Only check uniqueness if user doesn't exist by phone
+            $emailRule .= '|unique:users,email';
+        }
+        
         $validated = $request->validate([
             'client_name' => 'required|string|max:255',
-            'client_email' => 'required|email|max:255|unique:users,email',
+            'client_email' => $emailRule,
             'phone_number' => 'required|string|max:20',
             'device_model' => 'required|string|max:255',
             'device_serial_number' => 'required|string|max:255',
