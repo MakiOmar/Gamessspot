@@ -90,8 +90,37 @@ class PublicDeviceController extends Controller
             // Send email notification after transaction
             if ($deviceRepair) {
                 $deviceRepair->load('user');
-                // Notification will check if email is valid before sending
-                $deviceRepair->user->notify(new DeviceServiceNotification($deviceRepair, 'created'));
+                
+                // Log before sending notification
+                \Log::info('[PUBLIC FORM] Before sending device repair notification', [
+                    'device_repair_id' => $deviceRepair->id,
+                    'tracking_code' => $deviceRepair->tracking_code,
+                    'user_id' => $deviceRepair->user->id,
+                    'user_name' => $deviceRepair->user->name,
+                    'user_email' => $deviceRepair->user->email,
+                    'user_phone' => $deviceRepair->user->phone,
+                    'email_empty' => empty($deviceRepair->user->email),
+                    'email_valid' => filter_var($deviceRepair->user->email, FILTER_VALIDATE_EMAIL)
+                ]);
+                
+                try {
+                    // Notification will check if email is valid before sending
+                    $deviceRepair->user->notify(new DeviceServiceNotification($deviceRepair, 'created'));
+                    
+                    \Log::info('[PUBLIC FORM] Device repair notification sent successfully', [
+                        'device_repair_id' => $deviceRepair->id,
+                        'tracking_code' => $deviceRepair->tracking_code,
+                        'user_email' => $deviceRepair->user->email
+                    ]);
+                } catch (\Exception $e) {
+                    \Log::error('[PUBLIC FORM] Failed to send device repair notification', [
+                        'device_repair_id' => $deviceRepair->id,
+                        'tracking_code' => $deviceRepair->tracking_code,
+                        'user_email' => $deviceRepair->user->email,
+                        'error' => $e->getMessage(),
+                        'trace' => $e->getTraceAsString()
+                    ]);
+                }
             }
 
             return redirect()->route('device.tracking', ['code' => $deviceRepair->tracking_code])

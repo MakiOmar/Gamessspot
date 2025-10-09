@@ -148,8 +148,37 @@ class DeviceRepairController extends Controller
             // Send email notification after transaction
             if ($deviceRepair) {
                 $deviceRepair->load('user');
-                // Notification will check if email is valid before sending
-                $deviceRepair->user->notify(new DeviceServiceNotification($deviceRepair, 'created'));
+                
+                // Log before sending notification
+                \Log::info('[ADMIN FORM] Before sending device repair notification', [
+                    'device_repair_id' => $deviceRepair->id,
+                    'tracking_code' => $deviceRepair->tracking_code,
+                    'user_id' => $deviceRepair->user->id,
+                    'user_name' => $deviceRepair->user->name,
+                    'user_email' => $deviceRepair->user->email,
+                    'user_phone' => $deviceRepair->user->phone,
+                    'email_empty' => empty($deviceRepair->user->email),
+                    'email_valid' => filter_var($deviceRepair->user->email, FILTER_VALIDATE_EMAIL)
+                ]);
+                
+                try {
+                    // Notification will check if email is valid before sending
+                    $deviceRepair->user->notify(new DeviceServiceNotification($deviceRepair, 'created'));
+                    
+                    \Log::info('[ADMIN FORM] Device repair notification sent successfully', [
+                        'device_repair_id' => $deviceRepair->id,
+                        'tracking_code' => $deviceRepair->tracking_code,
+                        'user_email' => $deviceRepair->user->email
+                    ]);
+                } catch (\Exception $e) {
+                    \Log::error('[ADMIN FORM] Failed to send device repair notification', [
+                        'device_repair_id' => $deviceRepair->id,
+                        'tracking_code' => $deviceRepair->tracking_code,
+                        'user_email' => $deviceRepair->user->email,
+                        'error' => $e->getMessage(),
+                        'trace' => $e->getTraceAsString()
+                    ]);
+                }
             }
 
             return redirect()->route('device-repairs.index')
@@ -223,8 +252,39 @@ class DeviceRepairController extends Controller
             // Send email notification if status actually changed
             if ($oldStatus !== $deviceRepair->status) {
                 $deviceRepair->load('user');
-                // Notification will check if email is valid before sending
-                $deviceRepair->user->notify(new DeviceServiceNotification($deviceRepair, 'status_changed'));
+                
+                // Log before sending notification
+                \Log::info('[STATUS UPDATE] Before sending status change notification', [
+                    'device_repair_id' => $deviceRepair->id,
+                    'tracking_code' => $deviceRepair->tracking_code,
+                    'old_status' => $oldStatus,
+                    'new_status' => $deviceRepair->status,
+                    'user_id' => $deviceRepair->user->id,
+                    'user_name' => $deviceRepair->user->name,
+                    'user_email' => $deviceRepair->user->email,
+                    'user_phone' => $deviceRepair->user->phone,
+                    'email_empty' => empty($deviceRepair->user->email),
+                    'email_valid' => filter_var($deviceRepair->user->email, FILTER_VALIDATE_EMAIL)
+                ]);
+                
+                try {
+                    // Notification will check if email is valid before sending
+                    $deviceRepair->user->notify(new DeviceServiceNotification($deviceRepair, 'status_changed'));
+                    
+                    \Log::info('[STATUS UPDATE] Status change notification sent successfully', [
+                        'device_repair_id' => $deviceRepair->id,
+                        'tracking_code' => $deviceRepair->tracking_code,
+                        'user_email' => $deviceRepair->user->email
+                    ]);
+                } catch (\Exception $e) {
+                    \Log::error('[STATUS UPDATE] Failed to send status change notification', [
+                        'device_repair_id' => $deviceRepair->id,
+                        'tracking_code' => $deviceRepair->tracking_code,
+                        'user_email' => $deviceRepair->user->email,
+                        'error' => $e->getMessage(),
+                        'trace' => $e->getTraceAsString()
+                    ]);
+                }
             }
 
             return response()->json([
