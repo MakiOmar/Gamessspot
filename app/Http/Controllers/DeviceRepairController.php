@@ -148,10 +148,8 @@ class DeviceRepairController extends Controller
             // Send email notification after transaction
             if ($deviceRepair) {
                 $deviceRepair->load('user');
-                // Only send notification if user has a valid email
-                if ($deviceRepair->user && !empty($deviceRepair->user->email) && filter_var($deviceRepair->user->email, FILTER_VALIDATE_EMAIL)) {
-                    $deviceRepair->user->notify(new DeviceServiceNotification($deviceRepair, 'created'));
-                }
+                // Notification will check if email is valid before sending
+                $deviceRepair->user->notify(new DeviceServiceNotification($deviceRepair, 'created'));
             }
 
             return redirect()->route('device-repairs.index')
@@ -225,10 +223,8 @@ class DeviceRepairController extends Controller
             // Send email notification if status actually changed
             if ($oldStatus !== $deviceRepair->status) {
                 $deviceRepair->load('user');
-                // Only send notification if user has a valid email
-                if ($deviceRepair->user && !empty($deviceRepair->user->email) && filter_var($deviceRepair->user->email, FILTER_VALIDATE_EMAIL)) {
-                    $deviceRepair->user->notify(new DeviceServiceNotification($deviceRepair, 'status_changed'));
-                }
+                // Notification will check if email is valid before sending
+                $deviceRepair->user->notify(new DeviceServiceNotification($deviceRepair, 'status_changed'));
             }
 
             return response()->json([

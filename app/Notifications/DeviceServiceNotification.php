@@ -34,7 +34,13 @@ class DeviceServiceNotification extends Notification
      */
     public function via(object $notifiable): array
     {
-        return ['mail'];
+        // Only send via mail if the user has a valid email
+        if (!empty($notifiable->email) && filter_var($notifiable->email, FILTER_VALIDATE_EMAIL)) {
+            return ['mail'];
+        }
+        
+        // Return empty array to skip notification
+        return [];
     }
 
     /**
