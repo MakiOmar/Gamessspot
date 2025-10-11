@@ -14,121 +14,55 @@ class DeviceModelSeeder extends Seeder
 	public function run(): void
 	{
 		$deviceModels = [
-			// PlayStation Consoles
+			// PlayStation 4 Models
 			[
 				'brand'       => 'Sony',
-				'name'        => 'PlayStation 5',
-				'description' => 'PlayStation 5 Standard Edition',
+				'name'        => 'PS4 Fat',
+				'description' => 'PlayStation 4 Fat',
 				'is_active'   => true,
 			],
 			[
 				'brand'       => 'Sony',
-				'name'        => 'PlayStation 5 Digital Edition',
-				'description' => 'PlayStation 5 Digital Edition',
-				'is_active'   => true,
-			],
-			[
-				'brand'       => 'Sony',
-				'name'        => 'PlayStation 4 Pro',
-				'description' => 'PlayStation 4 Pro',
-				'is_active'   => true,
-			],
-			[
-				'brand'       => 'Sony',
-				'name'        => 'PlayStation 4 Slim',
+				'name'        => 'PS4 Slim',
 				'description' => 'PlayStation 4 Slim',
 				'is_active'   => true,
 			],
 			[
 				'brand'       => 'Sony',
-				'name'        => 'PlayStation 4',
-				'description' => 'PlayStation 4 Standard',
+				'name'        => 'PS4 Pro',
+				'description' => 'PlayStation 4 Pro',
 				'is_active'   => true,
 			],
 
-			// Xbox Consoles
-			[
-				'brand'       => 'Microsoft',
-				'name'        => 'Xbox Series X',
-				'description' => 'Xbox Series X',
-				'is_active'   => true,
-			],
-			[
-				'brand'       => 'Microsoft',
-				'name'        => 'Xbox Series S',
-				'description' => 'Xbox Series S',
-				'is_active'   => true,
-			],
-			[
-				'brand'       => 'Microsoft',
-				'name'        => 'Xbox One X',
-				'description' => 'Xbox One X',
-				'is_active'   => true,
-			],
-			[
-				'brand'       => 'Microsoft',
-				'name'        => 'Xbox One S',
-				'description' => 'Xbox One S',
-				'is_active'   => true,
-			],
-			[
-				'brand'       => 'Microsoft',
-				'name'        => 'Xbox One',
-				'description' => 'Xbox One Standard',
-				'is_active'   => true,
-			],
-
-			// Nintendo Consoles
-			[
-				'brand'       => 'Nintendo',
-				'name'        => 'Switch',
-				'description' => 'Nintendo Switch',
-				'is_active'   => true,
-			],
-			[
-				'brand'       => 'Nintendo',
-				'name'        => 'Switch Lite',
-				'description' => 'Nintendo Switch Lite',
-				'is_active'   => true,
-			],
-			[
-				'brand'       => 'Nintendo',
-				'name'        => 'Switch OLED',
-				'description' => 'Nintendo Switch OLED Model',
-				'is_active'   => true,
-			],
-
-			// Controllers
+			// PlayStation 5 Models
 			[
 				'brand'       => 'Sony',
-				'name'        => 'DualSense Controller',
-				'description' => 'PlayStation 5 DualSense Wireless Controller',
+				'name'        => 'PS5 Fat Digital',
+				'description' => 'PlayStation 5 Fat Digital Edition',
 				'is_active'   => true,
 			],
 			[
 				'brand'       => 'Sony',
-				'name'        => 'DualShock 4 Controller',
-				'description' => 'PlayStation 4 DualShock 4 Wireless Controller',
-				'is_active'   => true,
-			],
-			[
-				'brand'       => 'Microsoft',
-				'name'        => 'Xbox Wireless Controller',
-				'description' => 'Xbox Series X|S Wireless Controller',
-				'is_active'   => true,
-			],
-
-			// VR Headsets
-			[
-				'brand'       => 'Sony',
-				'name'        => 'PlayStation VR2',
-				'description' => 'PlayStation VR2 Headset',
+				'name'        => 'PS5 Fat CD',
+				'description' => 'PlayStation 5 Fat CD Edition',
 				'is_active'   => true,
 			],
 			[
 				'brand'       => 'Sony',
-				'name'        => 'PlayStation VR',
-				'description' => 'PlayStation VR Headset (PS4)',
+				'name'        => 'PS5 Slim Digital',
+				'description' => 'PlayStation 5 Slim Digital Edition',
+				'is_active'   => true,
+			],
+			[
+				'brand'       => 'Sony',
+				'name'        => 'PS5 Slim CD',
+				'description' => 'PlayStation 5 Slim CD Edition',
+				'is_active'   => true,
+			],
+			[
+				'brand'       => 'Sony',
+				'name'        => 'PS5 Pro',
+				'description' => 'PlayStation 5 Pro',
 				'is_active'   => true,
 			],
 		];
