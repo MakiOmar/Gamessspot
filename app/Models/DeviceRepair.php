@@ -11,6 +11,7 @@ class DeviceRepair extends Model
     use HasFactory;
 
     protected $fillable = [
+        'device_model_id',
         'device_model',
         'device_serial_number',
         'notes',
@@ -32,6 +33,14 @@ class DeviceRepair extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    /**
+     * Get the device model for this repair.
+     */
+    public function deviceModel(): BelongsTo
+    {
+        return $this->belongsTo(DeviceModel::class);
     }
 
     /**

@@ -76,10 +76,17 @@
                         <div class="row">
                             <div class="col-md-12">
                                 <div class="form-group">
-                                    <label for="device_model">Device Model <span class="text-danger">*</span></label>
-                                    <input type="text" class="form-control @error('device_model') is-invalid @enderror" 
-                                           id="device_model" name="device_model" value="{{ old('device_model') }}" required>
-                                    @error('device_model')
+                                    <label for="device_model_id">Device Model <span class="text-danger">*</span></label>
+                                    <select class="form-control @error('device_model_id') is-invalid @enderror" 
+                                            id="device_model_id" name="device_model_id" required>
+                                        <option value="">Select Device Model</option>
+                                        @foreach($deviceModels as $model)
+                                            <option value="{{ $model->id }}" {{ old('device_model_id') == $model->id ? 'selected' : '' }}>
+                                                {{ $model->full_name }}
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                    @error('device_model_id')
                                         <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
                                 </div>
