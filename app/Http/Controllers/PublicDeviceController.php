@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\DeviceRepair;
+use App\Models\DeviceModel;
 use App\Models\User;
 use App\Notifications\DeviceServiceNotification;
 use Illuminate\Http\Request;
@@ -15,7 +16,8 @@ class PublicDeviceController extends Controller
      */
     public function showSubmissionForm()
     {
-        return view('public.device-submission');
+        $deviceModels = DeviceModel::active()->orderBy('brand')->orderBy('name')->get();
+        return view('public.device-submission', compact('deviceModels'));
     }
 
     /**
@@ -27,7 +29,7 @@ class PublicDeviceController extends Controller
             'client_name' => 'required|string|max:255',
             'client_email' => 'required|email|max:255|unique:users,email',
             'phone_number' => 'required|string|max:20',
-            'device_model' => 'required|string|max:255',
+            'device_model_id' => 'required|exists:device_models,id',
             'device_serial_number' => 'required|string|max:255',
             'notes' => 'nullable|string'
         ]);
@@ -78,7 +80,7 @@ class PublicDeviceController extends Controller
 
             // Create device repair and link to user
             $deviceRepair = $user->deviceRepairs()->create([
-                'device_model' => $validated['device_model'],
+                'device_model_id' => $validated['device_model_id'],
                 'device_serial_number' => $validated['device_serial_number'],
                 'notes' => $validated['notes'],
                 'tracking_code' => DeviceRepair::generateTrackingCode(),
@@ -89,7 +91,7 @@ class PublicDeviceController extends Controller
 
             // Send email notification after transaction
             if ($deviceRepair) {
-                $deviceRepair->load('user');
+                $deviceRepair->load(['user', 'deviceModel']);
                 $deviceRepair->user->notify(new DeviceServiceNotification($deviceRepair, 'created'));
             }
 
@@ -109,7 +111,7 @@ class PublicDeviceController extends Controller
         $deviceRepair = null;
 
         if ($trackingCode) {
-            $deviceRepair = DeviceRepair::with('user')
+            $deviceRepair = DeviceRepair::with(['user', 'deviceModel'])
                 ->where('tracking_code', $trackingCode)
                 ->first();
         }
@@ -136,7 +138,7 @@ class PublicDeviceController extends Controller
             $phoneNumber = substr($phoneNumber, strlen($matches[0]));
         }
 
-        $deviceRepairs = DeviceRepair::with('user')
+        $deviceRepairs = DeviceRepair::with(['user', 'deviceModel'])
             ->whereHas('user', function($query) use ($phoneNumber, $countryCode) {
                 $query->where('phone', $countryCode . $phoneNumber)
                       ->orWhere('phone', $phoneNumber);

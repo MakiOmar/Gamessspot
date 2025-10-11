@@ -487,7 +487,7 @@
                                 <div class="info-value">{{ $deviceRepair->full_phone_number }}</div>
                                 
                                 <div class="info-label">Device Model</div>
-                                <div class="info-value">{{ $deviceRepair->device_model }}</div>
+                                <div class="info-value">{{ $deviceRepair->deviceModel ? $deviceRepair->deviceModel->full_name : 'N/A' }}</div>
                             </div>
                         </div>
                         
@@ -558,7 +558,7 @@
                                 <div class="col-md-8">
                                     <div class="device-info">
                                         <div class="info-label">Device Model</div>
-                                        <div class="info-value">{{ $repair->device_model }}</div>
+                                        <div class="info-value">{{ $repair->deviceModel ? $repair->deviceModel->full_name : 'N/A' }}</div>
                                         
                                         <div class="info-label">Serial Number</div>
                                         <div class="info-value">{{ $repair->device_serial_number }}</div>

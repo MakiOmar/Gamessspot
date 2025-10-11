@@ -151,7 +151,7 @@
                                         </td>
                                         <td>{{ $repair->client_name }}</td>
                                         <td>{{ $repair->full_phone_number }}</td>
-                                        <td>{{ $repair->device_model }}</td>
+                                        <td>{{ $repair->deviceModel ? $repair->deviceModel->full_name : 'N/A' }}</td>
                                         <td>
                                             <code>{{ $repair->device_serial_number }}</code>
                                         </td>

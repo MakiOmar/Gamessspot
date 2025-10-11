@@ -18,7 +18,7 @@ class DeviceRepairController extends Controller
      */
     public function index(Request $request)
     {
-        $query = DeviceRepair::with('user')
+        $query = DeviceRepair::with(['user', 'deviceModel'])
             ->orderBy('created_at', 'desc');
 
         // Filter by status
@@ -149,7 +149,7 @@ class DeviceRepairController extends Controller
 
             // Send email notification after transaction
             if ($deviceRepair) {
-                $deviceRepair->load('user');
+                $deviceRepair->load(['user', 'deviceModel']);
                 $deviceRepair->user->notify(new DeviceServiceNotification($deviceRepair, 'created'));
             }
 
@@ -165,7 +165,7 @@ class DeviceRepairController extends Controller
      */
     public function show(DeviceRepair $deviceRepair)
     {
-        $deviceRepair->load('user');
+        $deviceRepair->load(['user', 'deviceModel']);
         return view('manager.device-repairs.show', compact('deviceRepair'));
     }
 
@@ -224,7 +224,7 @@ class DeviceRepairController extends Controller
 
             // Send email notification if status actually changed
             if ($oldStatus !== $deviceRepair->status) {
-                $deviceRepair->load('user');
+                $deviceRepair->load(['user', 'deviceModel']);
                 $deviceRepair->user->notify(new DeviceServiceNotification($deviceRepair, 'status_changed'));
             }
 

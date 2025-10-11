@@ -56,7 +56,7 @@
                                         </tr>
                                         <tr>
                                             <td><strong>Device Model:</strong></td>
-                                            <td>{{ $deviceRepair->device_model }}</td>
+                                            <td>{{ $deviceRepair->deviceModel ? $deviceRepair->deviceModel->full_name : 'N/A' }}</td>
                                         </tr>
                                         <tr>
                                             <td><strong>Serial Number:</strong></td>

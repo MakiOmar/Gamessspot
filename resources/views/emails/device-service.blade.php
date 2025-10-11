@@ -152,7 +152,7 @@
             <div class="device-details">
                 <h3>Device Details:</h3>
                 <div class="detail-item">
-                    <span class="detail-label">Device Model:</span> {{ $deviceRepair->device_model }}
+                    <span class="detail-label">Device Model:</span> {{ $deviceRepair->deviceModel ? $deviceRepair->deviceModel->full_name : 'N/A' }}
                 </div>
                 <div class="detail-item">
                     <span class="detail-label">Serial Number:</span> {{ $deviceRepair->device_serial_number }}

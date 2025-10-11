@@ -312,12 +312,18 @@
                 <div class="row">
                     <div class="col-md-6">
                         <div class="form-group">
-                            <label for="device_model" class="form-label">
+                            <label for="device_model_id" class="form-label">
                                 <i class="fas fa-laptop icon"></i>
                                 Device Model
                             </label>
-                            <input type="text" class="form-control" id="device_model" name="device_model" 
-                                   value="{{ old('device_model') }}" placeholder="e.g., PS5, Xbox Series X, Nintendo Switch" required>
+                            <select class="form-control" id="device_model_id" name="device_model_id" required>
+                                <option value="">Select Device Model</option>
+                                @foreach($deviceModels as $model)
+                                    <option value="{{ $model->id }}" {{ old('device_model_id') == $model->id ? 'selected' : '' }}>
+                                        {{ $model->full_name }}
+                                    </option>
+                                @endforeach
+                            </select>
                         </div>
                     </div>
                 </div>
