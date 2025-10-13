@@ -455,7 +455,7 @@ class ManagerController extends Controller
             ->paginate( 20 );
 
         // Transform the data to include availability information for each type
-        $psGames->getCollection()->transform(
+        $transformed_games = $psGames->getCollection()->map(
             function ($game) use ($platform) {
                 // Calculate availability for each type
                 $types = array(
@@ -473,6 +473,9 @@ class ManagerController extends Controller
                 );
             }
         );
+
+        // Set the transformed collection back to the paginator
+        $psGames->setCollection( $transformed_games );
 
         return response()->json( $psGames );
     }
