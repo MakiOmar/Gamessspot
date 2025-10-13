@@ -458,8 +458,10 @@ class ManagerController extends Controller
         $transformed_games = $psGames->getCollection()->map(
             function ($game) use ($platform) {
                 // Calculate availability for each type
+                // Note: Currently only primary and secondary are enabled for customer self-service
+                // To enable offline purchases, uncomment the 'offline' line below
                 $types = array(
-                    'offline'   => $this->calculateTypeAvailability( $game->id, $platform, 'offline', $game ),
+                    // 'offline'   => $this->calculateTypeAvailability( $game->id, $platform, 'offline', $game ),
                     'primary'   => $this->calculateTypeAvailability( $game->id, $platform, 'primary', $game ),
                     'secondary' => $this->calculateTypeAvailability( $game->id, $platform, 'secondary', $game ),
                 );
