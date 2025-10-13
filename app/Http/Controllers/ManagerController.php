@@ -401,7 +401,7 @@ class ManagerController extends Controller
         }
     }
     /**
-     * Get games by platform (PS4 or PS5) via API, filtering only those with offline stock = 0.
+     * Get games by platform (PS4 or PS5) via API with detailed availability for each type.
      *
      * @param int $platform (4 for PS4, 5 for PS5)
      * @return \Illuminate\Http\JsonResponse
@@ -409,40 +409,121 @@ class ManagerController extends Controller
     public function getGamesByPlatformApi($platform)
     {
         // Validate the platform input (should be 4 or 5)
-        if (!in_array($platform, [4, 5])) {
-            return response()->json(['error' => 'Invalid platform. Use 4 for PS4 or 5 for PS5.'], 400);
+        if ( ! in_array( $platform, array( 4, 5 ) ) ) {
+            return response()->json( array( 'error' => 'Invalid platform. Use 4 for PS4 or 5 for PS5.' ), 400 );
         }
 
-        $image_url = "ps{$platform}_image_url";
+        $image_url        = "ps{$platform}_image_url";
+        $offline_price    = "ps{$platform}_offline_price";
+        $primary_price    = "ps{$platform}_primary_price";
+        $secondary_price  = "ps{$platform}_secondary_price";
+        $offline_status   = "ps{$platform}_offline_status";
+        $primary_status   = "ps{$platform}_primary_status";
+        $secondary_status = "ps{$platform}_secondary_status";
 
-        // Fetch games where offline stock = 0
-        $psGames = DB::table('accounts')
-        ->select(
-            'games.id',
-            'games.title',
-            'games.code',
-            "games.{$image_url}",
-            "games.ps{$platform}_offline_status",
-            "games.ps{$platform}_primary_status",
-            "games.ps{$platform}_secondary_status",
-            DB::raw("SUM(accounts.ps{$platform}_offline_stock) as ps{$platform}_offline_stock"),
-            DB::raw("SUM(accounts.ps{$platform}_primary_stock) as ps{$platform}_primary_stock"),
-            DB::raw("SUM(accounts.ps{$platform}_secondary_stock) as ps{$platform}_secondary_stock")
-        )
-        ->join('games', 'accounts.game_id', '=', 'games.id')
-        ->groupBy(
-            'games.id',
-            'games.title',
-            'games.code',
-            "games.{$image_url}",
-            "games.ps{$platform}_offline_status",
-            "games.ps{$platform}_primary_status",
-            "games.ps{$platform}_secondary_status"
-        )
-        ->havingRaw("SUM(accounts.ps{$platform}_offline_stock) = 0 AND (SUM(accounts.ps{$platform}_primary_stock) > 0 OR SUM(accounts.ps{$platform}_secondary_stock) > 0)") // Filter only games where offline stock = 0
-        ->paginate(10);  // Paginate 10 results per page
+        // Fetch all games that have any stock for this platform
+        $psGames = DB::table( 'accounts' )
+            ->select(
+                'games.id',
+                'games.title',
+                'games.code',
+                "games.{$image_url} as image_url",
+                "games.{$offline_price} as offline_price",
+                "games.{$primary_price} as primary_price",
+                "games.{$secondary_price} as secondary_price",
+                "games.{$offline_status} as offline_status",
+                "games.{$primary_status} as primary_status",
+                "games.{$secondary_status} as secondary_status",
+                DB::raw( "SUM(accounts.ps{$platform}_offline_stock) as total_offline_stock" ),
+                DB::raw( "SUM(accounts.ps{$platform}_primary_stock) as total_primary_stock" ),
+                DB::raw( "SUM(accounts.ps{$platform}_secondary_stock) as total_secondary_stock" )
+            )
+            ->join( 'games', 'accounts.game_id', '=', 'games.id' )
+            ->groupBy(
+                'games.id',
+                'games.title',
+                'games.code',
+                "games.{$image_url}",
+                "games.{$offline_price}",
+                "games.{$primary_price}",
+                "games.{$secondary_price}",
+                "games.{$offline_status}",
+                "games.{$primary_status}",
+                "games.{$secondary_status}"
+            )
+            ->havingRaw( "SUM(accounts.ps{$platform}_offline_stock) > 0 OR SUM(accounts.ps{$platform}_primary_stock) > 0 OR SUM(accounts.ps{$platform}_secondary_stock) > 0" )
+            ->paginate( 20 );
 
-        return response()->json($psGames);
+        // Transform the data to include availability information for each type
+        $psGames->getCollection()->transform(
+            function ($game) use ($platform) {
+                // Calculate availability for each type
+                $types = array(
+                    'offline'   => $this->calculateTypeAvailability( $game->id, $platform, 'offline', $game ),
+                    'primary'   => $this->calculateTypeAvailability( $game->id, $platform, 'primary', $game ),
+                    'secondary' => $this->calculateTypeAvailability( $game->id, $platform, 'secondary', $game ),
+                );
+
+                return array(
+                    'id'        => $game->id,
+                    'title'     => $game->title,
+                    'code'      => $game->code,
+                    'image_url' => $game->image_url,
+                    'types'     => $types,
+                );
+            }
+        );
+
+        return response()->json( $psGames );
+    }
+
+    /**
+     * Calculate availability for a specific game type.
+     *
+     * @param int    $game_id
+     * @param int    $platform
+     * @param string $type
+     * @param object $game
+     * @return array
+     */
+    private function calculateTypeAvailability($game_id, $platform, $type, $game)
+    {
+        $stock_field  = "total_{$type}_stock";
+        $status_field = "{$type}_status";
+        $price_field  = "{$type}_price";
+
+        $total_stock = $game->$stock_field;
+        $status      = $game->$status_field;
+        $price       = $game->$price_field;
+
+        // Base availability check: must have stock and status enabled
+        $available = ( $total_stock > 0 && $status );
+        $reason    = null;
+
+        if ( ! $status ) {
+            $reason = 'This type is currently disabled for this game.';
+        } elseif ( $total_stock == 0 ) {
+            $reason = 'Out of stock.';
+        } elseif ( $platform == 4 && $type === 'primary' ) {
+            // PS4 Primary special rule: must have at least one account with offline = 0 AND primary > 0
+            $available_account = Account::where( 'game_id', $game_id )
+                ->where( 'ps4_offline_stock', 0 )
+                ->where( 'ps4_primary_stock', '>', 0 )
+                ->exists();
+
+            if ( ! $available_account ) {
+                $available = false;
+                $reason    = 'PS4 primary accounts require offline stock to be 0. All available primary accounts currently have offline stock.';
+            }
+        }
+
+        return array(
+            'available' => $available,
+            'stock'     => (int) $total_stock,
+            'price'     => (float) $price,
+            'status'    => $status ? 'enabled' : 'disabled',
+            'reason'    => $reason,
+        );
     }
 
 
