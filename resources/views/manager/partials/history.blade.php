@@ -8,11 +8,7 @@
                         <div class="vertical-timeline-item vertical-timeline-element">
                             <div>
                                 <span class="vertical-timeline-element-icon bounce-in">
-                                    <i class="badge 
-                                        @if($order->status === 'completed') bg-success 
-                                        @elseif($order->status === 'pending') bg-warning 
-                                        @else bg-danger @endif 
-                                        rounded-circle badge-dot-xl">
+                                    <i class="badge bg-success rounded-circle badge-dot-xl">
                                         &nbsp;
                                     </i>
                                 </span>
