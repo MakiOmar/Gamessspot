@@ -35,14 +35,14 @@ class UserController extends Controller
     public function users($role = 'any')
     {
         if ('any' === $role) {
-            $users = User::with('storeProfile')->paginate(10);
+            $users = User::with('storeProfile')->paginate(15);
         } else {
             $users = User::whereHas(
                 'roles',
                 function ($query) use ($role) {
                     $query->where('roles.id', intval($role));
                 }
-            )->with('storeProfile')->paginate(10);
+            )->with('storeProfile')->paginate(15);
         }
 
         $storeProfiles = StoresProfile::all(); // Fetch all store profiles
