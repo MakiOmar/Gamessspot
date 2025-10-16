@@ -18,7 +18,7 @@ class DeviceRepairController extends Controller
      */
     public function index(Request $request)
     {
-        $query = DeviceRepair::with(['user', 'deviceModel'])
+        $query = DeviceRepair::with(['user', 'deviceModel', 'storeProfile', 'submittedBy'])
             ->orderBy('created_at', 'desc');
 
         // Filter by status
@@ -56,7 +56,8 @@ class DeviceRepairController extends Controller
     public function create()
     {
         $deviceModels = DeviceModel::active()->orderBy('brand')->orderBy('name')->get();
-        return view('manager.device-repairs.create', compact('deviceModels'));
+        $storeProfiles = \App\Models\StoresProfile::all();
+        return view('manager.device-repairs.create', compact('deviceModels', 'storeProfiles'));
     }
 
     /**
@@ -81,7 +82,8 @@ class DeviceRepairController extends Controller
             'device_model_id' => 'required|exists:device_models,id',
             'device_serial_number' => 'required|string|max:255',
             'notes' => 'nullable|string',
-            'status' => ['required', Rule::in(['received', 'processing', 'ready', 'delivered'])]
+            'status' => ['required', Rule::in(['received', 'processing', 'ready', 'delivered'])],
+            'store_profile_id' => 'nullable|exists:stores_profile,id'
         ]);
 
         $deviceRepair = null;
@@ -142,6 +144,8 @@ class DeviceRepairController extends Controller
                 'notes' => $validated['notes'],
                 'status' => $validated['status'],
                 'tracking_code' => DeviceRepair::generateTrackingCode(),
+                'submitted_by_user_id' => auth()->id(),
+                'store_profile_id' => $validated['store_profile_id'] ?? auth()->user()->store_profile_id ?? null,
                 'submitted_at' => now(),
                 'status_updated_at' => now()
             ]);

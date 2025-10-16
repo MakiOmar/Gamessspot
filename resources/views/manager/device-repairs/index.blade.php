@@ -136,6 +136,7 @@
                                     <th>Client Name</th>
                                     <th>Tracking Code</th>
                                     <th>Phone</th>
+                                    <th>Store Profile</th>
                                     <th>Device Model</th>
                                     <th>Serial Number</th>
                                     <th>Status</th>
@@ -151,6 +152,7 @@
                                             <code>{{ $repair->tracking_code }}</code>
                                         </td>
                                         <td>{{ $repair->full_phone_number }}</td>
+                                        <td>{{ $repair->storeProfile ? $repair->storeProfile->name : 'N/A' }}</td>
                                         <td>{{ $repair->deviceModel ? $repair->deviceModel->full_name : 'N/A' }}</td>
                                         <td>
                                             <code>{{ $repair->device_serial_number }}</code>
@@ -220,7 +222,7 @@
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="8" class="text-center">
+                                        <td colspan="9" class="text-center">
                                             <div class="py-4">
                                                 <i class="fas fa-search fa-3x text-muted mb-3"></i>
                                                 <h5 class="text-muted">No device repairs found</h5>

@@ -71,6 +71,25 @@
                                     @enderror
                                 </div>
                             </div>
+                            
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="store_profile_id">Store Profile</label>
+                                    <select class="form-control @error('store_profile_id') is-invalid @enderror" 
+                                            id="store_profile_id" name="store_profile_id">
+                                        <option value="">No Store Profile</option>
+                                        @foreach($storeProfiles as $profile)
+                                            <option value="{{ $profile->id }}" 
+                                                {{ old('store_profile_id', auth()->user()->store_profile_id) == $profile->id ? 'selected' : '' }}>
+                                                {{ $profile->name }}
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                    @error('store_profile_id')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                            </div>
                         </div>
                         
                         <div class="row">

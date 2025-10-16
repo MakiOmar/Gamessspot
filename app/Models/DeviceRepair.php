@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use App\Models\StoresProfile;
 
 class DeviceRepair extends Model
 {
@@ -17,6 +18,8 @@ class DeviceRepair extends Model
         'notes',
         'status',
         'user_id',
+        'submitted_by_user_id',
+        'store_profile_id',
         'tracking_code',
         'submitted_at',
         'status_updated_at'
@@ -41,6 +44,22 @@ class DeviceRepair extends Model
     public function deviceModel(): BelongsTo
     {
         return $this->belongsTo(DeviceModel::class);
+    }
+
+    /**
+     * Get the user (staff) who submitted this repair.
+     */
+    public function submittedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'submitted_by_user_id');
+    }
+
+    /**
+     * Get the store profile for this repair.
+     */
+    public function storeProfile(): BelongsTo
+    {
+        return $this->belongsTo(StoresProfile::class);
     }
 
     /**
