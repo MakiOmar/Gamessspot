@@ -150,7 +150,12 @@ class DeviceRepairController extends Controller
             // Send email notification after transaction
             if ($deviceRepair) {
                 $deviceRepair->load(['user', 'deviceModel']);
-                $deviceRepair->user->notify(new DeviceServiceNotification($deviceRepair, 'created'));
+                try {
+                    $deviceRepair->user->notify(new DeviceServiceNotification($deviceRepair, 'created'));
+                } catch (\Exception $e) {
+                    // Log email failure but don't fail the entire operation
+                    \Log::warning('Failed to send device repair notification email: ' . $e->getMessage());
+                }
             }
 
             return redirect()->route('device-repairs.index')
@@ -225,7 +230,12 @@ class DeviceRepairController extends Controller
             // Send email notification if status actually changed
             if ($oldStatus !== $deviceRepair->status) {
                 $deviceRepair->load(['user', 'deviceModel']);
-                $deviceRepair->user->notify(new DeviceServiceNotification($deviceRepair, 'status_changed'));
+                try {
+                    $deviceRepair->user->notify(new DeviceServiceNotification($deviceRepair, 'status_changed'));
+                } catch (\Exception $e) {
+                    // Log email failure but don't fail the entire operation
+                    \Log::warning('Failed to send status change notification email: ' . $e->getMessage());
+                }
             }
 
             return response()->json([
