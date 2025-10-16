@@ -133,8 +133,8 @@
                         <table class="table table-bordered table-striped">
                             <thead>
                                 <tr>
-                                    <th>Tracking Code</th>
                                     <th>Client Name</th>
+                                    <th>Tracking Code</th>
                                     <th>Phone</th>
                                     <th>Device Model</th>
                                     <th>Serial Number</th>
@@ -146,10 +146,10 @@
                             <tbody>
                                 @forelse($deviceRepairs as $repair)
                                     <tr data-repair-id="{{ $repair->id }}">
+                                        <td>{{ $repair->client_name }}</td>
                                         <td>
                                             <code>{{ $repair->tracking_code }}</code>
                                         </td>
-                                        <td>{{ $repair->client_name }}</td>
                                         <td>{{ $repair->full_phone_number }}</td>
                                         <td>{{ $repair->deviceModel ? $repair->deviceModel->full_name : 'N/A' }}</td>
                                         <td>
