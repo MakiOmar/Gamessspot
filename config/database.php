@@ -65,8 +65,8 @@ return [
                     PDO::ATTR_PERSISTENT                   => env('DB_PERSISTENT', false),
                     // Set connection timeout to prevent hanging connections
                     PDO::ATTR_TIMEOUT                      => env('DB_TIMEOUT', 5),
-                    // Set MySQL wait_timeout to close idle connections
-                    PDO::MYSQL_ATTR_INIT_COMMAND           => 'SET SESSION wait_timeout=600, interactive_timeout=600',
+                    // Set MySQL wait_timeout to close idle connections (10 minutes for sessions)
+                    PDO::MYSQL_ATTR_INIT_COMMAND           => 'SET SESSION wait_timeout=28800, interactive_timeout=28800',
                     // Enable error mode for better debugging
                     PDO::ATTR_ERRMODE                      => PDO::ERRMODE_EXCEPTION,
                     // Disable emulated prepared statements for better performance
