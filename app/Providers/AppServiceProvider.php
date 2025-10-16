@@ -36,14 +36,17 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        // Optimize: Prevent lazy loading to catch N+1 query problems in development only
-        // These are disabled in production to avoid breaking existing functionality
-        if ( ! app()->isProduction() ) {
-            Model::preventLazyLoading(true);
-            Model::preventSilentlyDiscardingAttributes(true);
-            Model::preventAccessingMissingAttributes(true);
+        // Optimize: Prevent lazy loading to catch N+1 query problems
+        // Only enable in truly local development (not staging/production)
+        if ( app()->environment('local') && app()->runningInConsole() === false ) {
+            // Temporarily disabled to avoid breaking staging environment
+            // Model::preventLazyLoading(true);
+            // Model::preventSilentlyDiscardingAttributes(true);
+            // Model::preventAccessingMissingAttributes(true);
+        }
 
-            // Log slow queries (queries taking more than 1000ms)
+        // Log slow queries in non-production environments
+        if ( app()->environment('local') ) {
             DB::listen(
                 function ($query) {
                     if ( $query->time > 1000 ) {
