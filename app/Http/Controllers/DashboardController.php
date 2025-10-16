@@ -116,7 +116,7 @@ class DashboardController extends Controller
         $currentMonth = Carbon::now()->month;
         $currentYear  = Carbon::now()->year;
 
-        return StoresProfile::leftJoin('users', 'stores_profiles.id', '=', 'users.store_profile_id')
+        return StoresProfile::leftJoin('users', 'stores_profile.id', '=', 'users.store_profile_id')
             ->leftJoin(
                 'orders',
                 function ($join) use ($currentMonth, $currentYear) {
@@ -126,11 +126,11 @@ class DashboardController extends Controller
                 }
             )
             ->select(
-                'stores_profiles.*',
+                'stores_profile.*',
                 DB::raw('COUNT(DISTINCT orders.id) as orders_count'),
                 DB::raw('COALESCE(SUM(orders.price), 0) as orders_sum_price')
             )
-            ->groupBy('stores_profiles.id', 'stores_profiles.name', 'stores_profiles.address', 'stores_profiles.phone', 'stores_profiles.created_at', 'stores_profiles.updated_at')
+            ->groupBy('stores_profile.id', 'stores_profile.name', 'stores_profile.address', 'stores_profile.phone', 'stores_profile.created_at', 'stores_profile.updated_at')
             ->having('orders_count', '>', 0)
             ->get();
     }
@@ -238,14 +238,14 @@ class DashboardController extends Controller
     public function topSellingStores()
     {
         // Optimize: Use single query with joins instead of separate count/sum queries
-        return StoresProfile::leftJoin('users', 'stores_profiles.id', '=', 'users.store_profile_id')
+        return StoresProfile::leftJoin('users', 'stores_profile.id', '=', 'users.store_profile_id')
             ->leftJoin('orders', 'users.id', '=', 'orders.seller_id')
             ->select(
-                'stores_profiles.*',
+                'stores_profile.*',
                 DB::raw('COUNT(DISTINCT orders.id) as orders_count'),
                 DB::raw('COALESCE(SUM(orders.price), 0) as orders_sum_price')
             )
-            ->groupBy('stores_profiles.id', 'stores_profiles.name', 'stores_profiles.address', 'stores_profiles.phone', 'stores_profiles.created_at', 'stores_profiles.updated_at')
+            ->groupBy('stores_profile.id', 'stores_profile.name', 'stores_profile.address', 'stores_profile.phone', 'stores_profile.created_at', 'stores_profile.updated_at')
             ->having('orders_sum_price', '>', 0)
             ->orderBy('orders_sum_price', 'desc')
             ->take(3)
