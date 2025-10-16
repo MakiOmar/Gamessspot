@@ -384,20 +384,29 @@ class ManagerController extends Controller
     }
     protected function isPrimaryActive(&$psGames, $primary_stock, $offline_stock, $n)
     {
-        foreach ($psGames as $game) {
-            $oldestAccount = DB::table('accounts')
-                ->where('game_id', $game->id)
-                ->where($offline_stock, 0)
-                ->where($primary_stock, '>', 0)
-                ->orderBy('created_at', 'asc')
-                ->first();
-            if ($oldestAccount && 5 !== $n) {
+        // PS5 always has primary active
+        if ( 5 === $n ) {
+            foreach ( $psGames as $game ) {
                 $game->is_primary_active = true;
-            } elseif (5 === $n) {
-                $game->is_primary_active = true;
-            } else {
-                $game->is_primary_active = false;
             }
+            return;
+        }
+
+        // Optimize: Get all game IDs at once
+        $gameIds = $psGames->pluck('id')->toArray();
+
+        // Single query to get oldest accounts for all games with offline=0 and primary>0
+        $oldestAccounts = DB::table('accounts')
+            ->select('game_id', DB::raw('MIN(created_at) as oldest_created_at'))
+            ->whereIn('game_id', $gameIds)
+            ->where($offline_stock, 0)
+            ->where($primary_stock, '>', 0)
+            ->groupBy('game_id')
+            ->pluck('oldest_created_at', 'game_id');
+
+        // Map the results to games
+        foreach ( $psGames as $game ) {
+            $game->is_primary_active = isset($oldestAccounts[ $game->id ]);
         }
     }
     /**
@@ -454,16 +463,32 @@ class ManagerController extends Controller
             ->havingRaw( "SUM(accounts.ps{$platform}_offline_stock) > 0 OR SUM(accounts.ps{$platform}_primary_stock) > 0 OR SUM(accounts.ps{$platform}_secondary_stock) > 0" )
             ->paginate( 20 );
 
+        // Optimize: Get all game IDs for batch processing
+        $gameIds = $psGames->pluck('id')->toArray();
+
+        // For PS4 primary, pre-fetch accounts with offline=0 and primary>0 to avoid N+1
+        $ps4PrimaryAvailableGames = array();
+        if ( 4 === $platform && ! empty( $gameIds ) ) {
+            $ps4PrimaryAvailableGames = DB::table('accounts')
+                ->select('game_id')
+                ->whereIn('game_id', $gameIds)
+                ->where('ps4_offline_stock', 0)
+                ->where('ps4_primary_stock', '>', 0)
+                ->groupBy('game_id')
+                ->pluck('game_id')
+                ->toArray();
+        }
+
         // Transform the data to include availability information for each type
         $transformed_games = $psGames->getCollection()->map(
-            function ($game) use ($platform) {
+            function ($game) use ($platform, $ps4PrimaryAvailableGames) {
                 // Calculate availability for each type
                 // Note: Currently only primary and secondary are enabled for customer self-service
                 // To enable offline purchases, uncomment the 'offline' line below
                 $types = array(
-                    // 'offline'   => $this->calculateTypeAvailability( $game->id, $platform, 'offline', $game ),
-                    'primary'   => $this->calculateTypeAvailability( $game->id, $platform, 'primary', $game ),
-                    'secondary' => $this->calculateTypeAvailability( $game->id, $platform, 'secondary', $game ),
+                    // 'offline'   => $this->calculateTypeAvailability( $game->id, $platform, 'offline', $game, $ps4PrimaryAvailableGames ),
+                    'primary'   => $this->calculateTypeAvailability( $game->id, $platform, 'primary', $game, $ps4PrimaryAvailableGames ),
+                    'secondary' => $this->calculateTypeAvailability( $game->id, $platform, 'secondary', $game, $ps4PrimaryAvailableGames ),
                 );
 
                 return array(
@@ -489,9 +514,10 @@ class ManagerController extends Controller
      * @param int    $platform
      * @param string $type
      * @param object $game
+     * @param array  $ps4PrimaryAvailableGames Pre-fetched game IDs with PS4 primary availability
      * @return array
      */
-    private function calculateTypeAvailability($game_id, $platform, $type, $game)
+    private function calculateTypeAvailability($game_id, $platform, $type, $game, $ps4PrimaryAvailableGames = array())
     {
         $stock_field  = "total_{$type}_stock";
         $status_field = "{$type}_status";
@@ -511,10 +537,8 @@ class ManagerController extends Controller
             $reason = 'Out of stock.';
         } elseif ( $platform == 4 && $type === 'primary' ) {
             // PS4 Primary special rule: must have at least one account with offline = 0 AND primary > 0
-            $available_account = Account::where( 'game_id', $game_id )
-                ->where( 'ps4_offline_stock', 0 )
-                ->where( 'ps4_primary_stock', '>', 0 )
-                ->exists();
+            // Use pre-fetched data to avoid N+1 query
+            $available_account = in_array( $game_id, $ps4PrimaryAvailableGames );
 
             if ( ! $available_account ) {
                 $available = false;
@@ -668,23 +692,10 @@ class ManagerController extends Controller
             )
             ->havingRaw("SUM(accounts.{$offline_stock}) > 0 OR SUM(accounts.{$primary_stock}) > 0 OR SUM(accounts.{$secondary_stock}) > 0")
             ->paginate(10);  // Paginate 10 results per page
-        // Determine if the primary stock is active
-        foreach ($psGames as $game) {
-            $oldestAccount = DB::table('accounts')
-                ->where('game_id', $game->id)
-                ->where($primary_stock, '>', 0)
-                ->orderBy('created_at', 'asc')
-                ->first();
 
-            $game->is_primary_active = false;
+        // Optimize: Determine if the primary stock is active using single query
+        $this->isPrimaryActive($psGames, $primary_stock, $offline_stock, $platform);
 
-            if ($oldestAccount) {
-                // Check if offline stock is 0 for the oldest account
-                if ($oldestAccount->$offline_stock == 0) {
-                    $game->is_primary_active = true;
-                }
-            }
-        }
         return $psGames;
     }
 }
