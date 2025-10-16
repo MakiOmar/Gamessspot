@@ -20,7 +20,12 @@ class AdminLoginController extends Controller
      */
     public function showLoginForm()
     {
-        return view('auth.manager-login'); // Or you could rename the view to manager-login
+        // Prevent caching of login page to ensure fresh CSRF token
+        return response()
+            ->view('auth.manager-login')
+            ->header('Cache-Control', 'no-cache, no-store, must-revalidate')
+            ->header('Pragma', 'no-cache')
+            ->header('Expires', '0');
     }
 
     /**
