@@ -207,7 +207,27 @@ class UserController extends Controller
         $existingUser = User::where('phone', $validated['phone'])->first();
         
         if ($existingUser) {
-            // User exists, return their information
+            // User exists, update email if it's different
+            if ($existingUser->email !== $validated['email']) {
+                // Check if the new email is already taken by another user
+                $emailTakenByOther = User::where('email', $validated['email'])
+                    ->where('id', '!=', $existingUser->id)
+                    ->exists();
+                
+                if ($emailTakenByOther) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Email already exists',
+                        'errors' => ['email' => ['The email has already been taken.']]
+                    ], 422);
+                }
+                
+                // Update the email
+                $existingUser->email = $validated['email'];
+                $existingUser->save();
+            }
+            
+            // Return the existing (possibly updated) user information
             return response()->json([
                 'success' => true,
                 'message' => 'Customer already exists',
