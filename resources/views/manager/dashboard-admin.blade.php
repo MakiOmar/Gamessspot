@@ -473,8 +473,8 @@
                             <tbody>
                                 @foreach($topSellingGames as $index => $gameData)
                                     <tr>
-                                        <td><img width="40" height="40" src="{{ asset($gameData->game->ps4_image_url) }}" alt=""></td>
-                                        <td>{{ $gameData->game->title ?? 'Unknown Game' }}</td>
+                                        <td><img width="40" height="40" src="{{ asset($gameData->ps4_image_url) }}" alt=""></td>
+                                        <td>{{ $gameData->title ?? 'Unknown Game' }}</td>
                                         <td class="text-end">{{ number_format($gameData->total_sales) }}</td>
                                     </tr>
                                 @endforeach
