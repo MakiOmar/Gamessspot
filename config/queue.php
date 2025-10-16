@@ -11,6 +11,9 @@ return [
     | API, giving you convenient access to each back-end using the same
     | syntax for every one. Here you may define a default connection.
     |
+    | IMPORTANT: Using 'sync' in production can cause database connection
+    | exhaustion. Consider using 'database' or 'redis' for production.
+    |
     */
 
     'default' => env('QUEUE_CONNECTION', 'sync'),
@@ -35,11 +38,13 @@ return [
         ],
 
         'database' => [
-            'driver' => 'database',
-            'table' => 'jobs',
-            'queue' => 'default',
-            'retry_after' => 90,
+            'driver'       => 'database',
+            'table'        => 'jobs',
+            'queue'        => 'default',
+            'retry_after'  => 90,
             'after_commit' => false,
+            // Optimize: Use separate database connection for queue to prevent connection exhaustion
+            'connection'   => env('DB_QUEUE_CONNECTION', null),
         ],
 
         'beanstalkd' => [
@@ -63,12 +68,14 @@ return [
         ],
 
         'redis' => [
-            'driver' => 'redis',
-            'connection' => 'default',
-            'queue' => env('REDIS_QUEUE', 'default'),
-            'retry_after' => 90,
-            'block_for' => null,
+            'driver'       => 'redis',
+            'connection'   => env('REDIS_QUEUE_CONNECTION', 'default'),
+            'queue'        => env('REDIS_QUEUE', 'default'),
+            'retry_after'  => 90,
+            'block_for'    => null,
             'after_commit' => false,
+            // Optimize: Memory and connection management
+            'memory_limit' => env('QUEUE_MEMORY_LIMIT', 128), // MB
         ],
 
     ],
