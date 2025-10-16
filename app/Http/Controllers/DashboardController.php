@@ -81,6 +81,9 @@ class DashboardController extends Controller
         // Get settings for the dashboard
         $companyName = SettingsService::getCompanyName();
         $businessSettings = SettingsService::getBusinessSettings();
+
+        // Get system health information
+        $systemHealth = $this->getSystemHealth();
         
         return view(
             'manager.dashboard',
@@ -102,7 +105,8 @@ class DashboardController extends Controller
                 'totalOrderCount',
                 'deviceRepairStats',
                 'companyName',
-                'businessSettings'
+                'businessSettings',
+                'systemHealth'
             )
         );
     }
@@ -246,5 +250,92 @@ class DashboardController extends Controller
             ->orderBy('orders_sum_price', 'desc')
             ->take(3)
             ->get();
+    }
+
+    /**
+     * Get system health information including cache driver status.
+     *
+     * @return array
+     */
+    public function getSystemHealth()
+    {
+        $health = array(
+            'cache_driver'   => config('cache.default'),
+            'session_driver' => config('session.driver'),
+            'queue_driver'   => config('queue.default'),
+            'cache_status'   => 'unknown',
+            'redis_status'   => 'not_configured',
+            'memcached_status' => 'not_configured',
+            'database_status' => 'unknown',
+        );
+
+        // Check cache driver status
+        try {
+            \Cache::put('health_check', 'ok', 10);
+            $test = \Cache::get('health_check');
+            $health['cache_status'] = ( $test === 'ok' ) ? 'working' : 'error';
+        } catch ( \Exception $e ) {
+            $health['cache_status'] = 'error';
+            $health['cache_error']  = $e->getMessage();
+        }
+
+        // Check Redis specifically
+        if ( config('cache.default') === 'redis' || config('session.driver') === 'redis' ) {
+            try {
+                $redis = \Redis::connection();
+                $redis->ping();
+                $health['redis_status'] = 'connected';
+                // Get Redis info
+                $info                  = $redis->info();
+                $health['redis_version'] = $info['Server']['redis_version'] ?? 'unknown';
+                $health['redis_memory']  = $info['Memory']['used_memory_human'] ?? 'unknown';
+            } catch ( \Exception $e ) {
+                $health['redis_status'] = 'error';
+                $health['redis_error']  = $e->getMessage();
+            }
+        }
+
+        // Check Memcached specifically
+        if ( config('cache.default') === 'memcached' ) {
+            try {
+                $memcached = \Cache::getStore()->getMemcached();
+                $stats     = $memcached->getStats();
+                if ( ! empty( $stats ) ) {
+                    $health['memcached_status'] = 'connected';
+                    $firstServer                = array_values($stats)[0];
+                    $health['memcached_version'] = $firstServer['version'] ?? 'unknown';
+                    $health['memcached_memory']  = isset( $firstServer['bytes'] ) 
+                        ? round( $firstServer['bytes'] / 1024 / 1024, 2 ) . ' MB' 
+                        : 'unknown';
+                } else {
+                    $health['memcached_status'] = 'error';
+                }
+            } catch ( \Exception $e ) {
+                $health['memcached_status'] = 'error';
+                $health['memcached_error']  = $e->getMessage();
+            }
+        }
+
+        // Check database connection
+        try {
+            DB::connection()->getPdo();
+            $health['database_status'] = 'connected';
+            // Get connection count if MySQL
+            if ( config('database.default') === 'mysql' ) {
+                $result = DB::select("SHOW STATUS WHERE `variable_name` = 'Threads_connected'");
+                if ( ! empty( $result ) ) {
+                    $health['database_connections'] = $result[0]->Value;
+                }
+                $maxConnections = DB::select("SHOW VARIABLES WHERE `variable_name` = 'max_connections'");
+                if ( ! empty( $maxConnections ) ) {
+                    $health['database_max_connections'] = $maxConnections[0]->Value;
+                }
+            }
+        } catch ( \Exception $e ) {
+            $health['database_status'] = 'error';
+            $health['database_error']  = $e->getMessage();
+        }
+
+        return $health;
     }
 }

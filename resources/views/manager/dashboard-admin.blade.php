@@ -270,6 +270,186 @@
         @include('manager.partials.history')
     </div>
 </div>
+<!-- System Health Monitoring -->
+<div class="row mb-3">
+    <div class="col-12">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-gradient text-white" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-activity me-2"></i>System Health Monitor
+                    </h5>
+                    <span class="badge bg-white text-dark">Live Status</span>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <!-- Cache Driver Status -->
+                    <div class="col-lg-3 col-md-6">
+                        <div class="p-3 border rounded" style="background-color: #f8f9fa;">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <div class="text-muted small mb-1">Cache Driver</div>
+                                    <h6 class="mb-1">{{ strtoupper($systemHealth['cache_driver']) }}</h6>
+                                    <span class="badge 
+                                        @if($systemHealth['cache_status'] === 'working') bg-success
+                                        @elseif($systemHealth['cache_status'] === 'error') bg-danger
+                                        @else bg-warning
+                                        @endif">
+                                        {{ $systemHealth['cache_status'] }}
+                                    </span>
+                                </div>
+                                <div class="fs-3">
+                                    @if($systemHealth['cache_status'] === 'working')
+                                        <i class="bi bi-check-circle-fill text-success"></i>
+                                    @elseif($systemHealth['cache_status'] === 'error')
+                                        <i class="bi bi-x-circle-fill text-danger"></i>
+                                    @else
+                                        <i class="bi bi-question-circle-fill text-warning"></i>
+                                    @endif
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Redis Status -->
+                    <div class="col-lg-3 col-md-6">
+                        <div class="p-3 border rounded" style="background-color: #f8f9fa;">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <div class="text-muted small mb-1">Redis</div>
+                                    @if($systemHealth['redis_status'] === 'connected')
+                                        <h6 class="mb-1">{{ $systemHealth['redis_version'] ?? 'N/A' }}</h6>
+                                        <small class="text-muted">Memory: {{ $systemHealth['redis_memory'] ?? 'N/A' }}</small>
+                                    @else
+                                        <h6 class="mb-1">{{ ucfirst(str_replace('_', ' ', $systemHealth['redis_status'])) }}</h6>
+                                    @endif
+                                    <div class="mt-1">
+                                        <span class="badge 
+                                            @if($systemHealth['redis_status'] === 'connected') bg-success
+                                            @elseif($systemHealth['redis_status'] === 'error') bg-danger
+                                            @else bg-secondary
+                                            @endif">
+                                            {{ str_replace('_', ' ', $systemHealth['redis_status']) }}
+                                        </span>
+                                    </div>
+                                </div>
+                                <div class="fs-3">
+                                    <i class="bi bi-database-fill 
+                                        @if($systemHealth['redis_status'] === 'connected') text-success
+                                        @elseif($systemHealth['redis_status'] === 'error') text-danger
+                                        @else text-secondary
+                                        @endif"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Memcached Status -->
+                    <div class="col-lg-3 col-md-6">
+                        <div class="p-3 border rounded" style="background-color: #f8f9fa;">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <div class="text-muted small mb-1">Memcached</div>
+                                    @if($systemHealth['memcached_status'] === 'connected')
+                                        <h6 class="mb-1">{{ $systemHealth['memcached_version'] ?? 'N/A' }}</h6>
+                                        <small class="text-muted">Memory: {{ $systemHealth['memcached_memory'] ?? 'N/A' }}</small>
+                                    @else
+                                        <h6 class="mb-1">{{ ucfirst(str_replace('_', ' ', $systemHealth['memcached_status'])) }}</h6>
+                                    @endif
+                                    <div class="mt-1">
+                                        <span class="badge 
+                                            @if($systemHealth['memcached_status'] === 'connected') bg-success
+                                            @elseif($systemHealth['memcached_status'] === 'error') bg-danger
+                                            @else bg-secondary
+                                            @endif">
+                                            {{ str_replace('_', ' ', $systemHealth['memcached_status']) }}
+                                        </span>
+                                    </div>
+                                </div>
+                                <div class="fs-3">
+                                    <i class="bi bi-hdd-network-fill 
+                                        @if($systemHealth['memcached_status'] === 'connected') text-success
+                                        @elseif($systemHealth['memcached_status'] === 'error') text-danger
+                                        @else text-secondary
+                                        @endif"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Database Status -->
+                    <div class="col-lg-3 col-md-6">
+                        <div class="p-3 border rounded" style="background-color: #f8f9fa;">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <div class="text-muted small mb-1">Database</div>
+                                    @if($systemHealth['database_status'] === 'connected')
+                                        @if(isset($systemHealth['database_connections']))
+                                            <h6 class="mb-1">{{ $systemHealth['database_connections'] }} / {{ $systemHealth['database_max_connections'] ?? '?' }}</h6>
+                                            <small class="text-muted">Active connections</small>
+                                            @php
+                                                $usage = isset($systemHealth['database_max_connections']) 
+                                                    ? ($systemHealth['database_connections'] / $systemHealth['database_max_connections']) * 100 
+                                                    : 0;
+                                            @endphp
+                                            <div class="mt-2">
+                                                <div class="progress" style="height: 4px;">
+                                                    <div class="progress-bar 
+                                                        @if($usage < 50) bg-success
+                                                        @elseif($usage < 80) bg-warning
+                                                        @else bg-danger
+                                                        @endif" 
+                                                        style="width: {{ $usage }}%"></div>
+                                                </div>
+                                            </div>
+                                        @else
+                                            <h6 class="mb-1">Connected</h6>
+                                        @endif
+                                    @else
+                                        <h6 class="mb-1">{{ ucfirst($systemHealth['database_status']) }}</h6>
+                                    @endif
+                                    <div class="mt-1">
+                                        <span class="badge 
+                                            @if($systemHealth['database_status'] === 'connected') bg-success
+                                            @else bg-danger
+                                            @endif">
+                                            {{ $systemHealth['database_status'] }}
+                                        </span>
+                                    </div>
+                                </div>
+                                <div class="fs-3">
+                                    <i class="bi bi-server 
+                                        @if($systemHealth['database_status'] === 'connected') text-success
+                                        @else text-danger
+                                        @endif"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Additional Info Row -->
+                    <div class="col-12">
+                        <div class="alert alert-info mb-0 d-flex align-items-center">
+                            <i class="bi bi-info-circle me-2 fs-5"></i>
+                            <div class="flex-grow-1">
+                                <strong>Session Driver:</strong> {{ strtoupper($systemHealth['session_driver']) }} &nbsp;|&nbsp; 
+                                <strong>Queue Driver:</strong> {{ strtoupper($systemHealth['queue_driver']) }}
+                                @if($systemHealth['queue_driver'] === 'sync')
+                                    <span class="badge bg-warning text-dark ms-2">
+                                        <i class="bi bi-exclamation-triangle me-1"></i>Consider using database/redis for production
+                                    </span>
+                                @endif
+                            </div>
+                            <small class="text-muted">Last checked: {{ now()->format('H:i:s') }}</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <div class="row">
     <!-- Top Selling Games -->
     <div class="col-xl-4 col-lg-6 col-md-12">
