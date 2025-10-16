@@ -6,6 +6,34 @@
 <meta name="csrf-token" content="{{ csrf_token() }}">
 @endpush
 
+@push('css')
+<style>
+    .pagination {
+        margin-bottom: 0;
+    }
+    .pagination .page-link {
+        color: #007bff;
+        border: 1px solid #dee2e6;
+        padding: 0.5rem 0.75rem;
+    }
+    .pagination .page-item.active .page-link {
+        background-color: #007bff;
+        border-color: #007bff;
+        color: white;
+    }
+    .pagination .page-item.disabled .page-link {
+        color: #6c757d;
+        background-color: #fff;
+        border-color: #dee2e6;
+    }
+    .pagination .page-link:hover {
+        color: #0056b3;
+        background-color: #e9ecef;
+        border-color: #dee2e6;
+    }
+</style>
+@endpush
+
 @section('content_body')
 <div class="container-fluid">
     <div class="row">
@@ -250,8 +278,10 @@
                     
                     <!-- Pagination -->
                     @if($deviceRepairs->hasPages())
-                        <div class="d-flex justify-content-center">
-                            {{ $deviceRepairs->links() }}
+                        <div class="d-flex justify-content-center mt-4">
+                            <nav aria-label="Device repairs pagination">
+                                {{ $deviceRepairs->links('vendor.pagination.bootstrap-5') }}
+                            </nav>
                         </div>
                     @endif
                 </div>
