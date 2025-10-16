@@ -105,7 +105,7 @@ class UserController extends Controller
 
         return response()->json([
             'rows' => view('manager.partials.user_table_rows', compact('users'))->render(),
-            'pagination' => '<div id="search-pagination">' . $showing . $users->links('vendor.pagination.bootstrap-5')->render() . '</div>',
+            'pagination' => $showing . $users->links('vendor.pagination.bootstrap-5')->render(),
         ]);
     }
 

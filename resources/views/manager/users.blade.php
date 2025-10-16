@@ -41,7 +41,7 @@
     </div>
 
     <!-- Pagination links (if needed) -->
-    <div class="d-flex justify-content-between align-items-center mt-4">
+    <div class="d-flex justify-content-between align-items-center mt-4" id="search-pagination">
         {{ $users->links('vendor.pagination.bootstrap-5') }}
     </div>
 </div>
