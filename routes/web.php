@@ -41,6 +41,127 @@ Route::get('/debug-phone', function () {
     ]);
 });
 
+// Redis Status Check Route - Access via: /check-redis
+Route::get('/check-redis', function () {
+    $status = array(
+        'timestamp'      => now()->toDateTimeString(),
+        'environment'    => app()->environment(),
+        'cache_driver'   => config('cache.default'),
+        'session_driver' => config('session.driver'),
+        'queue_driver'   => config('queue.default'),
+        'redis_config'   => array(
+            'host'     => config('database.redis.default.host'),
+            'port'     => config('database.redis.default.port'),
+            'database' => config('database.redis.default.database'),
+        ),
+        'tests'          => array(),
+    );
+
+    // Test 1: Check if Redis extension is loaded
+    $status['tests']['php_redis_extension'] = array(
+        'loaded'  => extension_loaded('redis'),
+        'message' => extension_loaded('redis') ? 'PHP Redis extension is loaded' : 'PHP Redis extension NOT loaded',
+    );
+
+    // Test 2: Try to connect to Redis
+    try {
+        $redis = \Illuminate\Support\Facades\Redis::connection();
+        $status['tests']['redis_connection'] = array(
+            'success' => true,
+            'message' => 'Successfully connected to Redis',
+        );
+
+        // Test 3: Ping Redis
+        try {
+            $redis->ping();
+            $status['tests']['redis_ping'] = array(
+                'success' => true,
+                'message' => 'PONG - Redis is responding',
+            );
+        } catch ( \Exception $e ) {
+            $status['tests']['redis_ping'] = array(
+                'success' => false,
+                'message' => 'Ping failed: ' . $e->getMessage(),
+            );
+        }
+
+        // Test 4: Set and Get test
+        try {
+            $testKey   = 'health_check_' . time();
+            $testValue = 'test_value_' . rand(1000, 9999);
+            
+            $redis->set($testKey, $testValue, 'EX', 10); // Expire in 10 seconds
+            $retrieved = $redis->get($testKey);
+            
+            $status['tests']['redis_set_get'] = array(
+                'success' => ( $retrieved === $testValue ),
+                'message' => ( $retrieved === $testValue ) ? 'SET/GET operations working' : 'SET/GET test failed',
+            );
+
+            $redis->del($testKey); // Clean up
+        } catch ( \Exception $e ) {
+            $status['tests']['redis_set_get'] = array(
+                'success' => false,
+                'message' => 'SET/GET failed: ' . $e->getMessage(),
+            );
+        }
+
+        // Test 5: Get Redis Server Info
+        try {
+            $info = $redis->info();
+            
+            if ( isset( $info['Server'] ) ) {
+                $status['redis_server'] = array(
+                    'version'      => $info['Server']['redis_version'] ?? 'Unknown',
+                    'mode'         => $info['Server']['redis_mode'] ?? 'Unknown',
+                    'os'           => $info['Server']['os'] ?? 'Unknown',
+                    'uptime_days'  => isset( $info['Server']['uptime_in_days'] ) ? $info['Server']['uptime_in_days'] : 'Unknown',
+                );
+            }
+            
+            if ( isset( $info['Memory'] ) ) {
+                $status['redis_memory'] = array(
+                    'used_memory_human' => $info['Memory']['used_memory_human'] ?? 'Unknown',
+                    'used_memory_peak_human' => $info['Memory']['used_memory_peak_human'] ?? 'Unknown',
+                );
+            }
+
+            if ( isset( $info['Stats'] ) ) {
+                $status['redis_stats'] = array(
+                    'total_connections_received' => $info['Stats']['total_connections_received'] ?? 'Unknown',
+                    'total_commands_processed'   => $info['Stats']['total_commands_processed'] ?? 'Unknown',
+                );
+            }
+
+        } catch ( \Exception $e ) {
+            $status['tests']['redis_info'] = array(
+                'success' => false,
+                'message' => 'Could not retrieve server info: ' . $e->getMessage(),
+            );
+        }
+
+    } catch ( \Exception $e ) {
+        $status['tests']['redis_connection'] = array(
+            'success' => false,
+            'message' => 'Connection failed: ' . $e->getMessage(),
+            'error'   => $e->getCode(),
+        );
+    }
+
+    // Overall status
+    $allTestsPassed = true;
+    foreach ( $status['tests'] as $test ) {
+        if ( isset( $test['success'] ) && ! $test['success'] ) {
+            $allTestsPassed = false;
+            break;
+        }
+    }
+
+    $status['overall_status'] = $allTestsPassed ? 'REDIS IS WORKING ✓' : 'REDIS HAS ISSUES ✗';
+
+    return response()->json($status, 200, array(), JSON_PRETTY_PRINT);
+});
+
 Route::prefix('manager')->group(function () {
     // Manager login routes (no middleware needed here)
     Route::get('/login', [AdminLoginController::class, 'showLoginForm'])->name('manager.login');
