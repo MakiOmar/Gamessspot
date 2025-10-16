@@ -108,16 +108,27 @@ class DashboardController extends Controller
     }
     public function branchesWithOrdersThisMonth()
     {
-        return StoresProfile::withCount(['orders' => function ($query) {
-            $query->whereMonth('created_at', Carbon::now()->month)
-                  ->whereYear('created_at', Carbon::now()->year);
-        }])
-        ->withSum(['orders' => function ($query) {
-            $query->whereMonth('created_at', Carbon::now()->month)
-                  ->whereYear('created_at', Carbon::now()->year);
-        }], 'price')
-        ->having('orders_count', '>', 0)
-        ->get();
+        // Optimize: Use single query with joins instead of separate count/sum queries
+        $currentMonth = Carbon::now()->month;
+        $currentYear  = Carbon::now()->year;
+
+        return StoresProfile::leftJoin('users', 'stores_profiles.id', '=', 'users.store_profile_id')
+            ->leftJoin(
+                'orders',
+                function ($join) use ($currentMonth, $currentYear) {
+                    $join->on('users.id', '=', 'orders.seller_id')
+                        ->whereMonth('orders.created_at', $currentMonth)
+                        ->whereYear('orders.created_at', $currentYear);
+                }
+            )
+            ->select(
+                'stores_profiles.*',
+                DB::raw('COUNT(DISTINCT orders.id) as orders_count'),
+                DB::raw('COALESCE(SUM(orders.price), 0) as orders_sum_price')
+            )
+            ->groupBy('stores_profiles.id', 'stores_profiles.name', 'stores_profiles.address', 'stores_profiles.phone', 'stores_profiles.created_at', 'stores_profiles.updated_at')
+            ->having('orders_count', '>', 0)
+            ->get();
     }
     public function activity()
     {
@@ -130,14 +141,22 @@ class DashboardController extends Controller
 
     public function topSellingGames()
     {
-    // Get top 5 selling games
-        return Order::select('accounts.game_id', DB::raw('count(orders.id) as total_sales'))
-        ->join('accounts', 'orders.account_id', '=', 'accounts.id')
-        ->groupBy('accounts.game_id')
-        ->orderByDesc('total_sales')
-        ->take(5)
-        ->with('game') // Assuming you have a relationship defined to fetch game data
-        ->get();
+        // Get top 5 selling games - Optimized to use single query with join
+        return DB::table('orders')
+            ->join('accounts', 'orders.account_id', '=', 'accounts.id')
+            ->join('games', 'accounts.game_id', '=', 'games.id')
+            ->select(
+                'games.id',
+                'games.title',
+                'games.code',
+                'games.ps4_image_url',
+                'games.ps5_image_url',
+                DB::raw('COUNT(orders.id) as total_sales')
+            )
+            ->groupBy('games.id', 'games.title', 'games.code', 'games.ps4_image_url', 'games.ps5_image_url')
+            ->orderByDesc('total_sales')
+            ->take(5)
+            ->get();
     }
     public function topBuyers()
     {
@@ -214,11 +233,18 @@ class DashboardController extends Controller
     }
     public function topSellingStores()
     {
-        return StoresProfile::withCount('orders') // Count the number of orders
-        ->withSum('orders', 'price') // Sum the price of all orders
-        ->having('orders_sum_price', '>', 0) // Ensure total price > 0
-        ->orderBy('orders_sum_price', 'desc') // Sort by total price in descending order
-        ->take(3)
-        ->get();
+        // Optimize: Use single query with joins instead of separate count/sum queries
+        return StoresProfile::leftJoin('users', 'stores_profiles.id', '=', 'users.store_profile_id')
+            ->leftJoin('orders', 'users.id', '=', 'orders.seller_id')
+            ->select(
+                'stores_profiles.*',
+                DB::raw('COUNT(DISTINCT orders.id) as orders_count'),
+                DB::raw('COALESCE(SUM(orders.price), 0) as orders_sum_price')
+            )
+            ->groupBy('stores_profiles.id', 'stores_profiles.name', 'stores_profiles.address', 'stores_profiles.phone', 'stores_profiles.created_at', 'stores_profiles.updated_at')
+            ->having('orders_sum_price', '>', 0)
+            ->orderBy('orders_sum_price', 'desc')
+            ->take(3)
+            ->get();
     }
 }
