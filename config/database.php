@@ -61,16 +61,8 @@ return [
             'options'        => extension_loaded('pdo_mysql') ? array_filter(
                 array(
                     PDO::MYSQL_ATTR_SSL_CA                 => env('MYSQL_ATTR_SSL_CA'),
-                    // Enable persistent connections to reuse existing connections
-                    PDO::ATTR_PERSISTENT                   => env('DB_PERSISTENT', false),
-                    // Set MySQL wait_timeout to close idle connections (8 hours to accommodate sessions)
+                    // Set MySQL wait_timeout to close idle connections after 8 hours
                     PDO::MYSQL_ATTR_INIT_COMMAND           => 'SET SESSION wait_timeout=28800, interactive_timeout=28800',
-                    // Enable error mode for better debugging
-                    PDO::ATTR_ERRMODE                      => PDO::ERRMODE_EXCEPTION,
-                    // Disable emulated prepared statements for better performance
-                    PDO::ATTR_EMULATE_PREPARES             => false,
-                    // Set default fetch mode
-                    PDO::ATTR_DEFAULT_FETCH_MODE           => PDO::FETCH_ASSOC,
                 )
             ) : array(),
             // Connection pool settings
