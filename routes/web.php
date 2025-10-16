@@ -162,6 +162,249 @@ Route::get('/check-redis', function () {
     return response()->json($status, 200, array(), JSON_PRETTY_PRINT);
 });
 
+// Memcached Status Check Route - Access via: /check-memcached
+Route::get('/check-memcached', function () {
+    $status = array(
+        'timestamp'      => now()->toDateTimeString(),
+        'environment'    => app()->environment(),
+        'cache_driver'   => config('cache.default'),
+        'session_driver' => config('session.driver'),
+        'queue_driver'   => config('queue.default'),
+        'memcached_config' => array(
+            'host'   => config('cache.stores.memcached.servers.0.host'),
+            'port'   => config('cache.stores.memcached.servers.0.port'),
+            'weight' => config('cache.stores.memcached.servers.0.weight'),
+        ),
+        'tests'          => array(),
+    );
+
+    // Test 1: Check if Memcached extension is loaded
+    $status['tests']['php_memcached_extension'] = array(
+        'loaded'  => extension_loaded('memcached'),
+        'message' => extension_loaded('memcached') ? 'PHP Memcached extension is loaded' : 'PHP Memcached extension NOT loaded',
+    );
+
+    // Test 2: Try to connect to Memcached
+    try {
+        if ( config('cache.default') !== 'memcached' ) {
+            $status['tests']['cache_driver_check'] = array(
+                'success' => false,
+                'message' => 'Cache driver is not set to memcached (current: ' . config('cache.default') . ')',
+                'note'    => 'Set CACHE_DRIVER=memcached in .env to enable',
+            );
+        }
+
+        // Create a Memcached instance directly
+        $memcached = new \Memcached();
+        $memcached->addServer(
+            config('cache.stores.memcached.servers.0.host', '127.0.0.1'),
+            config('cache.stores.memcached.servers.0.port', 11211)
+        );
+
+        $status['tests']['memcached_connection'] = array(
+            'success' => true,
+            'message' => 'Successfully created Memcached connection',
+        );
+
+        // Test 3: Set and Get test
+        try {
+            $testKey   = 'health_check_' . time();
+            $testValue = 'test_value_' . rand(1000, 9999);
+            
+            $setResult = $memcached->set($testKey, $testValue, 10); // Expire in 10 seconds
+            $retrieved = $memcached->get($testKey);
+            
+            $status['tests']['memcached_set_get'] = array(
+                'success' => ( $retrieved === $testValue ),
+                'message' => ( $retrieved === $testValue ) ? 'SET/GET operations working' : 'SET/GET test failed',
+                'set_result' => $setResult,
+            );
+
+            $memcached->delete($testKey); // Clean up
+        } catch ( \Exception $e ) {
+            $status['tests']['memcached_set_get'] = array(
+                'success' => false,
+                'message' => 'SET/GET failed: ' . $e->getMessage(),
+            );
+        }
+
+        // Test 4: Get Server Stats
+        try {
+            $stats = $memcached->getStats();
+            
+            if ( ! empty( $stats ) ) {
+                $firstServer = array_values($stats)[0];
+                
+                if ( $firstServer && is_array($firstServer) ) {
+                    $status['memcached_server'] = array(
+                        'version'            => $firstServer['version'] ?? 'Unknown',
+                        'uptime'             => isset( $firstServer['uptime'] ) ? round( $firstServer['uptime'] / 86400, 1 ) . ' days' : 'Unknown',
+                        'total_connections'  => $firstServer['total_connections'] ?? 'Unknown',
+                        'current_connections' => $firstServer['curr_connections'] ?? 'Unknown',
+                        'threads'            => $firstServer['threads'] ?? 'Unknown',
+                    );
+
+                    $status['memcached_memory'] = array(
+                        'bytes_used'    => isset( $firstServer['bytes'] ) ? round( $firstServer['bytes'] / 1024 / 1024, 2 ) . ' MB' : 'Unknown',
+                        'limit'         => isset( $firstServer['limit_maxbytes'] ) ? round( $firstServer['limit_maxbytes'] / 1024 / 1024, 2 ) . ' MB' : 'Unknown',
+                        'usage_percent' => isset( $firstServer['bytes'], $firstServer['limit_maxbytes'] ) ? round( ( $firstServer['bytes'] / $firstServer['limit_maxbytes'] ) * 100, 2 ) . '%' : 'Unknown',
+                    );
+
+                    $status['memcached_performance'] = array(
+                        'get_hits'      => $firstServer['get_hits'] ?? 'Unknown',
+                        'get_misses'    => $firstServer['get_misses'] ?? 'Unknown',
+                        'hit_rate'      => isset( $firstServer['get_hits'], $firstServer['get_misses'] ) 
+                            ? round( ( $firstServer['get_hits'] / ( $firstServer['get_hits'] + $firstServer['get_misses'] ) ) * 100, 2 ) . '%'
+                            : 'Unknown',
+                        'total_items'   => $firstServer['curr_items'] ?? 'Unknown',
+                        'evictions'     => $firstServer['evictions'] ?? 'Unknown',
+                    );
+                } else {
+                    $status['tests']['memcached_stats'] = array(
+                        'success' => false,
+                        'message' => 'Server returned invalid stats',
+                    );
+                }
+            } else {
+                $status['tests']['memcached_stats'] = array(
+                    'success' => false,
+                    'message' => 'Could not retrieve server stats - server may not be running',
+                );
+            }
+
+        } catch ( \Exception $e ) {
+            $status['tests']['memcached_stats'] = array(
+                'success' => false,
+                'message' => 'Could not retrieve stats: ' . $e->getMessage(),
+            );
+        }
+
+    } catch ( \Exception $e ) {
+        $status['tests']['memcached_connection'] = array(
+            'success' => false,
+            'message' => 'Connection failed: ' . $e->getMessage(),
+            'error'   => $e->getCode(),
+        );
+    }
+
+    // Overall status
+    $allTestsPassed = true;
+    foreach ( $status['tests'] as $test ) {
+        if ( isset( $test['success'] ) && ! $test['success'] ) {
+            $allTestsPassed = false;
+            break;
+        }
+    }
+
+    $status['overall_status'] = $allTestsPassed ? 'MEMCACHED IS WORKING ✓' : 'MEMCACHED HAS ISSUES ✗';
+
+    return response()->json($status, 200, array(), JSON_PRETTY_PRINT);
+});
+
+// Combined Cache Systems Check - Access via: /check-cache
+Route::get('/check-cache', function () {
+    $status = array(
+        'timestamp'      => now()->toDateTimeString(),
+        'environment'    => app()->environment(),
+        'cache_driver'   => config('cache.default'),
+        'session_driver' => config('session.driver'),
+        'queue_driver'   => config('queue.default'),
+        'systems'        => array(),
+    );
+
+    // Check Redis
+    $status['systems']['redis'] = array(
+        'configured'      => in_array( config('cache.default'), array( 'redis' ) ) || in_array( config('session.driver'), array( 'redis' ) ),
+        'extension_loaded' => extension_loaded('redis'),
+        'status'          => 'not_checked',
+    );
+
+    if ( $status['systems']['redis']['extension_loaded'] ) {
+        try {
+            $redis = \Illuminate\Support\Facades\Redis::connection();
+            $redis->ping();
+            $status['systems']['redis']['status'] = 'working';
+            $status['systems']['redis']['message'] = '✓ Redis is active and responding';
+        } catch ( \Exception $e ) {
+            $status['systems']['redis']['status'] = 'error';
+            $status['systems']['redis']['message'] = '✗ Redis error: ' . $e->getMessage();
+        }
+    } else {
+        $status['systems']['redis']['status'] = 'not_available';
+        $status['systems']['redis']['message'] = '✗ PHP Redis extension not loaded';
+    }
+
+    // Check Memcached
+    $status['systems']['memcached'] = array(
+        'configured'       => in_array( config('cache.default'), array( 'memcached' ) ),
+        'extension_loaded' => extension_loaded('memcached'),
+        'status'           => 'not_checked',
+    );
+
+    if ( $status['systems']['memcached']['extension_loaded'] ) {
+        try {
+            $memcached = new \Memcached();
+            $memcached->addServer(
+                config('cache.stores.memcached.servers.0.host', '127.0.0.1'),
+                config('cache.stores.memcached.servers.0.port', 11211)
+            );
+            
+            $testKey = 'health_' . time();
+            $setResult = $memcached->set($testKey, 'test', 5);
+            $getValue = $memcached->get($testKey);
+            $memcached->delete($testKey);
+            
+            if ( $getValue === 'test' ) {
+                $status['systems']['memcached']['status'] = 'working';
+                $status['systems']['memcached']['message'] = '✓ Memcached is active and responding';
+            } else {
+                $status['systems']['memcached']['status'] = 'error';
+                $status['systems']['memcached']['message'] = '✗ Memcached not responding correctly';
+            }
+        } catch ( \Exception $e ) {
+            $status['systems']['memcached']['status'] = 'error';
+            $status['systems']['memcached']['message'] = '✗ Memcached error: ' . $e->getMessage();
+        }
+    } else {
+        $status['systems']['memcached']['status'] = 'not_available';
+        $status['systems']['memcached']['message'] = '✗ PHP Memcached extension not loaded';
+    }
+
+    // Test current cache driver
+    try {
+        \Cache::put('health_check_test', 'working', 10);
+        $test = \Cache::get('health_check_test');
+        
+        $status['current_cache_test'] = array(
+            'success' => ( $test === 'working' ),
+            'message' => ( $test === 'working' ) ? '✓ Current cache driver (' . config('cache.default') . ') is working' : '✗ Cache test failed',
+        );
+    } catch ( \Exception $e ) {
+        $status['current_cache_test'] = array(
+            'success' => false,
+            'message' => '✗ Cache error: ' . $e->getMessage(),
+        );
+    }
+
+    // Recommendation
+    $workingSystems = array_filter(
+        array( 'redis', 'memcached' ),
+        function ($system) use ($status) {
+            return $status['systems'][ $system ]['status'] === 'working';
+        }
+    );
+
+    if ( ! empty( $workingSystems ) && config('cache.default') === 'file' ) {
+        $status['recommendation'] = '⚠️ You have ' . implode( ' and ', $workingSystems ) . ' available but using file cache. Consider updating CACHE_DRIVER in .env';
+    } elseif ( empty( $workingSystems ) && app()->environment('production') ) {
+        $status['recommendation'] = '⚠️ No memory cache system available. Consider installing Redis or Memcached for better performance.';
+    } else {
+        $status['recommendation'] = '✓ Configuration looks good';
+    }
+
+    return response()->json($status, 200, array(), JSON_PRETTY_PRINT);
+});
+
 Route::prefix('manager')->group(function () {
     // Manager login routes (no middleware needed here)
     Route::get('/login', [AdminLoginController::class, 'showLoginForm'])->name('manager.login');
