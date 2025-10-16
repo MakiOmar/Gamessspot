@@ -26,6 +26,11 @@ class DeviceRepairController extends Controller
             $query->where('status', $request->status);
         }
 
+        // Filter by store profile
+        if ($request->filled('store_profile_id')) {
+            $query->where('store_profile_id', $request->store_profile_id);
+        }
+
         // Search functionality
         if ($request->filled('search')) {
             $search = $request->search;
@@ -38,7 +43,7 @@ class DeviceRepairController extends Controller
             });
         }
 
-        $deviceRepairs = $query->paginate(15);
+        $deviceRepairs = $query->paginate(15)->appends($request->all());
 
         $statusCounts = [
             'received' => DeviceRepair::where('status', 'received')->count(),
@@ -47,7 +52,9 @@ class DeviceRepairController extends Controller
             'delivered' => DeviceRepair::where('status', 'delivered')->count(),
         ];
 
-        return view('manager.device-repairs.index', compact('deviceRepairs', 'statusCounts'));
+        $storeProfiles = \App\Models\StoresProfile::all();
+
+        return view('manager.device-repairs.index', compact('deviceRepairs', 'statusCounts', 'storeProfiles'));
     }
 
     /**

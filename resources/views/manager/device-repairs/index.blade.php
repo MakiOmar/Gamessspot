@@ -112,6 +112,19 @@
                             </div>
                             <div class="col-md-3">
                                 <div class="form-group">
+                                    <label for="store_profile_id">Store Profile</label>
+                                    <select class="form-control" id="store_profile_id" name="store_profile_id">
+                                        <option value="">All Stores</option>
+                                        @foreach($storeProfiles as $profile)
+                                            <option value="{{ $profile->id }}" {{ request('store_profile_id') == $profile->id ? 'selected' : '' }}>
+                                                {{ $profile->name }}
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-2">
+                                <div class="form-group">
                                     <label>&nbsp;</label>
                                     <div>
                                         <button type="submit" class="btn btn-primary">
