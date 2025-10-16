@@ -60,16 +60,9 @@ return [
             'engine'         => null,
             'options'        => extension_loaded('pdo_mysql') ? array_filter(
                 array(
-                    PDO::MYSQL_ATTR_SSL_CA                 => env('MYSQL_ATTR_SSL_CA'),
-                    // Set MySQL wait_timeout to close idle connections after 8 hours
-                    PDO::MYSQL_ATTR_INIT_COMMAND           => 'SET SESSION wait_timeout=28800, interactive_timeout=28800',
+                    PDO::MYSQL_ATTR_SSL_CA => env('MYSQL_ATTR_SSL_CA'),
                 )
             ) : array(),
-            // Connection pool settings
-            'pool'           => array(
-                'min_connections' => env('DB_POOL_MIN', 2),
-                'max_connections' => env('DB_POOL_MAX', 20),
-            ),
         ],
 
         'pgsql' => [
