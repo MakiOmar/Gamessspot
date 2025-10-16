@@ -20,10 +20,15 @@ class AdminLoginController extends Controller
      */
     public function showLoginForm()
     {
+        // Regenerate CSRF token on each login page load to prevent 419 errors
+        if ( ! request()->isMethod('post') ) {
+            session()->regenerateToken();
+        }
+
         // Prevent caching of login page to ensure fresh CSRF token
         return response()
             ->view('auth.manager-login')
-            ->header('Cache-Control', 'no-cache, no-store, must-revalidate')
+            ->header('Cache-Control', 'no-cache, no-store, must-revalidate, private')
             ->header('Pragma', 'no-cache')
             ->header('Expires', '0');
     }
