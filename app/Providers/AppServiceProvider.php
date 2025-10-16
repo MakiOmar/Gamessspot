@@ -36,17 +36,13 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        // Optimize: Prevent lazy loading to catch N+1 query problems in development
-        Model::preventLazyLoading( ! app()->isProduction() );
-
-        // Optimize: Prevent silently discarding attributes
-        Model::preventSilentlyDiscardingAttributes( ! app()->isProduction() );
-
-        // Optimize: Prevent accessing missing attributes
-        Model::preventAccessingMissingAttributes( ! app()->isProduction() );
-
-        // Monitor database connections in non-production environments
+        // Optimize: Prevent lazy loading to catch N+1 query problems in development only
+        // These are disabled in production to avoid breaking existing functionality
         if ( ! app()->isProduction() ) {
+            Model::preventLazyLoading(true);
+            Model::preventSilentlyDiscardingAttributes(true);
+            Model::preventAccessingMissingAttributes(true);
+
             // Log slow queries (queries taking more than 1000ms)
             DB::listen(
                 function ($query) {
@@ -64,7 +60,6 @@ class AppServiceProvider extends ServiceProvider
             );
         }
 
-        // Note: Connection timeout is handled in config/database.php
-        // DB::disconnect() removed from shutdown as it interferes with session saving
+        // Note: Connection timeout and pooling are handled in config/database.php
     }
 }
