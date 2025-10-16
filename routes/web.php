@@ -22,17 +22,39 @@ Route::get('/', function () {
     return view('welcome');
 });
 
-// Test session functionality
+// Test session functionality - Access: /test-session
 Route::get('/test-session', function () {
-    session(['test_key' => 'session_works_' . time()]);
-    return response()->json([
-        'session_test' => session('test_key'),
-        'csrf_token' => csrf_token(),
-        'session_driver' => config('session.driver'),
-        'session_path' => session_path(),
-        'permissions' => is_writable(storage_path('framework/sessions')) ? 'writable' : 'NOT writable',
-        'message' => 'If you see test_key value, sessions are working'
-    ]);
+    $testValue = 'session_works_' . time();
+    session(['test_key' => $testValue]);
+    
+    $diagnosis = array(
+        'timestamp'         => now()->toDateTimeString(),
+        'environment'       => app()->environment(),
+        'session_driver'    => config('session.driver'),
+        'session_lifetime'  => config('session.lifetime') . ' minutes',
+        'csrf_token'        => csrf_token(),
+        'session_id'        => session()->getId(),
+        'session_test'      => session('test_key'),
+        'session_all'       => session()->all(),
+        'storage_path'      => storage_path('framework/sessions'),
+        'permissions'       => is_writable(storage_path('framework/sessions')) ? 'writable ✓' : 'NOT writable ✗',
+        'session_file_exists' => file_exists(storage_path('framework/sessions')),
+        'config_cached'     => file_exists(base_path('bootstrap/cache/config.php')),
+        'test_result'       => (session('test_key') === $testValue) ? '✓ Sessions working correctly' : '✗ Session save failed',
+    );
+
+    // Test write to session directory
+    try {
+        $testFile = storage_path('framework/sessions/test_write_' . time());
+        file_put_contents($testFile, 'test');
+        $canWrite = file_exists($testFile);
+        unlink($testFile);
+        $diagnosis['can_write_to_session_dir'] = $canWrite ? '✓ Can write to session directory' : '✗ Cannot write to session directory';
+    } catch (\Exception $e) {
+        $diagnosis['can_write_to_session_dir'] = '✗ Error: ' . $e->getMessage();
+    }
+
+    return response()->json($diagnosis, 200, array(), JSON_PRETTY_PRINT);
 });
 
 // Debug route for testing phone number handling
