@@ -74,10 +74,10 @@
                             
                             <div class="col-md-6">
                                 <div class="form-group">
-                                    <label for="store_profile_id">Store Profile</label>
+                                    <label for="store_profile_id">Store Profile <span class="text-danger">*</span></label>
                                     <select class="form-control @error('store_profile_id') is-invalid @enderror" 
-                                            id="store_profile_id" name="store_profile_id">
-                                        <option value="">No Store Profile</option>
+                                            id="store_profile_id" name="store_profile_id" required>
+                                        <option value="">Select Store Profile</option>
                                         @foreach($storeProfiles as $profile)
                                             <option value="{{ $profile->id }}" 
                                                 {{ old('store_profile_id', auth()->user()->store_profile_id) == $profile->id ? 'selected' : '' }}>

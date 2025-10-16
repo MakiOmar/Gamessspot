@@ -90,7 +90,7 @@ class DeviceRepairController extends Controller
             'device_serial_number' => 'required|string|max:255',
             'notes' => 'nullable|string',
             'status' => ['required', Rule::in(['received', 'processing', 'ready', 'delivered'])],
-            'store_profile_id' => 'nullable|exists:stores_profile,id'
+            'store_profile_id' => 'required|exists:stores_profile,id'
         ]);
 
         $deviceRepair = null;
@@ -152,7 +152,7 @@ class DeviceRepairController extends Controller
                 'status' => $validated['status'],
                 'tracking_code' => DeviceRepair::generateTrackingCode(),
                 'submitted_by_user_id' => auth()->id(),
-                'store_profile_id' => $validated['store_profile_id'] ?? auth()->user()->store_profile_id ?? null,
+                'store_profile_id' => $validated['store_profile_id'],
                 'submitted_at' => now(),
                 'status_updated_at' => now()
             ]);
