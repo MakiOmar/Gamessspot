@@ -480,15 +480,46 @@ sudo systemctl restart php8.1-fpm
 
 ---
 
+## System Health Monitoring Dashboard 🆕
+
+A new **System Health Monitor** section has been added to the admin dashboard that displays:
+
+### Features:
+1. **Cache Driver Status** - Shows current cache driver (file/redis/memcached) and operational status
+2. **Redis Status** - Displays Redis version, memory usage, and connection status
+3. **Memcached Status** - Shows Memcached version, memory usage, and connection status  
+4. **Database Connections** - Real-time active connection count with visual progress bar
+5. **Session & Queue Drivers** - Shows configured drivers with warnings if using sync in production
+
+### Location:
+- Admin Dashboard → Top section below statistics boxes
+- Auto-refreshes on page load
+- Color-coded status indicators (green=good, yellow=warning, red=error)
+
+### What It Shows:
+
+```php
+✓ Cache Driver: FILE (working)
+✓ Redis: 7.x.x - Memory: 2.5MB (connected/not_configured)
+✓ Memcached: 1.x.x - Memory: 1.8MB (connected/not_configured)
+✓ Database: 15/200 connections (75% usage indicator)
+ℹ Session Driver: FILE | Queue Driver: SYNC (with warning)
+```
+
+This helps you monitor if Redis or Memcached is properly enabled and functioning.
+
+---
+
 ## Files Modified Summary
 
 1. `app/Http/Middleware/AdminMiddleware.php` - Eager loading
 2. `app/Http/Middleware/CheckRole.php` - Eager loading
 3. `config/database.php` - Connection pooling & timeouts
 4. `app/Http/Controllers/ManagerController.php` - N+1 query fixes
-5. `app/Http/Controllers/DashboardController.php` - Query optimization
+5. `app/Http/Controllers/DashboardController.php` - Query optimization + System Health Monitor
 6. `app/Providers/AppServiceProvider.php` - Connection management
 7. `config/queue.php` - Queue configuration updates
+8. `resources/views/manager/dashboard-admin.blade.php` - System Health UI
 
 ---
 
