@@ -22,6 +22,19 @@ Route::get('/', function () {
     return view('welcome');
 });
 
+// Test session functionality
+Route::get('/test-session', function () {
+    session(['test_key' => 'session_works_' . time()]);
+    return response()->json([
+        'session_test' => session('test_key'),
+        'csrf_token' => csrf_token(),
+        'session_driver' => config('session.driver'),
+        'session_path' => session_path(),
+        'permissions' => is_writable(storage_path('framework/sessions')) ? 'writable' : 'NOT writable',
+        'message' => 'If you see test_key value, sessions are working'
+    ]);
+});
+
 // Debug route for testing phone number handling
 Route::get('/debug-phone', function () {
     $countryCode = '+20';
