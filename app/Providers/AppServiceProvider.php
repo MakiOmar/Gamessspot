@@ -64,18 +64,7 @@ class AppServiceProvider extends ServiceProvider
             );
         }
 
-        // Optimize: Set connection timeout to prevent hanging connections
-        DB::connection()->getPdo()->setAttribute(\PDO::ATTR_TIMEOUT, 5);
-
-        // Optimize: Register shutdown function to ensure connections are closed
-        register_shutdown_function(
-            function () {
-                try {
-                    DB::disconnect();
-                } catch ( \Exception $e ) {
-                    // Silently fail if connection already closed
-                }
-            }
-        );
+        // Note: Connection timeout is handled in config/database.php
+        // DB::disconnect() removed from shutdown as it interferes with session saving
     }
 }
