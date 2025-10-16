@@ -130,7 +130,7 @@ class DashboardController extends Controller
                 DB::raw('COUNT(DISTINCT orders.id) as orders_count'),
                 DB::raw('COALESCE(SUM(orders.price), 0) as orders_sum_price')
             )
-            ->groupBy('stores_profile.id', 'stores_profile.name', 'stores_profile.address', 'stores_profile.phone', 'stores_profile.created_at', 'stores_profile.updated_at')
+            ->groupBy('stores_profile.id', 'stores_profile.name', 'stores_profile.phone_number', 'stores_profile.created_at', 'stores_profile.updated_at')
             ->having('orders_count', '>', 0)
             ->get();
     }
@@ -245,7 +245,7 @@ class DashboardController extends Controller
                 DB::raw('COUNT(DISTINCT orders.id) as orders_count'),
                 DB::raw('COALESCE(SUM(orders.price), 0) as orders_sum_price')
             )
-            ->groupBy('stores_profile.id', 'stores_profile.name', 'stores_profile.address', 'stores_profile.phone', 'stores_profile.created_at', 'stores_profile.updated_at')
+            ->groupBy('stores_profile.id', 'stores_profile.name', 'stores_profile.phone_number', 'stores_profile.created_at', 'stores_profile.updated_at')
             ->having('orders_sum_price', '>', 0)
             ->orderBy('orders_sum_price', 'desc')
             ->take(3)
