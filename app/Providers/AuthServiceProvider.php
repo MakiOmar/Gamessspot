@@ -68,6 +68,10 @@ class AuthServiceProvider extends ServiceProvider
             return $user->hasRole(['admin', 'sales', 'account manager']);
         });
 
+        Gate::define('delete-device-repairs', function ($user) {
+            return $user->hasRole('admin');
+        });
+
         Gate::define('submit-device-request', function ($user) {
             return $user->hasRole(['customer', 'admin', 'sales']);
         });

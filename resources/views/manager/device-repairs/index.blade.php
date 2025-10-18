@@ -251,6 +251,7 @@
                                                     </div>
                                                 </div>
                                                 
+                                                @if(Auth::user()->hasRole('admin'))
                                                 <form action="{{ route('device-repairs.destroy', $repair) }}" method="POST" 
                                                       style="display: inline-block;" 
                                                       onsubmit="return confirm('Are you sure you want to delete this repair record?')">
@@ -260,6 +261,7 @@
                                                         <i class="fas fa-trash"></i>
                                                     </button>
                                                 </form>
+                                                @endif
                                             </div>
                                         </td>
                                     </tr>

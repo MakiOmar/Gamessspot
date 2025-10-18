@@ -21,12 +21,18 @@ class DeviceRepairController extends Controller
         $query = DeviceRepair::with(['user', 'deviceModel', 'storeProfile', 'submittedBy'])
             ->orderBy('created_at', 'desc');
 
+        // For non-admin users, filter by their store profile
+        $currentUser = auth()->user();
+        if (!$currentUser->hasRole('admin')) {
+            $query->where('store_profile_id', $currentUser->store_profile_id);
+        }
+
         // Filter by status
         if ($request->filled('status')) {
             $query->where('status', $request->status);
         }
 
-        // Filter by store profile
+        // Filter by store profile (only applies if admin and explicitly filtering)
         if ($request->filled('store_profile_id')) {
             $query->where('store_profile_id', $request->store_profile_id);
         }
@@ -45,11 +51,17 @@ class DeviceRepairController extends Controller
 
         $deviceRepairs = $query->paginate(15)->appends($request->all());
 
+        // Filter status counts based on user role
+        $statusCountsQuery = DeviceRepair::query();
+        if (!$currentUser->hasRole('admin')) {
+            $statusCountsQuery->where('store_profile_id', $currentUser->store_profile_id);
+        }
+
         $statusCounts = [
-            'received' => DeviceRepair::where('status', 'received')->count(),
-            'processing' => DeviceRepair::where('status', 'processing')->count(),
-            'ready' => DeviceRepair::where('status', 'ready')->count(),
-            'delivered' => DeviceRepair::where('status', 'delivered')->count(),
+            'received' => (clone $statusCountsQuery)->where('status', 'received')->count(),
+            'processing' => (clone $statusCountsQuery)->where('status', 'processing')->count(),
+            'ready' => (clone $statusCountsQuery)->where('status', 'ready')->count(),
+            'delivered' => (clone $statusCountsQuery)->where('status', 'delivered')->count(),
         ];
 
         $storeProfiles = \App\Models\StoresProfile::all();
@@ -181,6 +193,12 @@ class DeviceRepairController extends Controller
      */
     public function show(DeviceRepair $deviceRepair)
     {
+        // Non-admin users can only view repairs from their own store profile
+        $currentUser = auth()->user();
+        if (!$currentUser->hasRole('admin') && $deviceRepair->store_profile_id !== $currentUser->store_profile_id) {
+            abort(403, 'Unauthorized action. You can only view device repairs from your own store profile.');
+        }
+
         $deviceRepair->load(['user', 'deviceModel']);
         return view('manager.device-repairs.show', compact('deviceRepair'));
     }
@@ -190,6 +208,12 @@ class DeviceRepairController extends Controller
      */
     public function edit(DeviceRepair $deviceRepair)
     {
+        // Non-admin users can only edit repairs from their own store profile
+        $currentUser = auth()->user();
+        if (!$currentUser->hasRole('admin') && $deviceRepair->store_profile_id !== $currentUser->store_profile_id) {
+            abort(403, 'Unauthorized action. You can only edit device repairs from your own store profile.');
+        }
+
         $deviceModels = DeviceModel::active()->orderBy('brand')->orderBy('name')->get();
         return view('manager.device-repairs.edit', compact('deviceRepair', 'deviceModels'));
     }
@@ -199,6 +223,12 @@ class DeviceRepairController extends Controller
      */
     public function update(Request $request, DeviceRepair $deviceRepair)
     {
+        // Non-admin users can only update repairs from their own store profile
+        $currentUser = auth()->user();
+        if (!$currentUser->hasRole('admin') && $deviceRepair->store_profile_id !== $currentUser->store_profile_id) {
+            abort(403, 'Unauthorized action. You can only update device repairs from your own store profile.');
+        }
+
         $validated = $request->validate([
             'client_name' => 'required|string|max:255',
             'phone_number' => 'required|string|max:20',
@@ -220,6 +250,15 @@ class DeviceRepairController extends Controller
      */
     public function updateStatus(Request $request, DeviceRepair $deviceRepair)
     {
+        // Non-admin users can only update status for repairs from their own store profile
+        $currentUser = auth()->user();
+        if (!$currentUser->hasRole('admin') && $deviceRepair->store_profile_id !== $currentUser->store_profile_id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized. You can only update device repairs from your own store profile.'
+            ], 403);
+        }
+
         try {
             $validated = $request->validate([
                 'status' => ['required', Rule::in(['received', 'processing', 'ready', 'delivered'])]
@@ -270,6 +309,15 @@ class DeviceRepairController extends Controller
      */
     public function destroy(DeviceRepair $deviceRepair)
     {
+        // Only admins can delete device repairs
+        $this->authorize('delete-device-repairs');
+
+        // Additional check: even admins should have this validation (optional security layer)
+        $currentUser = auth()->user();
+        if (!$currentUser->hasRole('admin') && $deviceRepair->store_profile_id !== $currentUser->store_profile_id) {
+            abort(403, 'Unauthorized action. You can only delete device repairs from your own store profile.');
+        }
+
         $deviceRepair->delete();
 
         return redirect()->route('device-repairs.index')
