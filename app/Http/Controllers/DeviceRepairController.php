@@ -41,11 +41,19 @@ class DeviceRepairController extends Controller
         if ($request->filled('search')) {
             $search = $request->search;
             $query->where(function ($q) use ($search) {
-                $q->where('client_name', 'like', "%{$search}%")
-                  ->orWhere('phone_number', 'like', "%{$search}%")
-                  ->orWhere('device_model', 'like', "%{$search}%")
-                  ->orWhere('device_serial_number', 'like', "%{$search}%")
-                  ->orWhere('tracking_code', 'like', "%{$search}%");
+                // Search in related user's name
+                $q->whereHas('user', function ($userQuery) use ($search) {
+                    $userQuery->where('name', 'like', "%{$search}%")
+                             ->orWhere('phone', 'like', "%{$search}%");
+                })
+                // Search in device_repairs table columns
+                ->orWhere('device_serial_number', 'like', "%{$search}%")
+                ->orWhere('tracking_code', 'like', "%{$search}%")
+                // Search in related device model
+                ->orWhereHas('deviceModel', function ($modelQuery) use ($search) {
+                    $modelQuery->where('name', 'like', "%{$search}%")
+                              ->orWhere('brand', 'like', "%{$search}%");
+                });
             });
         }
 
