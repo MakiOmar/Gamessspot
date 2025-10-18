@@ -43,6 +43,25 @@
                             
                             <div class="col-md-6">
                                 <div class="form-group">
+                                    <label for="store_profile_id">Store Profile <span class="text-danger">*</span></label>
+                                    @if(Auth::user()->hasRole('admin'))
+                                        <input type="text" class="form-control" 
+                                               value="{{ $deviceRepair->storeProfile ? $deviceRepair->storeProfile->name : 'N/A' }}" 
+                                               readonly disabled>
+                                        <small class="form-text text-muted">Store profile cannot be changed after creation.</small>
+                                    @else
+                                        <input type="text" class="form-control" 
+                                               value="{{ $deviceRepair->storeProfile ? $deviceRepair->storeProfile->name : 'N/A' }}" 
+                                               readonly disabled>
+                                        <small class="form-text text-muted">You can only edit repairs from your own store profile.</small>
+                                    @endif
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-12">
+                                <div class="form-group">
                                     <label for="device_model_id">Device Model <span class="text-danger">*</span></label>
                                     <select class="form-control @error('device_model_id') is-invalid @enderror" 
                                             id="device_model_id" name="device_model_id" required>

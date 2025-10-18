@@ -75,16 +75,31 @@
                             <div class="col-md-6">
                                 <div class="form-group">
                                     <label for="store_profile_id">Store Profile <span class="text-danger">*</span></label>
-                                    <select class="form-control @error('store_profile_id') is-invalid @enderror" 
-                                            id="store_profile_id" name="store_profile_id" required>
-                                        <option value="">Select Store Profile</option>
-                                        @foreach($storeProfiles as $profile)
-                                            <option value="{{ $profile->id }}" 
-                                                {{ old('store_profile_id', auth()->user()->store_profile_id) == $profile->id ? 'selected' : '' }}>
-                                                {{ $profile->name }}
-                                            </option>
-                                        @endforeach
-                                    </select>
+                                    @if(Auth::user()->hasRole('admin'))
+                                        <select class="form-control @error('store_profile_id') is-invalid @enderror" 
+                                                id="store_profile_id" name="store_profile_id" required>
+                                            <option value="">Select Store Profile</option>
+                                            @foreach($storeProfiles as $profile)
+                                                <option value="{{ $profile->id }}" 
+                                                    {{ old('store_profile_id', auth()->user()->store_profile_id) == $profile->id ? 'selected' : '' }}>
+                                                    {{ $profile->name }}
+                                                </option>
+                                            @endforeach
+                                        </select>
+                                    @else
+                                        <select class="form-control @error('store_profile_id') is-invalid @enderror" 
+                                                id="store_profile_id_display" disabled>
+                                            @foreach($storeProfiles as $profile)
+                                                @if($profile->id == auth()->user()->store_profile_id)
+                                                    <option value="{{ $profile->id }}" selected>
+                                                        {{ $profile->name }}
+                                                    </option>
+                                                @endif
+                                            @endforeach
+                                        </select>
+                                        <input type="hidden" name="store_profile_id" value="{{ auth()->user()->store_profile_id }}">
+                                        <small class="form-text text-muted">You can only create repairs for your own store profile.</small>
+                                    @endif
                                     @error('store_profile_id')
                                         <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror

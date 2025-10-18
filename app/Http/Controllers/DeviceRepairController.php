@@ -105,6 +105,12 @@ class DeviceRepairController extends Controller
             'store_profile_id' => 'required|exists:stores_profile,id'
         ]);
 
+        // For non-admin users, enforce their own store profile
+        $currentUser = auth()->user();
+        if (!$currentUser->hasRole('admin')) {
+            $validated['store_profile_id'] = $currentUser->store_profile_id;
+        }
+
         $deviceRepair = null;
         
         try {
