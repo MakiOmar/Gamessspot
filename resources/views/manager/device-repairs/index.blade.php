@@ -119,14 +119,14 @@
                     <!-- Search and Filter Form -->
                     <form method="GET" action="{{ route('device-repairs.index') }}" class="mb-4">
                         <div class="row">
-                            <div class="col-md-4">
+                            <div class="{{ Auth::user()->hasRole('admin') ? 'col-md-4' : 'col-md-5' }}">
                                 <div class="form-group">
                                     <label for="search">Search</label>
                                     <input type="text" class="form-control" id="search" name="search" 
                                            value="{{ request('search') }}" placeholder="Search by name, phone, model, serial, or tracking code">
                                 </div>
                             </div>
-                            <div class="col-md-3">
+                            <div class="{{ Auth::user()->hasRole('admin') ? 'col-md-3' : 'col-md-4' }}">
                                 <div class="form-group">
                                     <label for="status">Status</label>
                                     <select class="form-control" id="status" name="status">
@@ -138,6 +138,7 @@
                                     </select>
                                 </div>
                             </div>
+                            @if(Auth::user()->hasRole('admin'))
                             <div class="col-md-3">
                                 <div class="form-group">
                                     <label for="store_profile_id">Store Profile</label>
@@ -151,7 +152,8 @@
                                     </select>
                                 </div>
                             </div>
-                            <div class="col-md-2">
+                            @endif
+                            <div class="{{ Auth::user()->hasRole('admin') ? 'col-md-2' : 'col-md-3' }}">
                                 <div class="form-group">
                                     <label>&nbsp;</label>
                                     <div>
