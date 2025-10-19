@@ -605,9 +605,9 @@ class OrderController extends Controller
         if (!$user) {
             $user = User::create([
                 'name'     => $validatedData['buyer_name'],
-                'email'    => Str::random(10) . '@' . Str::random(4) . '.com', // Temporary email to satisfy unique constraint
+                'email'    => Str::random(10) . '@' . Str::random(4) . '.com',
                 'phone'    => $validatedData['buyer_phone'],
-                'password' => bcrypt(Str::random(12)), // Generate a random password
+                'password' => bcrypt(Str::random(12)),
             ]);
 
             // Assign a default role if necessary
@@ -628,8 +628,8 @@ class OrderController extends Controller
         // Fetch the appropriate account based on type, stock availability, and game status
         $accountQuery = Account::where('game_id', $validatedData['game_id'])
             ->join('games', 'accounts.game_id', '=', 'games.id')
-            ->where("games.{$sold_item_status}", true) // Ensure the game's status is true
-            ->orderBy('accounts.created_at', 'asc'); // Order by the oldest date
+            ->where("games.{$sold_item_status}", true)
+            ->orderBy('accounts.created_at', 'asc');
 
         if ($validatedData['type'] === 'offline') {
             $accountQuery->where($sold_item, '>', 0);
@@ -657,7 +657,7 @@ class OrderController extends Controller
             if (!$account) {
                 return response()->json([
                     'message' => 'No available account matches the specified criteria.',
-                ], 422); // 422 Unprocessable Entity
+                ], 422);
             }
 
             // Reduce the corresponding stock by 1 for the account
@@ -675,7 +675,6 @@ class OrderController extends Controller
             ) {
                 $check_for = $validatedData['type'] === 'primary' ? $sold_offline_item : $sold_item;
 
-                // Fetch the recent order for this account and item within the last 11 minutes
                 $recentOrder = Order::where('account_id', $account->id)
                     ->where('sold_item', $check_for)
                     ->where('created_at', '>=', now()->subMinutes(11))
@@ -701,7 +700,7 @@ class OrderController extends Controller
                 'price'            => $validatedData['price'],
                 'notes'            => '',
                 'sold_item'        => $sold_item,
-                'updated_at'       => now(), // أو أي وقت تحدده
+                'updated_at'       => now(),
                 'created_at'       => now(),
             ];
 
@@ -710,16 +709,47 @@ class OrderController extends Controller
 
             // Commit the transaction if everything succeeds
             DB::commit();
-            Cache::forget('unique_buyer_phone_count'); // Clear the cache
+            Cache::forget('unique_buyer_phone_count');
 
-            // Return a JSON response on success, including recent order and seller details if applicable
+            // ✅ NEW: Send webhook to WordPress to invalidate cache
+            try {
+                $webhookService = app(\App\Services\WebhookService::class);
+                
+                // Get remaining stock after decrement
+                $remainingStock = $account->$sold_item;
+                
+                // Send webhook asynchronously (non-blocking, doesn't affect order creation)
+                $webhookService->notifyInventoryUpdateAsync(
+                    $validatedData['game_id'],     // game_id
+                    $validatedData['platform'],     // platform (4 or 5)
+                    $validatedData['type'],         // type (primary, secondary, offline)
+                    $remainingStock,                // current stock after decrement
+                    'order_created'                 // event type
+                );
+                
+                \Log::info('Webhook notification queued', [
+                    'game_id'  => $validatedData['game_id'],
+                    'platform' => $validatedData['platform'],
+                    'type'     => $validatedData['type'],
+                    'stock'    => $remainingStock,
+                ]);
+            } catch (\Exception $e) {
+                // Don't fail the order if webhook fails - just log it
+                \Log::warning('Webhook notification failed (order still created)', [
+                    'error'    => $e->getMessage(),
+                    'game_id'  => $validatedData['game_id'],
+                    'order_id' => $order->id,
+                ]);
+            }
+
+            // Return a JSON response on success
             return response()->json([
-                'message'          => 'Order created successfully!',
-                'account_email'    => $account->mail,
-                'account_password' => $account->password, // Be cautious with sensitive data
-                'recent_order'     => $recentOrder,
+                'message'            => 'Order created successfully!',
+                'account_email'      => $account->mail,
+                'account_password'   => $account->password,
+                'recent_order'       => $recentOrder,
                 'additional_message' => $message,
-                'order_id'         => $order->id,
+                'order_id'           => $order->id,
             ]);
         } catch (\Exception $e) {
             // Rollback the transaction in case of any error
