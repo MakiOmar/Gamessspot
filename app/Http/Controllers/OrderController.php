@@ -21,6 +21,7 @@ use App\Models\Role;
 use Illuminate\Support\Facades\Http;
 use App\Services\SettingsService;
 use Rawilk\Settings\Facades\Settings;
+use App\Jobs\SendInventoryWebhookJob;
 
 class OrderController extends Controller
 {
