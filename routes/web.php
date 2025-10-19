@@ -609,17 +609,3 @@ Route::prefix('device')->group(function () {
     Route::post('/search', [PublicDeviceController::class, 'searchByPhone'])->name('device.search');
     Route::get('/api/country-codes', [PublicDeviceController::class, 'getCountryCodes'])->name('device.country-codes');
 });
-
-Route::get('/test-webhook', function () {
-    $webhookService = new \App\Services\WebhookService();
-    
-    $result = $webhookService->notifyInventoryUpdate(
-        66,          // game_id
-        '4',          // platform
-        'primary',    // type
-        5,            // stock
-        'stock_updated'
-    );
-    
-    return $result ? 'Webhook sent successfully!' : 'Webhook failed!';
-});
