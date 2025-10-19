@@ -18,48 +18,60 @@
 <div class="container mt-5">
     <h1 class="text-center mb-4">Accounts Management</h1>
     @if ( Auth::user()->roles->contains('name', 'admin') )
-        <!-- Add Account Button (Bootstrap 5) -->
-        <div class="d-flex justify-content-between mb-4 align-items-end">
-            <div class="w-50">
-                <div class="alert alert-warning" id="noResultsMessage" style="display: none;">
-                    No results found.
-                </div>
-                <div class="d-flex">
-                    <!-- Search Box -->
-                    <input type="text" class="form-control" id="searchAccount" placeholder="Search accounts by email or game name">
-                    <button id="searchButton" type="button" class="btn btn-primary ms-2">
-                        Search
-                    </button>
+        <!-- Search and Action Buttons -->
+        <div class="mb-4">
+            <!-- Search Row -->
+            <div class="row mb-3">
+                <div class="col-12">
+                    <div class="alert alert-warning" id="noResultsMessage" style="display: none;">
+                        No results found.
+                    </div>
+                    <div class="d-flex">
+                        <!-- Search Box -->
+                        <input type="text" class="form-control" id="searchAccount" placeholder="Search accounts by email or game name">
+                        <button id="searchButton" type="button" class="btn btn-primary ms-2">
+                            Search
+                        </button>
+                    </div>
                 </div>
             </div>
-            <div class="d-flex justify-content-end align-items-center">
-                <!-- Add Account Button -->
-                <a type="button" id="addAccountButton" data-bs-toggle="modal" data-bs-target="#accountModal">
-                    <svg xmlns="http://www.w3.org/2000/svg"  viewBox="0 0 512 512" width="32px" height="32px"><path fill="#32BEA6" d="M7.9,256C7.9,119,119,7.9,256,7.9C393,7.9,504.1,119,504.1,256c0,137-111.1,248.1-248.1,248.1C119,504.1,7.9,393,7.9,256z"/><path fill="#FFF" d="M391.5,214.5H297v-93.9c0-4-3.2-7.2-7.2-7.2h-68.1c-4,0-7.2,3.2-7.2,7.2v93.9h-93.9c-4,0-7.2,3.2-7.2,7.2v69.2c0,4,3.2,7.2,7.2,7.2h93.9v93.4c0,4,3.2,7.2,7.2,7.2h68.1c4,0,7.2-3.2,7.2-7.2v-93.4h94.5c4,0,7.2-3.2,7.2-7.2v-69.2C398.7,217.7,395.4,214.5,391.5,214.5z"/></svg>
-                </a>
-                @if( Auth::user()->roles->contains('name', 'admin') )
-                    <!-- Import Button -->
-                    <button type="button" class="btn btn-info me-2" data-bs-toggle="modal" data-bs-target="#importModal" title="Import Accounts">
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20px" height="20px" fill="white">
-                            <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"/>
-                        </svg>
-                        Import
-                    </button>
-                    <!-- Export Button -->
-                    <a href="{{ route('manager.accounts.export') }}" class="btn btn-success me-2" title="Export Accounts">
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20px" height="20px" fill="white">
-                            <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"/>
-                        </svg>
-                        Export
-                    </a>
-                    <!-- Template Button -->
-                    <a href="{{ route('manager.accounts.template') }}" class="btn btn-outline-secondary" title="Download Template">
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20px" height="20px" fill="currentColor">
-                            <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"/>
-                        </svg>
-                        Template
-                    </a>
-                @endif
+            
+            <!-- Action Buttons Row -->
+            <div class="row">
+                <div class="col-12">
+                    <div class="d-flex flex-wrap gap-2 justify-content-start">
+                        <!-- Add Account Button -->
+                        <a type="button" id="addAccountButton" data-bs-toggle="modal" data-bs-target="#accountModal" class="btn btn-success">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="20px" height="20px" class="me-1">
+                                <path fill="#FFF" d="M391.5,214.5H297v-93.9c0-4-3.2-7.2-7.2-7.2h-68.1c-4,0-7.2,3.2-7.2,7.2v93.9h-93.9c-4,0-7.2,3.2-7.2,7.2v69.2c0,4,3.2,7.2,7.2,7.2h93.9v93.4c0,4,3.2,7.2,7.2,7.2h68.1c4,0,7.2-3.2,7.2-7.2v-93.4h94.5c4,0,7.2-3.2,7.2-7.2v-69.2C398.7,217.7,395.4,214.5,391.5,214.5z"/>
+                            </svg>
+                            Add Account
+                        </a>
+                        @if( Auth::user()->roles->contains('name', 'admin') )
+                            <!-- Import Button -->
+                            <button type="button" class="btn btn-info" data-bs-toggle="modal" data-bs-target="#importModal" title="Import Accounts">
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20px" height="20px" fill="white" class="me-1">
+                                    <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"/>
+                                </svg>
+                                Import
+                            </button>
+                            <!-- Export Button -->
+                            <a href="{{ route('manager.accounts.export') }}" class="btn btn-success" title="Export Accounts">
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20px" height="20px" fill="white" class="me-1">
+                                    <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"/>
+                                </svg>
+                                Export
+                            </a>
+                            <!-- Template Button -->
+                            <a href="{{ route('manager.accounts.template') }}" class="btn btn-outline-secondary" title="Download Template">
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20px" height="20px" fill="currentColor" class="me-1">
+                                    <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"/>
+                                </svg>
+                                Template
+                            </a>
+                        @endif
+                    </div>
+                </div>
             </div>
         </div>
 
