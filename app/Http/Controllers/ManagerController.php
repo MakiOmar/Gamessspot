@@ -430,16 +430,21 @@ class ManagerController extends Controller
         $primary_status   = "ps{$platform}_primary_status";
         $secondary_status = "ps{$platform}_secondary_status";
 
+        // Store profile ID for special prices
+        $storeProfileId = 17;
+
         // Fetch all games that have any stock for this platform
+        // Join with special_prices table to get store-specific prices
         $psGames = DB::table( 'accounts' )
             ->select(
                 'games.id',
                 'games.title',
                 'games.code',
                 "games.{$image_url} as image_url",
-                "games.{$offline_price} as offline_price",
-                "games.{$primary_price} as primary_price",
-                "games.{$secondary_price} as secondary_price",
+                // Use special prices if available, fallback to games table prices
+                DB::raw( "COALESCE(special_prices.{$offline_price}, games.{$offline_price}) as offline_price" ),
+                DB::raw( "COALESCE(special_prices.{$primary_price}, games.{$primary_price}) as primary_price" ),
+                DB::raw( "COALESCE(special_prices.{$secondary_price}, games.{$secondary_price}) as secondary_price" ),
                 "games.{$offline_status} as offline_status",
                 "games.{$primary_status} as primary_status",
                 "games.{$secondary_status} as secondary_status",
@@ -448,13 +453,21 @@ class ManagerController extends Controller
                 DB::raw( "SUM(accounts.ps{$platform}_secondary_stock) as total_secondary_stock" )
             )
             ->join( 'games', 'accounts.game_id', '=', 'games.id' )
+            ->leftJoin( 'special_prices', function($join) use ($storeProfileId) {
+                $join->on('games.id', '=', 'special_prices.game_id')
+                     ->where('special_prices.store_profile_id', '=', $storeProfileId)
+                     ->where('special_prices.is_available', '=', 1);
+            })
             ->groupBy(
                 'games.id',
                 'games.title',
                 'games.code',
                 "games.{$image_url}",
+                "special_prices.{$offline_price}",
                 "games.{$offline_price}",
+                "special_prices.{$primary_price}",
                 "games.{$primary_price}",
+                "special_prices.{$secondary_price}",
                 "games.{$secondary_price}",
                 "games.{$offline_status}",
                 "games.{$primary_status}",
