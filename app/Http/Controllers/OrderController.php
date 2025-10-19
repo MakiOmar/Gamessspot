@@ -485,11 +485,12 @@ class OrderController extends Controller
             'game_id'          => 'required|exists:games,id',
             'buyer_phone'      => 'required|string|max:15',
             'buyer_name'       => 'required|string|max:100',
-            'buyer_email'      => 'required|email', // Optional but unique
+            'buyer_email'      => 'required|email',
             'price'            => 'required|numeric|min:0',
-            'type'             => 'required|string|in:primary,secondary', // Only primary & secondary
+            'type'             => 'required|string|in:primary,secondary',
             'platform'         => 'required|string|max:255',
         ]);
+        
         // Check if the user already exists by phone number
         $user = User::where('phone', $validatedData['buyer_phone'])->first();
 
@@ -510,6 +511,7 @@ class OrderController extends Controller
 
         // Update buyer name to match user record
         $validatedData['buyer_name'] = $user->name;
+        
         // Determine the sold item field dynamically
         $sold_item         = "ps{$validatedData['platform']}_{$validatedData['type']}_stock";
         $sold_item_status  = "ps{$validatedData['platform']}_{$validatedData['type']}_status";
@@ -518,9 +520,9 @@ class OrderController extends Controller
         // Fetch one available account based on type, stock availability, and game status
         $accountQuery = Account::where('game_id', $validatedData['game_id'])
             ->join('games', 'accounts.game_id', '=', 'games.id')
-            ->where("games.{$sold_item_status}", true) // Ensure the game's status is true
-            ->orderBy('accounts.created_at', 'asc') // Order by oldest date
-            ->where($sold_item, '>', 0); // Ensure at least 1 stock is available
+            ->where("games.{$sold_item_status}", true)
+            ->orderBy('accounts.created_at', 'asc')
+            ->where($sold_item, '>', 0);
 
         // Special conditions for primary and secondary
         if ($validatedData['platform'] !== '5') {
@@ -542,9 +544,10 @@ class OrderController extends Controller
 
             // Reduce the stock by 1
             $account->decrement($sold_item, 1);
+            
             // Create the order
             $order_data = [
-                'seller_id'        => null, // Assign to the provided user
+                'seller_id'        => null,
                 'store_profile_id' => $validatedData['store_profile_id'],
                 'account_id'       => $account->id,
                 'buyer_phone'      => $validatedData['buyer_phone'],
@@ -557,7 +560,16 @@ class OrderController extends Controller
             $order = Order::create($order_data);
 
             DB::commit();
-            Cache::forget('unique_buyer_phone_count'); // Clear cache
+            Cache::forget('unique_buyer_phone_count');
+
+            // ✅ NEW: Dispatch webhook to WordPress to invalidate cache
+            \App\Jobs\SendInventoryWebhookJob::dispatch(
+                $validatedData['game_id'],
+                $validatedData['platform'],
+                $validatedData['type'],
+                $account->$sold_item,  // remaining stock after decrement
+                'order_created'
+            );
 
             // Return a JSON response on success
             return response()->json([
@@ -565,7 +577,7 @@ class OrderController extends Controller
                 'order_id'         => $order->id,
                 'account_details'  => [
                     'email'    => $account->mail,
-                    'password' => $account->password // Be cautious with sensitive data
+                    'password' => $account->password
                 ],
             ], 201);
         } catch (\Exception $e) {
@@ -711,36 +723,14 @@ class OrderController extends Controller
             DB::commit();
             Cache::forget('unique_buyer_phone_count');
 
-            // ✅ NEW: Send webhook to WordPress to invalidate cache
-            try {
-                $webhookService = app(\App\Services\WebhookService::class);
-                
-                // Get remaining stock after decrement
-                $remainingStock = $account->$sold_item;
-                
-                // Send webhook asynchronously (non-blocking, doesn't affect order creation)
-                $webhookService->notifyInventoryUpdateAsync(
-                    $validatedData['game_id'],     // game_id
-                    $validatedData['platform'],     // platform (4 or 5)
-                    $validatedData['type'],         // type (primary, secondary, offline)
-                    $remainingStock,                // current stock after decrement
-                    'order_created'                 // event type
-                );
-                
-                \Log::info('Webhook notification queued', [
-                    'game_id'  => $validatedData['game_id'],
-                    'platform' => $validatedData['platform'],
-                    'type'     => $validatedData['type'],
-                    'stock'    => $remainingStock,
-                ]);
-            } catch (\Exception $e) {
-                // Don't fail the order if webhook fails - just log it
-                \Log::warning('Webhook notification failed (order still created)', [
-                    'error'    => $e->getMessage(),
-                    'game_id'  => $validatedData['game_id'],
-                    'order_id' => $order->id,
-                ]);
-            }
+            // ✅ REPLACE WITH THIS (queued job):
+            \App\Jobs\SendInventoryWebhookJob::dispatch(
+                $validatedData['game_id'],
+                $validatedData['platform'],
+                $validatedData['type'],
+                $account->$sold_item,
+                'order_created'
+            );
 
             // Return a JSON response on success
             return response()->json([
