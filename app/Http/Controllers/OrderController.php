@@ -398,10 +398,37 @@ class OrderController extends Controller
             $order = Order::find($request->order_id);
 
             if ($order) {
+                // Track game details for webhook
+                $gameId = null;
+                $platform = null;
+                $type = null;
+                $newStock = null;
+                
                 if ($order->card_id) {
                     $this->updateCardStatus($order->card_id);
                 } else {
+                    // Extract game details from the order before restocking
+                    $account = Account::find($order->account_id);
+                    
+                    if ($account) {
+                        $gameId = $account->game_id;
+                        
+                        // Parse platform and type from sold_item field
+                        // Example: "ps4_primary_stock" -> platform: 4, type: primary
+                        if (preg_match('/ps(\d+)_(\w+)_stock/', $order->sold_item, $matches)) {
+                            $platform = $matches[1];  // e.g., "4" or "5"
+                            $type = $matches[2];      // e.g., "primary", "secondary", "offline"
+                        }
+                    }
+                    
+                    // Increment the stock
                     $this->incrementAccountStock($order);
+                    
+                    // Get the new stock count after increment
+                    if ($account) {
+                        $account->refresh(); // Reload from database
+                        $newStock = $account->{$order->sold_item};
+                    }
                 }
 
                 if ($request->has('report_id')) {
@@ -411,11 +438,40 @@ class OrderController extends Controller
                 $this->deleteOrderAndReports($order);
 
                 DB::commit();
+                Cache::forget('unique_buyer_phone_count');
+                
+                // ✅ NEW: Send webhook to WordPress when order is undone (stock restored)
+                if ($gameId && $platform && $type) {
+                    try {
+                        \App\Jobs\SendInventoryWebhookJob::dispatch(
+                            $gameId,
+                            $platform,
+                            $type,
+                            $newStock,
+                            'stock_updated'  // Different event type for restock
+                        );
+                        
+                        \Log::info('Restock webhook dispatched', [
+                            'order_id' => $order->id,
+                            'game_id'  => $gameId,
+                            'platform' => $platform,
+                            'type'     => $type,
+                            'new_stock' => $newStock,
+                        ]);
+                    } catch (\Exception $e) {
+                        // Don't fail the undo operation if webhook fails
+                        \Log::warning('Restock webhook dispatch failed', [
+                            'error' => $e->getMessage(),
+                            'order_id' => $order->id,
+                        ]);
+                    }
+                }
+                
                 return response()->json(['success' => true]);
             }
 
             DB::rollBack();
-            Cache::forget('unique_buyer_phone_count'); // Clear the cache
+            Cache::forget('unique_buyer_phone_count');
             return response()->json(['success' => false]);
         } catch (\Exception $e) {
             DB::rollBack();
