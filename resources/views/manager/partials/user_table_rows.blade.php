@@ -6,6 +6,11 @@
     <td>{{ $user->phone }}</td>
     <td>
         <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#editUserModal" data-id="{{ $user->id }}">Edit</button>
+        <a href="{{ route('manager.orders', ['search' => $user->phone]) }}" 
+           class="btn btn-info btn-sm" 
+           title="View Orders">
+            <i class="bi bi-receipt"></i> Orders
+        </a>
         @if(auth()->id() !== $user->id)
         <!-- Delete Button -->
         <button type="button" class="btn btn-danger deleteUserButton" data-id="{{ $user->id }}">Delete</button>
