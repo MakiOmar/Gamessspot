@@ -297,39 +297,8 @@
                     }
                 });
             });
-            // Check if there's a search parameter in URL on page load
-            const urlParams = new URLSearchParams(window.location.search);
-            const searchParam = urlParams.get('search');
-            const startDateParam = urlParams.get('start_date');
-            const endDateParam = urlParams.get('end_date');
-            
-            console.log('URL Parameters:', {
-                search: searchParam,
-                start_date: startDateParam,
-                end_date: endDateParam
-            });
-            
-            if (searchParam) {
-                $('#searchOrder').val(searchParam);
-                
-                // Set date range if provided in URL
-                if (startDateParam) {
-                    $('#startDate').val(startDateParam);
-                }
-                if (endDateParam) {
-                    $('#endDate').val(endDateParam);
-                }
-                
-                console.log('Form values after setting:', {
-                    search: $('#searchOrder').val(),
-                    start_date: $('#startDate').val(),
-                    end_date: $('#endDate').val()
-                });
-                
-                // Trigger the search automatically
-                $('#customSearchBtn').trigger('click');
-            }
 
+            // Define the search button click handler FIRST
             $('#customSearchBtn').on('click', function() {
                 let query = $('#searchOrder').val();
                 let startDate = $('#startDate').val();
@@ -418,6 +387,40 @@
                     }
                 });
             });
+
+            // NOW check for URL parameters and trigger search AFTER the handler is defined
+            const urlParams = new URLSearchParams(window.location.search);
+            const searchParam = urlParams.get('search');
+            const startDateParam = urlParams.get('start_date');
+            const endDateParam = urlParams.get('end_date');
+            
+            console.log('URL Parameters:', {
+                search: searchParam,
+                start_date: startDateParam,
+                end_date: endDateParam
+            });
+            
+            if (searchParam) {
+                $('#searchOrder').val(searchParam);
+                
+                // Set date range if provided in URL
+                if (startDateParam) {
+                    $('#startDate').val(startDateParam);
+                }
+                if (endDateParam) {
+                    $('#endDate').val(endDateParam);
+                }
+                
+                console.log('Form values after setting:', {
+                    search: $('#searchOrder').val(),
+                    start_date: $('#startDate').val(),
+                    end_date: $('#endDate').val()
+                });
+                
+                // Trigger the search automatically
+                console.log('About to trigger click...');
+                $('#customSearchBtn').trigger('click');
+            }
 
         });
     </script>
