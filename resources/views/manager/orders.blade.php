@@ -303,6 +303,12 @@
             const startDateParam = urlParams.get('start_date');
             const endDateParam = urlParams.get('end_date');
             
+            console.log('URL Parameters:', {
+                search: searchParam,
+                start_date: startDateParam,
+                end_date: endDateParam
+            });
+            
             if (searchParam) {
                 $('#searchOrder').val(searchParam);
                 
@@ -313,6 +319,12 @@
                 if (endDateParam) {
                     $('#endDate').val(endDateParam);
                 }
+                
+                console.log('Form values after setting:', {
+                    search: $('#searchOrder').val(),
+                    start_date: $('#startDate').val(),
+                    end_date: $('#endDate').val()
+                });
                 
                 // Trigger the search automatically
                 $('#customSearchBtn').trigger('click');
@@ -325,17 +337,24 @@
                 let storeProfileId = $('#storeId').val();
                 let status = $('#currentReportStatus').length > 0 ? $('#currentReportStatus').val() : 'all';
 
+                let searchData = {
+                    search: query,
+                    start_date: startDate,
+                    end_date: endDate,
+                    status: status,
+                    store_profile_id: storeProfileId,
+                };
+
+                console.log('Sending AJAX request with data:', searchData);
+
                 $.ajax({
                     url: "{{ route('manager.orders.search') }}",
                     method: 'GET',
-                    data: {
-                        search: query,
-                        start_date: startDate,
-                        end_date: endDate,
-                        status: status,
-                        store_profile_id: storeProfileId,
-                    },
+                    data: searchData,
                     success: function(response) {
+                        console.log('AJAX response:', response);
+                        console.log('Response rows length:', response.rows ? response.rows.length : 0);
+                        
                         if (!response.rows || response.rows.trim() === '') {
                             Swal.fire({
                                 title: 'No Results',
@@ -354,6 +373,7 @@
                         }
                     },
                     error: function(xhr) {
+                        console.error('AJAX error:', xhr);
                         Swal.fire({
                             title: 'Error',
                             text: 'An error occurred while processing your request.',

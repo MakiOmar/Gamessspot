@@ -205,6 +205,16 @@ class OrderController extends Controller
         $storeProfileId = $request->input('store_profile_id');
         $status         = $request->input('status', 'all'); // Default to 'all' if not provided
 
+        // Debug logging
+        Log::info('Order Search Request', [
+            'search' => $query,
+            'start_date' => $startDate,
+            'end_date' => $endDate,
+            'store_profile_id' => $storeProfileId,
+            'status' => $status,
+            'all_inputs' => $request->all()
+        ]);
+
         // Build the query to filter orders
         $orders = Order::with(array( 'seller', 'account.game' ));
         // Check if the user is an admin
@@ -272,8 +282,23 @@ class OrderController extends Controller
         if ($storeProfileId != 0) {
             $orders->where('orders.store_profile_id', $storeProfileId)->orderBy('buyer_name', 'asc')->orderBy('created_at', 'desc');
         }
+        
+        // Debug: Log the SQL query
+        Log::info('Order Search SQL', [
+            'sql' => $orders->toSql(),
+            'bindings' => $orders->getBindings()
+        ]);
+        
         // Execute the query and paginate or get the results
         $orders = $orders->paginate(20)->appends($request->all());
+        
+        // Debug: Log results count
+        Log::info('Order Search Results', [
+            'total' => $orders->total(),
+            'count' => $orders->count(),
+            'current_page' => $orders->currentPage()
+        ]);
+        
         $showing = "<div class=\"mb-2 mb-md-0 mobile-results-count\">Showing {$orders->firstItem()} to {$orders->lastItem()} of {$orders->total()} results</div>";
         // Return the updated rows for the table (assuming a partial view)
         return response()->json([
