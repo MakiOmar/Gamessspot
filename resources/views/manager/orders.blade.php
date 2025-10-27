@@ -49,12 +49,12 @@
                     @if( ! Auth::user()->roles->contains('name', 'sales') )
                         <div class="col-12 col-md-6 d-flex flex-column flex-md-row align-items-md-center">
                             <input type="date" class="form-control mb-2 mb-md-0 me-md-2"
-                                id="startDate" name="startDate"
-                                value="{{ request('startDate', date('Y-m-d')) }}">
+                                id="startDate" name="start_date"
+                                value="{{ request('start_date', date('Y-m-d')) }}">
                             
                             <input type="date" class="form-control"
-                                id="endDate" name="endDate"
-                                value="{{ request('endDate', date('Y-m-d')) }}">
+                                id="endDate" name="end_date"
+                                value="{{ request('end_date', date('Y-m-d')) }}">
                         </div>
                     @endif
 
