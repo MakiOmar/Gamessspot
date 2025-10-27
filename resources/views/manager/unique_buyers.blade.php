@@ -41,6 +41,7 @@
                     <tr role="row">
                         <th>Phone</th>
                         <th>Name</th>
+                        <th style="width: 150px;">Actions</th>
                     </tr>
                 </thead>
                 <tbody id="orderTableBody">
@@ -48,6 +49,13 @@
                         <tr id="orderRow-{{ $order->id }}">
                             <td>{{ $order->buyer_phone }}</td>
                             <td>{{ $order->buyer_name }}</td>
+                            <td>
+                                <a href="{{ route('manager.orders', ['search' => $order->buyer_phone]) }}" 
+                                   class="btn btn-primary btn-sm" 
+                                   title="View Orders">
+                                    <i class="bi bi-receipt"></i> View Orders
+                                </a>
+                            </td>
                         </tr>
                     @endforeach
                 </tbody>

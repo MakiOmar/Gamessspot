@@ -297,6 +297,15 @@
                     }
                 });
             });
+            // Check if there's a search parameter in URL on page load
+            const urlParams = new URLSearchParams(window.location.search);
+            const searchParam = urlParams.get('search');
+            if (searchParam) {
+                $('#searchOrder').val(searchParam);
+                // Trigger the search automatically
+                $('#customSearchBtn').trigger('click');
+            }
+
             $('#customSearchBtn').on('click', function() {
                 let query = $('#searchOrder').val();
                 let startDate = $('#startDate').val();
