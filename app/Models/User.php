@@ -96,6 +96,12 @@ class User extends Authenticatable
     {
         return $this->hasMany(DeviceRepair::class);
     }
+
+    public function orders()
+    {
+        return $this->hasMany(Order::class, 'buyer_phone', 'phone');
+    }
+
     /**
      * Check if the user has one or more roles by their names.
      *

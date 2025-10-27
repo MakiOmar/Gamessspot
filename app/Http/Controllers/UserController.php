@@ -35,14 +35,18 @@ class UserController extends Controller
     public function users($role = 'any')
     {
         if ('any' === $role) {
-            $users = User::with('storeProfile')->paginate(15);
+            $users = User::with('storeProfile')
+                ->withCount('orders')
+                ->paginate(15);
         } else {
             $users = User::whereHas(
                 'roles',
                 function ($query) use ($role) {
                     $query->where('roles.id', intval($role));
                 }
-            )->with('storeProfile')->paginate(15);
+            )->with('storeProfile')
+            ->withCount('orders')
+            ->paginate(15);
         }
 
         $storeProfiles = StoresProfile::all(); // Fetch all store profiles
@@ -99,7 +103,7 @@ class UserController extends Controller
                 });
         });
 
-        $users = $users->with('storeProfile')->paginate(15)->appends($request->all());
+        $users = $users->with('storeProfile')->withCount('orders')->paginate(15)->appends($request->all());
 
         $showing = "<div class=\"mb-2 mb-md-0 mobile-results-count\">Showing {$users->firstItem()} to {$users->lastItem()} of {$users->total()} results</div>";
 

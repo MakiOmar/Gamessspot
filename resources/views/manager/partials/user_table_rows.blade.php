@@ -4,11 +4,14 @@
     <td>{{ $user->name }}</td>
     <td>{{ $user->storeProfile->name ?? 'No Store Profile' }}</td>
     <td>{{ $user->phone }}</td>
+    <td class="text-center">
+        <span class="badge bg-primary">{{ $user->orders_count ?? 0 }}</span>
+    </td>
     <td>
         <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#editUserModal" data-id="{{ $user->id }}">Edit</button>
-        <a href="{{ route('manager.orders', ['search' => $user->phone]) }}" 
+        <a href="{{ route('manager.orders', ['search' => $user->phone, 'start_date' => '2000-01-01', 'end_date' => date('Y-m-d', strtotime('+1 year'))]) }}" 
            class="btn btn-info btn-sm" 
-           title="View Orders">
+           title="View All Orders">
             <i class="bi bi-receipt"></i> Orders
         </a>
         @if(auth()->id() !== $user->id)

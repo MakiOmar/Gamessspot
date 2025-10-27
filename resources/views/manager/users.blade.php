@@ -31,6 +31,7 @@
                     <th style="width: 265px;">Name</th>
                     <th style="width: 170px;">Store Profile</th>
                     <th style="width: 170px;">Phone</th>
+                    <th style="width: 100px;">Orders Count</th>
                     <th style="width: 120px;">Actions</th>
                 </tr>
             </thead>

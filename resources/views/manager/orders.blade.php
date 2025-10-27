@@ -300,8 +300,20 @@
             // Check if there's a search parameter in URL on page load
             const urlParams = new URLSearchParams(window.location.search);
             const searchParam = urlParams.get('search');
+            const startDateParam = urlParams.get('start_date');
+            const endDateParam = urlParams.get('end_date');
+            
             if (searchParam) {
                 $('#searchOrder').val(searchParam);
+                
+                // Set date range if provided in URL
+                if (startDateParam) {
+                    $('#startDate').val(startDateParam);
+                }
+                if (endDateParam) {
+                    $('#endDate').val(endDateParam);
+                }
+                
                 // Trigger the search automatically
                 $('#customSearchBtn').trigger('click');
             }
