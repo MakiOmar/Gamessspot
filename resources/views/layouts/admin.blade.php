@@ -383,5 +383,39 @@
     [class*="sidebar-dark-"] {
         background-color: #080808;
     }
+    
+    /* Make header and sidebar sticky on scroll - Desktop only */
+    @media (min-width: 992px) {
+        .main-header {
+            position: fixed;
+            top: 0;
+            width: 100%;
+            z-index: 1030;
+        }
+        
+        .main-sidebar {
+            position: fixed !important;
+            top: 0;
+            height: 100vh;
+            z-index: 1020;
+            overflow-y: auto;
+        }
+        
+        /* Adjust content wrapper to account for fixed header */
+        body:not(.sidebar-mini-md):not(.sidebar-mini-xs):not(.layout-top-nav) .content-wrapper,
+        body:not(.sidebar-mini-md):not(.sidebar-mini-xs):not(.layout-top-nav) .main-footer {
+            margin-left: 250px;
+        }
+        
+        body.sidebar-collapse:not(.sidebar-mini-md):not(.sidebar-mini-xs):not(.layout-top-nav) .content-wrapper,
+        body.sidebar-collapse:not(.sidebar-mini-md):not(.sidebar-mini-xs):not(.layout-top-nav) .main-footer {
+            margin-left: 0;
+        }
+        
+        /* Ensure the content wrapper has proper top margin for fixed header */
+        .content-wrapper {
+            margin-top: 57px;
+        }
+    }
 </style>
 @endpush
