@@ -336,6 +336,95 @@ Route::get('/check-memcached', function () {
     return response()->json($status, 200, array(), JSON_PRETTY_PRINT);
 });
 
+// Quick Memcached Test - Access via: /test-memcached
+Route::get('/test-memcached', function () {
+    $result = [
+        'php_extension' => extension_loaded('memcached'),
+        'timestamp' => now()->toDateTimeString(),
+    ];
+    
+    if (!$result['php_extension']) {
+        return response()->json([
+            'status' => 'error',
+            'message' => 'Memcached PHP extension not loaded',
+            'result' => $result
+        ], 500);
+    }
+    
+    try {
+        $memcached = new \Memcached();
+        $memcached->setOption(\Memcached::OPT_CONNECT_TIMEOUT, 2000);
+        
+        $host = config('cache.stores.memcached.servers.0.host', '127.0.0.1');
+        $port = config('cache.stores.memcached.servers.0.port', 11211);
+        
+        $result['host'] = $host;
+        $result['port'] = $port;
+        
+        $memcached->addServer($host, $port);
+        
+        // Get stats
+        $stats = $memcached->getStats();
+        $result['stats'] = $stats;
+        $result['stats_empty'] = empty($stats);
+        
+        if (empty($stats)) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Cannot connect to Memcached server - service may not be running',
+                'result' => $result,
+                'solution' => 'Start Memcached service on ' . $host . ':' . $port
+            ], 500);
+        }
+        
+        // Try to set a value
+        $testKey = 'test_' . time();
+        $setResult = $memcached->set($testKey, 'Hello Memcached', 10);
+        $result['set_result'] = $setResult;
+        $result['set_result_code'] = $memcached->getResultCode();
+        $result['set_result_message'] = $memcached->getResultMessage();
+        
+        if (!$setResult) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Failed to write to Memcached',
+                'result' => $result
+            ], 500);
+        }
+        
+        // Try to get the value
+        $getValue = $memcached->get($testKey);
+        $result['get_value'] = $getValue;
+        $result['get_result_code'] = $memcached->getResultCode();
+        $result['get_result_message'] = $memcached->getResultMessage();
+        
+        // Clean up
+        $memcached->delete($testKey);
+        
+        if ($getValue === 'Hello Memcached') {
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Memcached is working correctly! ✓',
+                'result' => $result
+            ], 200);
+        } else {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Memcached read test failed',
+                'result' => $result
+            ], 500);
+        }
+        
+    } catch (\Exception $e) {
+        return response()->json([
+            'status' => 'error',
+            'message' => $e->getMessage(),
+            'exception' => get_class($e),
+            'result' => $result
+        ], 500);
+    }
+});
+
 // Combined Cache Systems Check - Access via: /check-cache
 Route::get('/check-cache', function () {
     $status = array(
@@ -597,6 +686,9 @@ Route::prefix('manager')->group(function () {
                 Route::get('/get/{key}', [SettingsController::class, 'get'])->name('settings.get');
                 Route::post('/set/{key}', [SettingsController::class, 'set'])->name('settings.set');
             });
+            
+            // System Health Check Route (Admin only)
+            Route::get('/health-check', [ManagerController::class, 'healthCheck'])->name('manager.health-check');
         });
     });
 });

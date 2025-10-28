@@ -711,4 +711,212 @@ class ManagerController extends Controller
 
         return $psGames;
     }
+
+    /**
+     * Show the system health check page for managers
+     *
+     * @return \Illuminate\View\View
+     */
+    public function healthCheck()
+    {
+        $healthData = [];
+        
+        // PHP Information
+        $healthData['php'] = [
+            'version' => PHP_VERSION,
+            'memory_limit' => ini_get('memory_limit'),
+            'max_execution_time' => ini_get('max_execution_time'),
+            'post_max_size' => ini_get('post_max_size'),
+            'upload_max_filesize' => ini_get('upload_max_filesize'),
+        ];
+
+        // Laravel Configuration
+        $healthData['laravel'] = [
+            'version' => app()->version(),
+            'environment' => app()->environment(),
+            'debug_mode' => config('app.debug'),
+            'timezone' => config('app.timezone'),
+            'locale' => config('app.locale'),
+        ];
+
+        // Cache Configuration
+        $healthData['cache'] = [
+            'default_driver' => config('cache.default'),
+            'stores' => array_keys(config('cache.stores')),
+        ];
+
+        // Session Configuration
+        $healthData['session'] = [
+            'driver' => config('session.driver'),
+            'lifetime' => config('session.lifetime'),
+            'secure' => config('session.secure'),
+            'same_site' => config('session.same_site'),
+        ];
+
+        // Queue Configuration
+        $healthData['queue'] = [
+            'default' => config('queue.default'),
+            'connections' => array_keys(config('queue.connections')),
+        ];
+
+        // Database Check
+        $healthData['database'] = [
+            'default' => config('database.default'),
+            'connection' => 'not_checked',
+        ];
+        
+        try {
+            DB::connection()->getPdo();
+            $healthData['database']['connection'] = 'working';
+            $healthData['database']['driver'] = DB::connection()->getDriverName();
+            $healthData['database']['database'] = DB::connection()->getDatabaseName();
+        } catch (\Exception $e) {
+            $healthData['database']['connection'] = 'error';
+            $healthData['database']['message'] = $e->getMessage();
+        }
+
+        // Redis Check
+        $healthData['redis'] = [
+            'configured' => in_array(config('cache.default'), ['redis']) || in_array(config('session.driver'), ['redis']),
+            'extension_loaded' => extension_loaded('redis'),
+            'status' => 'not_checked',
+        ];
+
+        if ($healthData['redis']['extension_loaded']) {
+            try {
+                $redis = \Illuminate\Support\Facades\Redis::connection();
+                $redis->ping();
+                $healthData['redis']['status'] = 'working';
+                $healthData['redis']['host'] = config('database.redis.default.host');
+                $healthData['redis']['port'] = config('database.redis.default.port');
+            } catch (\Exception $e) {
+                $healthData['redis']['status'] = 'error';
+                $healthData['redis']['message'] = $e->getMessage();
+            }
+        } else {
+            $healthData['redis']['status'] = 'not_available';
+            $healthData['redis']['message'] = 'PHP Redis extension not loaded';
+        }
+
+        // Memcached Check
+        $healthData['memcached'] = [
+            'configured' => in_array(config('cache.default'), ['memcached']),
+            'extension_loaded' => extension_loaded('memcached'),
+            'status' => 'not_checked',
+            'host' => config('cache.stores.memcached.servers.0.host', '127.0.0.1'),
+            'port' => config('cache.stores.memcached.servers.0.port', 11211),
+        ];
+
+        if ($healthData['memcached']['extension_loaded']) {
+            try {
+                $memcached = new \Memcached();
+                $memcached->setOption(\Memcached::OPT_CONNECT_TIMEOUT, 2000);
+                $memcached->setOption(\Memcached::OPT_SEND_TIMEOUT, 2000);
+                $memcached->setOption(\Memcached::OPT_RECV_TIMEOUT, 2000);
+                $memcached->setOption(\Memcached::OPT_RETRY_TIMEOUT, 1);
+                
+                $memcached->addServer(
+                    config('cache.stores.memcached.servers.0.host', '127.0.0.1'),
+                    config('cache.stores.memcached.servers.0.port', 11211)
+                );
+                
+                // Get server stats to check if server is reachable
+                $stats = $memcached->getStats();
+                $healthData['memcached']['stats'] = $stats;
+                
+                if (empty($stats) || !isset($stats[$healthData['memcached']['host'] . ':' . $healthData['memcached']['port']])) {
+                    $healthData['memcached']['status'] = 'error';
+                    $healthData['memcached']['message'] = 'Cannot connect to Memcached server. Please check if Memcached service is running.';
+                    $healthData['memcached']['solution'] = 'Start Memcached service or check host/port configuration.';
+                } else {
+                    // Try to set and get a value
+                    $testKey = 'health_check_' . time();
+                    $setResult = $memcached->set($testKey, 'test', 5);
+                    
+                    if (!$setResult) {
+                        $resultCode = $memcached->getResultCode();
+                        $healthData['memcached']['status'] = 'error';
+                        $healthData['memcached']['message'] = 'Failed to write to Memcached. Result code: ' . $resultCode;
+                        $healthData['memcached']['result_message'] = $memcached->getResultMessage();
+                    } else {
+                        $getValue = $memcached->get($testKey);
+                        $memcached->delete($testKey);
+                        
+                        if ($getValue === 'test') {
+                            $healthData['memcached']['status'] = 'working';
+                        } else {
+                            $healthData['memcached']['status'] = 'error';
+                            $healthData['memcached']['message'] = 'Memcached not responding correctly (read test failed)';
+                            $healthData['memcached']['result_code'] = $memcached->getResultCode();
+                            $healthData['memcached']['result_message'] = $memcached->getResultMessage();
+                        }
+                    }
+                }
+            } catch (\Exception $e) {
+                $healthData['memcached']['status'] = 'error';
+                $healthData['memcached']['message'] = $e->getMessage();
+                $healthData['memcached']['exception'] = get_class($e);
+            }
+        } else {
+            $healthData['memcached']['status'] = 'not_available';
+            $healthData['memcached']['message'] = 'PHP Memcached extension not loaded';
+        }
+
+        // Storage Check
+        $healthData['storage'] = [
+            'disk' => config('filesystems.default'),
+            'writable' => is_writable(storage_path()),
+            'free_space' => $this->formatBytes(disk_free_space(storage_path())),
+            'total_space' => $this->formatBytes(disk_total_space(storage_path())),
+        ];
+
+        // PHP Extensions Check
+        $requiredExtensions = ['pdo', 'mbstring', 'openssl', 'json', 'tokenizer', 'xml', 'ctype', 'fileinfo'];
+        $optionalExtensions = ['redis', 'memcached', 'imagick', 'gd', 'zip', 'curl'];
+        
+        $healthData['extensions'] = [
+            'required' => [],
+            'optional' => [],
+        ];
+
+        foreach ($requiredExtensions as $ext) {
+            $healthData['extensions']['required'][$ext] = extension_loaded($ext);
+        }
+
+        foreach ($optionalExtensions as $ext) {
+            $healthData['extensions']['optional'][$ext] = extension_loaded($ext);
+        }
+
+        // Cache Test
+        try {
+            $testKey = 'health_check_cache_' . time();
+            Cache::put($testKey, 'test_value', 60);
+            $testValue = Cache::get($testKey);
+            Cache::forget($testKey);
+            
+            $healthData['cache']['test'] = ($testValue === 'test_value') ? 'working' : 'error';
+        } catch (\Exception $e) {
+            $healthData['cache']['test'] = 'error';
+            $healthData['cache']['test_message'] = $e->getMessage();
+        }
+
+        return view('manager.health-check', compact('healthData'));
+    }
+
+    /**
+     * Helper function to format bytes to human-readable format
+     *
+     * @param int $bytes
+     * @return string
+     */
+    private function formatBytes($bytes)
+    {
+        $units = ['B', 'KB', 'MB', 'GB', 'TB'];
+        
+        for ($i = 0; $bytes > 1024; $i++) {
+            $bytes /= 1024;
+        }
+        
+        return round($bytes, 2) . ' ' . $units[$i];
+    }
 }

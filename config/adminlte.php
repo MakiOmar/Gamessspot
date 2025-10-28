@@ -505,6 +505,14 @@ return [
             'icon' => 'bi bi-gear-fill',
             'can' => 'manage-options',
         ],
+
+        // System Health Check
+        [
+            'text' => 'Health Check',
+            'route' => 'manager.health-check',
+            'icon' => 'bi bi-heart-pulse-fill',
+            'can' => 'manage-options',
+        ],
     ],
 
     'navbar-left' => [
