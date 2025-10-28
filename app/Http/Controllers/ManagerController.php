@@ -338,12 +338,15 @@ class ManagerController extends Controller
         $primary_stock   = "ps{$n}_primary_stock";
         $this->isPrimaryActive($psGames, $primary_stock, $offline_stock, $n);
 
+        // Fetch store profiles (needed by view)
+        $storeProfiles = StoresProfile::all();
+
         // Get cache metadata
         $cacheMetadata = CacheManager::getCacheMetadata($cacheKey);
         $fromCache = CacheManager::wasCacheHit($cacheKey);
 
-        // Return view with games, $n parameter, and cache data
-        return view('manager.games_listings', compact('psGames', 'n', 'cacheKey', 'cacheMetadata', 'fromCache'));
+        // Return view with games, $n parameter, store profiles, and cache data
+        return view('manager.games_listings', compact('psGames', 'n', 'storeProfiles', 'cacheKey', 'cacheMetadata', 'fromCache'));
     }
     
     /**
