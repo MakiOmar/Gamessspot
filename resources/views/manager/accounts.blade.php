@@ -17,6 +17,10 @@
 @endphp
 <div class="container mt-5">
     <h1 class="text-center mb-4">Accounts Management</h1>
+    
+    {{-- Cache Indicator --}}
+    @include('components.cache-indicator')
+    
     @if ( Auth::user()->roles->contains('name', 'admin') )
         <!-- Search and Action Buttons -->
         <div class="mb-4">

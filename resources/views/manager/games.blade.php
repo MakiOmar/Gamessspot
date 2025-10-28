@@ -13,6 +13,10 @@
 @section('content')
     <div class="container mt-5">
         <h1 class="text-center mb-4">Games Management</h1>
+        
+        {{-- Cache Indicator --}}
+        @include('components.cache-indicator')
+        
         <!-- Search Box -->
         <input type="text" id="search-box" class="form-control mb-3" placeholder="Search games by title...">
         <div class="d-flex justify-content-end mb-4">

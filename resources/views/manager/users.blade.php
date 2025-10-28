@@ -5,6 +5,10 @@
 @section('content')
 <div class="container mt-5">
     <h1 class="text-center mb-4">Users Management</h1>
+    
+    {{-- Cache Indicator --}}
+    @include('components.cache-indicator')
+    
     <!-- Add User Button -->
     <div class="d-flex justify-content-end mb-4">
         <button type="button" class="btn btn-success mb-3" data-bs-toggle="modal" data-bs-target="#editUserModal" id="createUserButton">
