@@ -894,6 +894,14 @@ class ManagerController extends Controller
             $healthData['cache']['test_message'] = $e->getMessage();
         }
 
+        // Get Cache Statistics from CacheManager
+        try {
+            $cacheStats = CacheManager::getStats();
+            $healthData['cache']['stats'] = $cacheStats;
+        } catch (\Exception $e) {
+            $healthData['cache']['stats'] = ['error' => $e->getMessage()];
+        }
+
         return view('manager.health-check', compact('healthData'));
     }
 

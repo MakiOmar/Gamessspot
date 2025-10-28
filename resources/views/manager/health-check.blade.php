@@ -456,9 +456,74 @@
                             @endforeach
                         </div>
                     </div>
+                    
+                    @if(isset($healthData['cache']['stats']) && !isset($healthData['cache']['stats']['error']))
+                        <hr>
+                        <h6 class="font-weight-bold mt-3">📊 Cache Statistics</h6>
+                        <div class="info-row">
+                            <span class="info-label">Total Cache Keys:</span>
+                            <span class="info-value float-right">
+                                <span class="badge badge-info">{{ $healthData['cache']['stats']['total_keys'] }}</span>
+                            </span>
+                        </div>
+                    @endif
                 </div>
             </div>
         </div>
+
+        <!-- Cache Statistics Breakdown -->
+        @if(isset($healthData['cache']['stats']) && !isset($healthData['cache']['stats']['error']))
+        <div class="col-12 mb-4">
+            <div class="card health-card">
+                <div class="card-header bg-success text-white">
+                    <h4><i class="fas fa-chart-bar"></i> Cache Keys by Category</h4>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted">
+                        <i class="fas fa-info-circle"></i> 
+                        Shows the number of cache entries stored for each category. 
+                        The number represents cached entries, not the values they store.
+                    </p>
+                    
+                    <div class="row">
+                        @foreach($healthData['cache']['stats']['keys_by_prefix'] as $prefix => $count)
+                        <div class="col-md-3 col-sm-6 mb-3">
+                            <div class="card {{ $count > 0 ? 'border-success' : 'border-secondary' }}">
+                                <div class="card-body text-center">
+                                    <h3 class="mb-0 {{ $count > 0 ? 'text-success' : 'text-muted' }}">
+                                        {{ $count }}
+                                    </h3>
+                                    <small class="text-muted">
+                                        <i class="fas fa-tag"></i> {{ ucfirst($prefix) }}
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                        @endforeach
+                    </div>
+
+                    <div class="alert alert-info mt-3 mb-0">
+                        <strong><i class="fas fa-lightbulb"></i> What do these numbers mean?</strong>
+                        <ul class="mb-0 mt-2">
+                            <li><strong>Dashboard:</strong> Cached dashboard statistics (today's orders, etc.)</li>
+                            <li><strong>Users:</strong> Cached user counts and statistics</li>
+                            <li><strong>Orders:</strong> Cached order statistics (unique buyers, etc.)</li>
+                            <li><strong>Accounts:</strong> Cached account costs and statistics</li>
+                            <li><strong>Cards:</strong> Cached card costs and statistics</li>
+                            <li><strong>Games:</strong> Cached game listings (PS4/PS5 pages)</li>
+                            <li><strong>Devices:</strong> Cached device repair statistics</li>
+                        </ul>
+                        <hr>
+                        <p class="mb-0">
+                            <strong>Example:</strong> "Users: 1" means there is 1 cached entry about users 
+                            (e.g., total user count = {{ \App\Models\User::count() }} users). 
+                            The number shows cache entries, not the actual values stored.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        @endif
 
         <!-- Session Configuration -->
         <div class="col-lg-6 mb-4">
