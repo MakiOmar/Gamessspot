@@ -374,6 +374,80 @@
                         <span class="info-value float-right">{{ $healthData['memcached']['port'] }}</span>
                     </div>
                     
+                    @if($healthData['memcached']['status'] === 'working' && isset($healthData['memcached']['memory']))
+                        <hr>
+                        <h6 class="font-weight-bold mb-2"><i class="fas fa-memory"></i> Memory Usage</h6>
+                        <div class="info-row">
+                            <span class="info-label">Used:</span>
+                            <span class="info-value float-right">{{ $healthData['memcached']['memory']['used_formatted'] }}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Max:</span>
+                            <span class="info-value float-right">{{ $healthData['memcached']['memory']['max_formatted'] }}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Free:</span>
+                            <span class="info-value float-right">{{ $healthData['memcached']['memory']['free_formatted'] }}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Usage:</span>
+                            <span class="info-value float-right">
+                                <div class="progress" style="width: 100px; height: 20px;">
+                                    <div class="progress-bar bg-{{ $healthData['memcached']['memory']['usage_percent'] > 80 ? 'danger' : ($healthData['memcached']['memory']['usage_percent'] > 60 ? 'warning' : 'success') }}" 
+                                         role="progressbar" 
+                                         style="width: {{ $healthData['memcached']['memory']['usage_percent'] }}%">
+                                        {{ $healthData['memcached']['memory']['usage_percent'] }}%
+                                    </div>
+                                </div>
+                            </span>
+                        </div>
+                        
+                        @if(isset($healthData['memcached']['performance']))
+                            <hr>
+                            <h6 class="font-weight-bold mb-2"><i class="fas fa-chart-line"></i> Performance</h6>
+                            <div class="info-row">
+                                <span class="info-label">Current Items:</span>
+                                <span class="info-value float-right">{{ number_format($healthData['memcached']['performance']['curr_items']) }}</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Total Items:</span>
+                                <span class="info-value float-right">{{ number_format($healthData['memcached']['performance']['total_items']) }}</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Evictions:</span>
+                                <span class="info-value float-right">
+                                    <span class="badge badge-{{ $healthData['memcached']['performance']['evictions'] > 100 ? 'danger' : ($healthData['memcached']['performance']['evictions'] > 10 ? 'warning' : 'success') }}">
+                                        {{ number_format($healthData['memcached']['performance']['evictions']) }}
+                                    </span>
+                                </span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Hit Rate:</span>
+                                <span class="info-value float-right">
+                                    <span class="badge badge-{{ $healthData['memcached']['performance']['hit_rate'] > 80 ? 'success' : ($healthData['memcached']['performance']['hit_rate'] > 60 ? 'warning' : 'danger') }}">
+                                        {{ $healthData['memcached']['performance']['hit_rate'] }}%
+                                    </span>
+                                </span>
+                            </div>
+                            
+                            @if($healthData['memcached']['memory']['usage_percent'] > 80)
+                                <div class="alert alert-danger mt-2 mb-0">
+                                    <strong><i class="fas fa-exclamation-triangle"></i> High Memory Usage!</strong><br>
+                                    Memcached is using {{ $healthData['memcached']['memory']['usage_percent'] }}% of available memory.
+                                    Consider clearing cache or increasing Memcached memory allocation.
+                                </div>
+                            @endif
+                            
+                            @if($healthData['memcached']['performance']['evictions'] > 100)
+                                <div class="alert alert-warning mt-2 mb-0">
+                                    <strong><i class="fas fa-exclamation-triangle"></i> High Eviction Rate!</strong><br>
+                                    {{ number_format($healthData['memcached']['performance']['evictions']) }} items have been evicted due to memory pressure.
+                                    This may indicate insufficient Memcached memory.
+                                </div>
+                            @endif
+                        @endif
+                    @endif
+                    
                     @if($healthData['memcached']['status'] === 'error' && isset($healthData['memcached']['message']))
                         <div class="alert alert-danger mt-2 mb-2">
                             <strong><i class="fas fa-exclamation-triangle"></i> Error:</strong><br>

@@ -860,13 +860,15 @@ class ManagerController extends Controller
                 
                 // Get server stats to check if server is reachable
                 $stats = $memcached->getStats();
-                $healthData['memcached']['stats'] = $stats;
+                $serverKey = $healthData['memcached']['host'] . ':' . $healthData['memcached']['port'];
                 
-                if (empty($stats) || !isset($stats[$healthData['memcached']['host'] . ':' . $healthData['memcached']['port']])) {
+                if (empty($stats) || !isset($stats[$serverKey])) {
                     $healthData['memcached']['status'] = 'error';
                     $healthData['memcached']['message'] = 'Cannot connect to Memcached server. Please check if Memcached service is running.';
                     $healthData['memcached']['solution'] = 'Start Memcached service or check host/port configuration.';
                 } else {
+                    $serverStats = $stats[$serverKey];
+                    
                     // Try to set and get a value
                     $testKey = 'health_check_' . time();
                     $setResult = $memcached->set($testKey, 'test', 5);
@@ -882,6 +884,29 @@ class ManagerController extends Controller
                         
                         if ($getValue === 'test') {
                             $healthData['memcached']['status'] = 'working';
+                            
+                            // Add memory and performance statistics
+                            $healthData['memcached']['memory'] = [
+                                'used_bytes' => $serverStats['bytes'],
+                                'used_formatted' => $this->formatBytes($serverStats['bytes']),
+                                'max_bytes' => $serverStats['limit_maxbytes'],
+                                'max_formatted' => $this->formatBytes($serverStats['limit_maxbytes']),
+                                'usage_percent' => round(($serverStats['bytes'] / $serverStats['limit_maxbytes']) * 100, 2),
+                                'free_bytes' => $serverStats['limit_maxbytes'] - $serverStats['bytes'],
+                                'free_formatted' => $this->formatBytes($serverStats['limit_maxbytes'] - $serverStats['bytes']),
+                            ];
+                            
+                            $totalOps = $serverStats['get_hits'] + $serverStats['get_misses'];
+                            $healthData['memcached']['performance'] = [
+                                'curr_items' => $serverStats['curr_items'],
+                                'total_items' => $serverStats['total_items'],
+                                'evictions' => $serverStats['evictions'],
+                                'get_hits' => $serverStats['get_hits'],
+                                'get_misses' => $serverStats['get_misses'],
+                                'hit_rate' => $totalOps > 0 
+                                    ? round(($serverStats['get_hits'] / $totalOps) * 100, 2) 
+                                    : 0,
+                            ];
                         } else {
                             $healthData['memcached']['status'] = 'error';
                             $healthData['memcached']['message'] = 'Memcached not responding correctly (read test failed)';
