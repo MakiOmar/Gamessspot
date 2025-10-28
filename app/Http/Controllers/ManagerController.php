@@ -412,14 +412,6 @@ class ManagerController extends Controller
             )
             ->havingRaw("SUM(accounts.{$offline_stock}) > 0 OR SUM(accounts.{$primary_stock}) > 0 OR SUM(accounts.{$secondary_stock}) > 0")
             ->get();
-
-        // Determine if the primary stock is active
-        $this->isPrimaryActive($psGames, $primary_stock, $offline_stock, $n);
-
-        $storeProfiles = StoresProfile::all(); // Fetch all store profiles
-
-        // Return the view with the games, platform indicator, and store profiles.
-        return view('manager.games_listings', compact('psGames', 'n', 'storeProfiles'));
     }
     protected function isPrimaryActive(&$psGames, $primary_stock, $offline_stock, $n)
     {
