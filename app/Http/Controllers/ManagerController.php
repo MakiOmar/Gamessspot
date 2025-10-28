@@ -31,13 +31,20 @@ class ManagerController extends Controller
         // Get current page from request
         $page = request()->get('page', 1);
         
+        // Get cache key for this listing
+        $cacheKey = CacheManager::getGameListingKey('all', $page);
+        
         // ✅ Cache game listings with pagination
         $games = CacheManager::getGameListing('all', $page, function () {
             return Game::paginate(100);
         });
+        
+        // Get cache metadata
+        $cacheMetadata = CacheManager::getCacheMetadata($cacheKey);
+        $fromCache = CacheManager::wasCacheHit($cacheKey);
 
         // Return the view with the games data
-        return view('manager.games', compact('games'));
+        return view('manager.games', compact('games', 'cacheKey', 'cacheMetadata', 'fromCache'));
     }
     // Show the game data for editing
     public function edit($id)

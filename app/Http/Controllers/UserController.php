@@ -38,6 +38,9 @@ class UserController extends Controller
         // Get current page from request
         $page = request()->get('page', 1);
         
+        // Get cache key for this listing
+        $cacheKey = CacheManager::getUserListingKey($role, $page);
+        
         // ✅ Cache user listings with pagination and role filter
         $users = CacheManager::getUserListing($role, $page, function () use ($role) {
             if ('any' === $role) {
@@ -57,10 +60,13 @@ class UserController extends Controller
         });
 
         $storeProfiles = StoresProfile::all(); // Fetch all store profiles
-
         $roles = Role::all(); // Fetch all available roles
+        
+        // Get cache metadata
+        $cacheMetadata = CacheManager::getCacheMetadata($cacheKey);
+        $fromCache = CacheManager::wasCacheHit($cacheKey);
 
-        return view('manager.users', compact('users', 'storeProfiles', 'roles'));
+        return view('manager.users', compact('users', 'storeProfiles', 'roles', 'cacheKey', 'cacheMetadata', 'fromCache'));
     }
     // Method to list users with role 1 or 2
     public function index()

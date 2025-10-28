@@ -52,7 +52,15 @@ class CacheManager
             // Register this key
             self::registerKey($key);
             
-            return Cache::remember($key, $ttl, $callback);
+            // Check if cache exists (for hit/miss tracking)
+            $cacheExists = Cache::has($key);
+            
+            $result = Cache::remember($key, $ttl, $callback);
+            
+            // Store cache metadata for debugging
+            self::storeCacheMetadata($key, $cacheExists);
+            
+            return $result;
         } catch (\Exception $e) {
             Log::error('Cache remember failed: ' . $e->getMessage(), [
                 'key' => $key,
@@ -62,6 +70,57 @@ class CacheManager
             // If cache fails, execute callback directly
             return $callback();
         }
+    }
+    
+    /**
+     * Store cache metadata (hit/miss info)
+     *
+     * @param string $key
+     * @param bool $wasHit
+     * @return void
+     */
+    protected static function storeCacheMetadata(string $key, bool $wasHit): void
+    {
+        try {
+            $metadata = [
+                'was_hit' => $wasHit,
+                'timestamp' => now()->timestamp,
+                'datetime' => now()->toDateTimeString(),
+            ];
+            
+            // Store metadata with a short TTL
+            Cache::put("meta:{$key}", $metadata, 120); // 2 minutes
+        } catch (\Exception $e) {
+            // Silently fail - metadata is optional
+            Log::debug('Failed to store cache metadata', ['key' => $key]);
+        }
+    }
+    
+    /**
+     * Get cache metadata for a key
+     *
+     * @param string $key
+     * @return array|null
+     */
+    public static function getCacheMetadata(string $key): ?array
+    {
+        try {
+            return Cache::get("meta:{$key}");
+        } catch (\Exception $e) {
+            return null;
+        }
+    }
+    
+    /**
+     * Check if a key was served from cache (cache hit)
+     *
+     * @param string $key
+     * @return bool
+     */
+    public static function wasCacheHit(string $key): bool
+    {
+        $metadata = self::getCacheMetadata($key);
+        return $metadata['was_hit'] ?? false;
     }
     
     /**
@@ -311,9 +370,21 @@ class CacheManager
      */
     public static function getUserListing(string $role, int $page, callable $callback)
     {
-        $cacheKey = self::PREFIX_USERS . "list:role_{$role}:page_{$page}";
+        $cacheKey = self::getUserListingKey($role, $page);
         
         return self::remember($cacheKey, self::TTL_SHORT, $callback);
+    }
+    
+    /**
+     * Get cache key for user listing
+     *
+     * @param string $role
+     * @param int $page
+     * @return string
+     */
+    public static function getUserListingKey(string $role, int $page): string
+    {
+        return self::PREFIX_USERS . "list:role_{$role}:page_{$page}";
     }
     
     // ====================================================================
@@ -330,9 +401,21 @@ class CacheManager
      */
     public static function getGameListing(string $platform, int $page, callable $callback)
     {
-        $cacheKey = self::PREFIX_GAMES . "list:platform_{$platform}:page_{$page}";
+        $cacheKey = self::getGameListingKey($platform, $page);
         
         return self::remember($cacheKey, self::TTL_SHORT, $callback);
+    }
+    
+    /**
+     * Get cache key for game listing
+     *
+     * @param string $platform
+     * @param int $page
+     * @return string
+     */
+    public static function getGameListingKey(string $platform, int $page): string
+    {
+        return self::PREFIX_GAMES . "list:platform_{$platform}:page_{$page}";
     }
     
     // ====================================================================
@@ -348,9 +431,20 @@ class CacheManager
      */
     public static function getAccountListing(int $page, callable $callback)
     {
-        $cacheKey = self::PREFIX_ACCOUNTS . "list:page_{$page}";
+        $cacheKey = self::getAccountListingKey($page);
         
         return self::remember($cacheKey, self::TTL_SHORT, $callback);
+    }
+    
+    /**
+     * Get cache key for account listing
+     *
+     * @param int $page
+     * @return string
+     */
+    public static function getAccountListingKey(int $page): string
+    {
+        return self::PREFIX_ACCOUNTS . "list:page_{$page}";
     }
     
     // ====================================================================

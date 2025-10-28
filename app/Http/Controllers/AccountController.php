@@ -19,6 +19,9 @@ class AccountController extends Controller
         // Get current page from request
         $page = request()->get('page', 1);
         
+        // Get cache key for this listing
+        $cacheKey = CacheManager::getAccountListingKey($page);
+        
         // ✅ Cache account listings with pagination
         $accounts = CacheManager::getAccountListing($page, function () {
             return Account::orderBy('created_at', 'asc')->paginate(10);
@@ -28,9 +31,13 @@ class AccountController extends Controller
 
         // Get the flag emojis from the config
         $flags = config('flags.flags'); // This retrieves the array of flags
+        
+        // Get cache metadata
+        $cacheMetadata = CacheManager::getCacheMetadata($cacheKey);
+        $fromCache = CacheManager::wasCacheHit($cacheKey);
 
         // Return the view with the accounts data
-        return view('manager.accounts', compact('accounts', 'games', 'flags'));
+        return view('manager.accounts', compact('accounts', 'games', 'flags', 'cacheKey', 'cacheMetadata', 'fromCache'));
     }
     public function export()
     {

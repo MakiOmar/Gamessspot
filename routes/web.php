@@ -347,6 +347,26 @@ Route::get('/cache-stats', function () {
     ], 200, [], JSON_PRETTY_PRINT);
 });
 
+// Clear specific cache by key - POST via AJAX
+Route::post('/cache/clear-key', function (Illuminate\Http\Request $request) {
+    $key = $request->input('key');
+    
+    if (!$key) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Cache key is required'
+        ], 400);
+    }
+    
+    $deleted = \App\Services\CacheManager::forget($key);
+    
+    return response()->json([
+        'success' => $deleted,
+        'message' => $deleted ? 'Cache cleared successfully!' : 'Failed to clear cache',
+        'key' => $key
+    ]);
+})->middleware(['auth:admin', 'checkRole:admin']);
+
 // Quick Memcached Test - Access via: /test-memcached
 Route::get('/test-memcached', function () {
     $result = [
