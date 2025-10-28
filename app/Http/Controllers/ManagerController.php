@@ -321,6 +321,39 @@ class ManagerController extends Controller
      */
     public function getGamesByPlatform($n)
     {
+        // Get current page from request
+        $page = request()->get('page', 1);
+        
+        // Get cache key for this platform listing
+        $platform = $n == 4 ? 'ps4' : 'ps5';
+        $cacheKey = CacheManager::getGameListingKey($platform, $page);
+        
+        // ✅ Cache platform game listings
+        $psGames = CacheManager::getGameListing($platform, $page, function () use ($n) {
+            return $this->fetchGamesByPlatform($n);
+        });
+
+        // Determine if the primary stock is active
+        $offline_stock   = "ps{$n}_offline_stock";
+        $primary_stock   = "ps{$n}_primary_stock";
+        $this->isPrimaryActive($psGames, $primary_stock, $offline_stock, $n);
+
+        // Get cache metadata
+        $cacheMetadata = CacheManager::getCacheMetadata($cacheKey);
+        $fromCache = CacheManager::wasCacheHit($cacheKey);
+
+        // Return view with games, $n parameter, and cache data
+        return view('manager.games_listings', compact('psGames', 'n', 'cacheKey', 'cacheMetadata', 'fromCache'));
+    }
+    
+    /**
+     * Fetch games by platform (extracted for caching)
+     *
+     * @param int $n
+     * @return \Illuminate\Pagination\LengthAwarePaginator
+     */
+    private function fetchGamesByPlatform($n)
+    {
         // Get the current user
         $user = Auth::user();
         $storeProfileId = $user->store_profile_id;
@@ -341,7 +374,7 @@ class ManagerController extends Controller
         $image_url       = "ps{$n}_image_url";
 
         // Fetch games and their special prices if the user has a store profile
-        $psGames = DB::table('accounts')
+        return DB::table('accounts')
             ->select(
                 'games.id',
                 'games.title',

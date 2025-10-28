@@ -31,7 +31,10 @@
 
 @section('content')
     <div class="container mb-4">
-        <div class="row d-flex justify-content-center">
+        {{-- Cache Indicator --}}
+        @include('components.cache-indicator')
+        
+        <div class="row d-flex justify-content-center mt-3">
             <div class="col-md-6">
                 <input type="text" id="searchBox" class="form-control" placeholder="Search games...">
             </div>
