@@ -221,7 +221,7 @@ class CacheManager
     public static function getTotalCodeCost()
     {
         return self::remember(
-            self::PREFIX_DASHBOARD . 'total_code_cost',
+            self::PREFIX_CARDS . 'total_code_cost',
             self::TTL_LONG,
             fn() => \App\Models\Card::sum('cost')
         );
@@ -230,7 +230,7 @@ class CacheManager
     public static function getTotalAccountCost()
     {
         return self::remember(
-            self::PREFIX_DASHBOARD . 'total_account_cost',
+            self::PREFIX_ACCOUNTS . 'total_account_cost',
             self::TTL_LONG,
             fn() => \App\Models\Account::sum('cost')
         );
@@ -239,7 +239,7 @@ class CacheManager
     public static function getTotalUserCount()
     {
         return self::remember(
-            self::PREFIX_DASHBOARD . 'total_user_count',
+            self::PREFIX_USERS . 'total_user_count',
             self::TTL_LONG,
             fn() => \App\Models\User::count()
         );
@@ -342,7 +342,6 @@ class CacheManager
     {
         $count = 0;
         $count += self::forgetByPattern(self::PREFIX_USERS . '*');
-        $count += self::forget(self::PREFIX_DASHBOARD . 'total_user_count') ? 1 : 0;
         
         Log::info('User cache invalidated', ['keys_cleared' => $count]);
         return $count;
@@ -357,7 +356,6 @@ class CacheManager
     {
         $count = 0;
         $count += self::forgetByPattern(self::PREFIX_ACCOUNTS . '*');
-        $count += self::forget(self::PREFIX_DASHBOARD . 'total_account_cost') ? 1 : 0;
         
         Log::info('Account cache invalidated', ['keys_cleared' => $count]);
         return $count;
@@ -372,7 +370,6 @@ class CacheManager
     {
         $count = 0;
         $count += self::forgetByPattern(self::PREFIX_CARDS . '*');
-        $count += self::forget(self::PREFIX_DASHBOARD . 'total_code_cost') ? 1 : 0;
         
         Log::info('Card cache invalidated', ['keys_cleared' => $count]);
         return $count;
