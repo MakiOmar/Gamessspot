@@ -397,11 +397,12 @@ class CacheManager
      * @param string $platform Platform filter ('all', 'ps4', 'ps5')
      * @param int $page Page number
      * @param callable $callback Query callback
+     * @param int|null $storeProfileId Optional store profile ID for store-specific caching
      * @return mixed
      */
-    public static function getGameListing(string $platform, int $page, callable $callback)
+    public static function getGameListing(string $platform, int $page, callable $callback, ?int $storeProfileId = null)
     {
-        $cacheKey = self::getGameListingKey($platform, $page);
+        $cacheKey = self::getGameListingKey($platform, $page, $storeProfileId);
         
         return self::remember($cacheKey, self::TTL_SHORT, $callback);
     }
@@ -411,10 +412,17 @@ class CacheManager
      *
      * @param string $platform
      * @param int $page
+     * @param int|null $storeProfileId Optional store profile ID for store-specific caching
      * @return string
      */
-    public static function getGameListingKey(string $platform, int $page): string
+    public static function getGameListingKey(string $platform, int $page, ?int $storeProfileId = null): string
     {
+        if ($storeProfileId !== null) {
+            // Store-specific cache key
+            return self::PREFIX_GAMES . "list:platform_{$platform}:store_{$storeProfileId}:page_{$page}";
+        }
+        
+        // Global cache key (for admin view without store-specific prices)
         return self::PREFIX_GAMES . "list:platform_{$platform}:page_{$page}";
     }
     

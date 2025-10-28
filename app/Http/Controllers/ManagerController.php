@@ -31,13 +31,13 @@ class ManagerController extends Controller
         // Get current page from request
         $page = request()->get('page', 1);
         
-        // Get cache key for this listing
-        $cacheKey = CacheManager::getGameListingKey('all', $page);
+        // Get cache key for this listing (no store profile - global view)
+        $cacheKey = CacheManager::getGameListingKey('all', $page, null);
         
         // ✅ Cache game listings with pagination
         $games = CacheManager::getGameListing('all', $page, function () {
             return Game::paginate(100);
-        });
+        }, null);
         
         // Get cache metadata
         $cacheMetadata = CacheManager::getCacheMetadata($cacheKey);
@@ -324,14 +324,18 @@ class ManagerController extends Controller
         // Get current page from request
         $page = request()->get('page', 1);
         
-        // Get cache key for this platform listing
-        $platform = $n == 4 ? 'ps4' : 'ps5';
-        $cacheKey = CacheManager::getGameListingKey($platform, $page);
+        // Get current user's store profile ID
+        $user = Auth::user();
+        $storeProfileId = $user->store_profile_id;
         
-        // ✅ Cache platform game listings
+        // Get cache key for this platform listing (store-specific)
+        $platform = $n == 4 ? 'ps4' : 'ps5';
+        $cacheKey = CacheManager::getGameListingKey($platform, $page, $storeProfileId);
+        
+        // ✅ Cache platform game listings (per store profile)
         $psGames = CacheManager::getGameListing($platform, $page, function () use ($n) {
             return $this->fetchGamesByPlatform($n);
-        });
+        }, $storeProfileId);
 
         // Determine if the primary stock is active
         $offline_stock   = "ps{$n}_offline_stock";
