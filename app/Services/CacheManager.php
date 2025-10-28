@@ -461,17 +461,55 @@ class CacheManager
     
     /**
      * Cache order listing with pagination and filter
+     * 
+     * IMPORTANT: Orders are user-specific or role-specific!
+     * - Admins see all orders
+     * - Sales/Account managers see only their orders
+     * - Accountants see only their store's orders
      *
-     * @param string $filter Filter type ('all', 'has_problem', 'needs_return', 'solved')
+     * @param string $filter Filter type ('all', 'has_problem', 'needs_return', 'solved', 'today')
      * @param int $page Page number
      * @param callable $callback Query callback
+     * @param int|null $userId User ID for user-specific caching (sales/account manager)
+     * @param int|null $storeProfileId Store ID for store-specific caching (accountant)
+     * @param bool $isAdmin Whether user is admin (sees all orders)
      * @return mixed
      */
-    public static function getOrderListing(string $filter, int $page, callable $callback)
+    public static function getOrderListing(string $filter, int $page, callable $callback, ?int $userId = null, ?int $storeProfileId = null, bool $isAdmin = false)
     {
-        $cacheKey = self::PREFIX_ORDERS . "list:filter_{$filter}:page_{$page}";
+        $cacheKey = self::getOrderListingKey($filter, $page, $userId, $storeProfileId, $isAdmin);
         
         return self::remember($cacheKey, self::TTL_SHORT, $callback);
+    }
+    
+    /**
+     * Get cache key for order listing
+     *
+     * @param string $filter
+     * @param int $page
+     * @param int|null $userId
+     * @param int|null $storeProfileId
+     * @param bool $isAdmin
+     * @return string
+     */
+    public static function getOrderListingKey(string $filter, int $page, ?int $userId = null, ?int $storeProfileId = null, bool $isAdmin = false): string
+    {
+        if ($isAdmin && $storeProfileId !== null) {
+            // Admin filtered by specific store
+            return self::PREFIX_ORDERS . "list:filter_{$filter}:store_{$storeProfileId}:page_{$page}";
+        } elseif ($isAdmin) {
+            // Admin viewing all orders
+            return self::PREFIX_ORDERS . "list:filter_{$filter}:admin:page_{$page}";
+        } elseif ($userId !== null) {
+            // User-specific orders (sales/account manager)
+            return self::PREFIX_ORDERS . "list:filter_{$filter}:user_{$userId}:page_{$page}";
+        } elseif ($storeProfileId !== null) {
+            // Store-specific orders (accountant)
+            return self::PREFIX_ORDERS . "list:filter_{$filter}:store_{$storeProfileId}:page_{$page}";
+        }
+        
+        // Fallback (shouldn't happen)
+        return self::PREFIX_ORDERS . "list:filter_{$filter}:page_{$page}";
     }
     
     // ====================================================================
