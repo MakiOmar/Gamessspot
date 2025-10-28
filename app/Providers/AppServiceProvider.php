@@ -36,6 +36,9 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // Register Model Observers for automatic cache invalidation
+        $this->registerModelObservers();
+
         // Optimize: Prevent lazy loading to catch N+1 query problems
         // Only enable in truly local development (not staging/production)
         if ( app()->environment('local') && app()->runningInConsole() === false ) {
@@ -64,5 +67,22 @@ class AppServiceProvider extends ServiceProvider
         }
 
         // Note: Connection timeout and pooling are handled in config/database.php
+    }
+
+    /**
+     * Register model observers for automatic cache invalidation
+     *
+     * @return void
+     */
+    protected function registerModelObservers(): void
+    {
+        \App\Models\Order::observe(\App\Observers\OrderObserver::class);
+        \App\Models\User::observe(\App\Observers\UserObserver::class);
+        \App\Models\Account::observe(\App\Observers\AccountObserver::class);
+        \App\Models\Card::observe(\App\Observers\CardObserver::class);
+        \App\Models\Game::observe(\App\Observers\GameObserver::class);
+        \App\Models\DeviceRepair::observe(\App\Observers\DeviceRepairObserver::class);
+
+        Log::info('Model observers registered for automatic cache invalidation');
     }
 }

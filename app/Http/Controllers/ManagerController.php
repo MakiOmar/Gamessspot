@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\DB;
 use App\Models\StoresProfile;
 use App\Models\SpecialPrice;
 use App\Services\ImageUploadService;
+use App\Services\CacheManager;
 
 class ManagerController extends Controller
 {
@@ -131,15 +132,8 @@ class ManagerController extends Controller
         $ps4TotalPages   = ceil($ps4GamesCount / $paginationLimit);
         $ps5TotalPages   = ceil($ps5GamesCount / $paginationLimit);
 
-        // Forget cache for all pages of PS4 games
-        for ($page = 1; $page <= $ps4TotalPages; $page++) {
-            Cache::forget("ps4_games_page_{$page}");
-        }
-
-        // Forget cache for all pages of PS5 games
-        for ($page = 1; $page <= $ps5TotalPages; $page++) {
-            Cache::forget("ps5_games_page_{$page}");
-        }
+        // ✅ Use CacheManager to invalidate all game caches
+        CacheManager::invalidateGames();
     }
     public function update(Request $request, $id)
     {

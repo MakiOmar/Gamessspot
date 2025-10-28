@@ -22,6 +22,7 @@ use Illuminate\Support\Facades\Http;
 use App\Services\SettingsService;
 use Rawilk\Settings\Facades\Settings;
 use App\Jobs\SendInventoryWebhookJob;
+use App\Services\CacheManager;
 
 class OrderController extends Controller
 {
@@ -440,7 +441,7 @@ class OrderController extends Controller
                 $this->deleteOrderAndReports($order);
 
                 DB::commit();
-                Cache::forget('unique_buyer_phone_count');
+                // ✅ No need to manually clear cache - OrderObserver handles it automatically
                 
                 // ✅ NEW: Send webhook to WordPress when order is undone (stock restored)
                 if ($gameId && $platform && $type) {
@@ -473,7 +474,7 @@ class OrderController extends Controller
             }
 
             DB::rollBack();
-            Cache::forget('unique_buyer_phone_count');
+            // ✅ No need to manually clear cache - OrderObserver handles it automatically
             return response()->json(['success' => false]);
         } catch (\Exception $e) {
             DB::rollBack();
@@ -619,7 +620,7 @@ class OrderController extends Controller
             $order = Order::create($order_data);
 
             DB::commit();
-            Cache::forget('unique_buyer_phone_count');
+            // ✅ No need to manually clear cache - OrderObserver handles it automatically
 
             // ✅ NEW: Dispatch webhook to WordPress to invalidate cache
             \App\Jobs\SendInventoryWebhookJob::dispatch(
@@ -780,7 +781,7 @@ class OrderController extends Controller
 
             // Commit the transaction if everything succeeds
             DB::commit();
-            Cache::forget('unique_buyer_phone_count');
+            // ✅ No need to manually clear cache - OrderObserver handles it automatically
 
             // ✅ REPLACE WITH THIS (queued job):
             \App\Jobs\SendInventoryWebhookJob::dispatch(

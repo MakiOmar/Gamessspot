@@ -136,7 +136,7 @@ class UserController extends Controller
 
         // Delete the user
         $user->delete();
-        Cache::forget('total_user_count'); // Clear the cache
+        // ✅ No need to manually clear cache - UserObserver handles it automatically
         // Return a success response
         return response()->json(array( 'message' => 'User deleted successfully!' ));
     }
@@ -193,7 +193,7 @@ class UserController extends Controller
         $validated['password'] = bcrypt($request->input('password')); // Hash the password
 
         $user = User::create($validated);
-        Cache::forget('total_user_count'); // Clear the cache
+        // ✅ No need to manually clear cache - UserObserver handles it automatically
         $user->roles()->sync($request->input('roles')); // Sync roles
         return response()->json(array( 'message' => 'User created successfully' ));
     }
@@ -271,7 +271,7 @@ class UserController extends Controller
             $user->roles()->attach($customerRole);
         }
 
-        Cache::forget('total_user_count'); // Clear the cache
+        // ✅ No need to manually clear cache - UserObserver handles it automatically
 
         return response()->json([
             'success' => true,

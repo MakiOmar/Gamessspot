@@ -336,6 +336,17 @@ Route::get('/check-memcached', function () {
     return response()->json($status, 200, array(), JSON_PRETTY_PRINT);
 });
 
+// Cache Statistics - Access via: /cache-stats
+Route::get('/cache-stats', function () {
+    $stats = \App\Services\CacheManager::getStats();
+    
+    return response()->json([
+        'status' => 'success',
+        'cache_stats' => $stats,
+        'timestamp' => now()->toDateTimeString()
+    ], 200, [], JSON_PRETTY_PRINT);
+});
+
 // Quick Memcached Test - Access via: /test-memcached
 Route::get('/test-memcached', function () {
     $result = [

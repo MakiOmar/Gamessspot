@@ -14,33 +14,20 @@ use App\Models\StoresProfile;
 use App\Models\DeviceRepair;
 use Carbon\Carbon;
 use App\Services\SettingsService;
+use App\Services\CacheManager;
 
 class DashboardController extends Controller
 {
     public function dashboard()
     {
-        // Get the total code cost, caching it for 10 minutes
-        $totalCodeCost = Cache::remember('total_code_cost', 600, function () {
-            return Card::sum('cost');
-        });
-        $accountsCost = Cache::remember('total_account_cost', 600, function () {
-            return Account::sum('cost');
-        });
-
-        // Get the total user count, caching it for 10 minutes
-        $totalUserCount = Cache::remember('total_user_count', 600, function () {
-            return User::count();
-        });
-
-        // Get the total orders count, caching it for 5 minutes
-        $totalOrderCount = Cache::remember('today_order_count', 300, function () {
-            return Order::whereDate('created_at', now()->toDateString())->count();
-        });
-
-        // Get the unique buyer_phone count, caching it for 10 minutes
-        $uniqueBuyerPhoneCount = Cache::remember('unique_buyer_phone_count', 600, function () {
-            return Order::distinct('buyer_phone')->count('buyer_phone');
-        });
+        // ✅ Use CacheManager for all cached statistics
+        $totalCodeCost = CacheManager::getTotalCodeCost();
+        $accountsCost = CacheManager::getTotalAccountCost();
+        $totalUserCount = CacheManager::getTotalUserCount();
+        $totalOrderCount = CacheManager::getTodayOrderCount();
+        $uniqueBuyerPhoneCount = CacheManager::getUniqueBuyerCount();
+        $deviceRepairStats = CacheManager::getDeviceRepairStats();
+        $newUsersCount = CacheManager::getNewUsersCount();
 
         $topSellingGames = $this->topSellingGames();
 
@@ -55,26 +42,6 @@ class DashboardController extends Controller
         $highStockGames = $StockLevels['highStock'] ?? collect();
 
         $orders   = $this->activity();
-        $newUsersCount = Cache::remember('new_users_role_5_count', 600, function () {
-            return User::whereHas('roles', function ($query) {
-                    $query->where('role_id', 5);
-            })
-                ->whereMonth('created_at', now()->month)
-                ->whereYear('created_at', now()->year)
-                ->count();
-        });
-
-        // Get device repair statistics
-        $deviceRepairStats = Cache::remember('device_repair_stats', 300, function () {
-            return [
-                'total_repairs' => DeviceRepair::count(),
-                'active_repairs' => DeviceRepair::active()->count(),
-                'delivered_today' => DeviceRepair::where('status', 'delivered')
-                    ->whereDate('status_updated_at', today())
-                    ->count(),
-                'processing_repairs' => DeviceRepair::where('status', 'processing')->count()
-            ];
-        });
 
         $total = $totalCodeCost + $accountsCost;
         

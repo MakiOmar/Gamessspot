@@ -9,6 +9,7 @@ use App\Exports\AccountsExport;
 use App\Imports\AccountsImport;
 use Maatwebsite\Excel\Facades\Excel;
 use Illuminate\Support\Facades\Cache;
+use App\Services\CacheManager;
 
 class AccountController extends Controller
 {
@@ -40,8 +41,8 @@ class AccountController extends Controller
         try {
             Excel::import(new AccountsImport, $request->file('file'));
             
-            // Clear the cache after import
-            Cache::forget('total_account_cost');
+            // ✅ No need to manually clear cache - AccountObserver handles it
+            // Observer will automatically invalidate cache when accounts are created
             
             return response()->json([
                 'success' => 'Accounts imported successfully!'
@@ -104,9 +105,8 @@ class AccountController extends Controller
 
     public function getTotalAccountCost()
     {
-        $totalCost = Cache::remember('total_account_cost', 600, function () {
-            return Account::sum('cost'); // Sum the costs if not already cached
-        });
+        // ✅ Use CacheManager for consistent caching
+        $totalCost = CacheManager::getTotalAccountCost();
 
         return response()->json(['total_cost' => $totalCost]);
     }
@@ -198,7 +198,7 @@ class AccountController extends Controller
 
         // Check if the account was created successfully
         if ($account) {
-            Cache::forget('total_account_cost'); // Clear the cache
+            // ✅ No need to manually clear cache - AccountObserver handles it automatically
             return response()->json(array( 'success' => 'Account created and game stock updated successfully!' ));
         }
 

@@ -46,7 +46,7 @@ class CardController extends Controller
         ]);
 
         $card = Card::create($validatedData);
-        Cache::forget('total_code_cost'); // Clear the cache
+        // ✅ No need to manually clear cache - CardObserver handles it automatically
         return response()->json([
             'success' => true,
             'message' => 'Card created successfully.',
