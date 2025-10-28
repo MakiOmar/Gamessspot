@@ -16,8 +16,13 @@ class AccountController extends Controller
     // Display the accounts table
     public function index()
     {
-        // Assuming you want paginated accounts
-        $accounts = Account::orderBy('created_at', 'asc')->paginate(10);
+        // Get current page from request
+        $page = request()->get('page', 1);
+        
+        // ✅ Cache account listings with pagination
+        $accounts = CacheManager::getAccountListing($page, function () {
+            return Account::orderBy('created_at', 'asc')->paginate(10);
+        });
 
         $games = Game::all(); // Fetch all games
 

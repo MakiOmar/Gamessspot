@@ -9,6 +9,7 @@ use App\Models\Role;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
+use App\Services\CacheManager;
 
 class UserController extends Controller
 {
@@ -34,20 +35,26 @@ class UserController extends Controller
 
     public function users($role = 'any')
     {
-        if ('any' === $role) {
-            $users = User::with('storeProfile')
+        // Get current page from request
+        $page = request()->get('page', 1);
+        
+        // ✅ Cache user listings with pagination and role filter
+        $users = CacheManager::getUserListing($role, $page, function () use ($role) {
+            if ('any' === $role) {
+                return User::with('storeProfile')
+                    ->withCount('orders')
+                    ->paginate(15);
+            } else {
+                return User::whereHas(
+                    'roles',
+                    function ($query) use ($role) {
+                        $query->where('roles.id', intval($role));
+                    }
+                )->with('storeProfile')
                 ->withCount('orders')
                 ->paginate(15);
-        } else {
-            $users = User::whereHas(
-                'roles',
-                function ($query) use ($role) {
-                    $query->where('roles.id', intval($role));
-                }
-            )->with('storeProfile')
-            ->withCount('orders')
-            ->paginate(15);
-        }
+            }
+        });
 
         $storeProfiles = StoresProfile::all(); // Fetch all store profiles
 

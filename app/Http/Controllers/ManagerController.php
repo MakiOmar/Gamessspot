@@ -28,8 +28,13 @@ class ManagerController extends Controller
      */
     public function showGames()
     {
-        // Retrieve all games from the database
-        $games = Game::paginate(100);
+        // Get current page from request
+        $page = request()->get('page', 1);
+        
+        // ✅ Cache game listings with pagination
+        $games = CacheManager::getGameListing('all', $page, function () {
+            return Game::paginate(100);
+        });
 
         // Return the view with the games data
         return view('manager.games', compact('games'));

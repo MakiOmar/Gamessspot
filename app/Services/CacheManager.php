@@ -298,6 +298,99 @@ class CacheManager
     }
     
     // ====================================================================
+    // USER LISTING CACHE METHODS
+    // ====================================================================
+    
+    /**
+     * Cache user listing with pagination and role filter
+     *
+     * @param string $role Role filter ('any' or role ID)
+     * @param int $page Page number
+     * @param callable $callback Query callback
+     * @return mixed
+     */
+    public static function getUserListing(string $role, int $page, callable $callback)
+    {
+        $cacheKey = self::PREFIX_USERS . "list:role_{$role}:page_{$page}";
+        
+        return self::remember($cacheKey, self::TTL_SHORT, $callback);
+    }
+    
+    // ====================================================================
+    // GAME LISTING CACHE METHODS
+    // ====================================================================
+    
+    /**
+     * Cache game listing with pagination and platform filter
+     *
+     * @param string $platform Platform filter ('all', 'ps4', 'ps5')
+     * @param int $page Page number
+     * @param callable $callback Query callback
+     * @return mixed
+     */
+    public static function getGameListing(string $platform, int $page, callable $callback)
+    {
+        $cacheKey = self::PREFIX_GAMES . "list:platform_{$platform}:page_{$page}";
+        
+        return self::remember($cacheKey, self::TTL_SHORT, $callback);
+    }
+    
+    // ====================================================================
+    // ACCOUNT LISTING CACHE METHODS
+    // ====================================================================
+    
+    /**
+     * Cache account listing with pagination
+     *
+     * @param int $page Page number
+     * @param callable $callback Query callback
+     * @return mixed
+     */
+    public static function getAccountListing(int $page, callable $callback)
+    {
+        $cacheKey = self::PREFIX_ACCOUNTS . "list:page_{$page}";
+        
+        return self::remember($cacheKey, self::TTL_SHORT, $callback);
+    }
+    
+    // ====================================================================
+    // ORDER LISTING CACHE METHODS
+    // ====================================================================
+    
+    /**
+     * Cache order listing with pagination and filter
+     *
+     * @param string $filter Filter type ('all', 'has_problem', 'needs_return', 'solved')
+     * @param int $page Page number
+     * @param callable $callback Query callback
+     * @return mixed
+     */
+    public static function getOrderListing(string $filter, int $page, callable $callback)
+    {
+        $cacheKey = self::PREFIX_ORDERS . "list:filter_{$filter}:page_{$page}";
+        
+        return self::remember($cacheKey, self::TTL_SHORT, $callback);
+    }
+    
+    // ====================================================================
+    // CARD LISTING CACHE METHODS
+    // ====================================================================
+    
+    /**
+     * Cache card listing with pagination
+     *
+     * @param int $page Page number
+     * @param callable $callback Query callback
+     * @return mixed
+     */
+    public static function getCardListing(int $page, callable $callback)
+    {
+        $cacheKey = self::PREFIX_CARDS . "list:page_{$page}";
+        
+        return self::remember($cacheKey, self::TTL_SHORT, $callback);
+    }
+    
+    // ====================================================================
     // CACHE INVALIDATION METHODS
     // ====================================================================
     
