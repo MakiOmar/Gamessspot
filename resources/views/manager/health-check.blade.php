@@ -140,6 +140,7 @@
             </div>
         </div>
         
+        @if(isset($healthData['memcached']) && $healthData['memcached']['configured'])
         <div class="col-md-3 col-sm-6 mb-3">
             <div class="card health-card bg-info text-white">
                 <div class="card-body text-center">
@@ -148,12 +149,28 @@
                     <span class="status-badge 
                         {{ $healthData['memcached']['status'] === 'working' ? 'status-working' : '' }}
                         {{ $healthData['memcached']['status'] === 'error' ? 'status-error' : '' }}
-                        {{ $healthData['memcached']['status'] === 'not_available' ? 'status-not-available' : '' }}">
+                        {{ $healthData['memcached']['status'] === 'not_available' ? 'status-not-available' : '' }}
+                        {{ $healthData['memcached']['status'] === 'not_configured' ? 'status-not-available' : '' }}">
                         {{ strtoupper(str_replace('_', ' ', $healthData['memcached']['status'])) }}
                     </span>
                 </div>
             </div>
         </div>
+        @endif
+        
+        @if(isset($healthData['file_cache']))
+        <div class="col-md-3 col-sm-6 mb-3">
+            <div class="card health-card bg-secondary text-white">
+                <div class="card-body text-center">
+                    <i class="fas fa-file fa-3x mb-2"></i>
+                    <h5>File Cache</h5>
+                    <span class="status-badge status-working">
+                        {{ strtoupper($healthData['file_cache']['status']) }}
+                    </span>
+                </div>
+            </div>
+        </div>
+        @endif
         
         <div class="col-md-3 col-sm-6 mb-3">
             <div class="card health-card bg-success text-white">
@@ -330,7 +347,72 @@
             </div>
         </div>
 
-        <!-- Memcached Information -->
+        <!-- File Cache Information -->
+        @if(isset($healthData['file_cache']))
+        <div class="col-lg-6 mb-4">
+            <div class="card health-card">
+                <div class="card-header bg-secondary text-white">
+                    <h4><i class="fas fa-file"></i> File Cache</h4>
+                </div>
+                <div class="card-body">
+                    <div class="info-row">
+                        <span class="info-label">Status:</span>
+                        <span class="info-value float-right">
+                            <span class="status-badge status-working">
+                                {{ strtoupper($healthData['file_cache']['status']) }}
+                            </span>
+                        </span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Cache Path:</span>
+                        <span class="info-value float-right">
+                            <small>{{ basename($healthData['file_cache']['path']) }}</small>
+                        </span>
+                    </div>
+                    
+                    @if(isset($healthData['file_cache']['statistics']))
+                        <div class="info-row">
+                            <span class="info-label">Total Files:</span>
+                            <span class="info-value float-right">
+                                <span class="badge badge-info">{{ number_format($healthData['file_cache']['statistics']['total_files']) }}</span>
+                            </span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Total Size:</span>
+                            <span class="info-value float-right">{{ $healthData['file_cache']['statistics']['total_size_formatted'] }}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Writable:</span>
+                            <span class="info-value float-right">
+                                <span class="badge badge-{{ $healthData['file_cache']['statistics']['writable'] ? 'success' : 'danger' }}">
+                                    {{ $healthData['file_cache']['statistics']['writable'] ? 'YES' : 'NO' }}
+                                </span>
+                            </span>
+                        </div>
+                        
+                        <div class="alert alert-info mt-3 mb-0">
+                            <strong><i class="fas fa-info-circle"></i> File Cache Info</strong>
+                            <ul class="mb-0 mt-2">
+                                <li>Cache files are stored on disk</li>
+                                <li>Slower than Redis/Memcached but requires no setup</li>
+                                <li>Files are automatically cleaned up by Laravel</li>
+                                <li>Great for development, consider Redis/Memcached for production</li>
+                            </ul>
+                        </div>
+                    @endif
+                    
+                    @if(isset($healthData['file_cache']['error']))
+                        <div class="alert alert-danger mt-2 mb-0">
+                            <strong>Error:</strong> {{ $healthData['file_cache']['error'] }}
+                        </div>
+                    @endif
+                </div>
+            </div>
+        </div>
+        @endif
+        
+        <!-- Memcached Information (Only if configured) -->
+        @if(isset($healthData['memcached']) && $healthData['memcached']['configured'])
         <div class="col-lg-6 mb-4">
             <div class="card health-card">
                 <div class="card-header bg-info text-white">
@@ -495,6 +577,7 @@
                 </div>
             </div>
         </div>
+        @endif
 
         <!-- Cache Configuration -->
         <div class="col-lg-6 mb-4">

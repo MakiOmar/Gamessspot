@@ -836,16 +836,61 @@ class ManagerController extends Controller
             $healthData['redis']['message'] = 'PHP Redis extension not loaded';
         }
 
-        // Memcached Check
+        // File Cache Statistics (if using file driver)
+        if (config('cache.default') === 'file') {
+            $healthData['file_cache'] = [
+                'configured' => true,
+                'status' => 'working',
+                'path' => config('cache.stores.file.path'),
+            ];
+            
+            try {
+                $cachePath = config('cache.stores.file.path');
+                
+                // Count cache files
+                $files = glob($cachePath . '/*');
+                $fileCount = is_array($files) ? count($files) : 0;
+                
+                // Calculate total size
+                $totalSize = 0;
+                if (is_array($files)) {
+                    foreach ($files as $file) {
+                        if (is_file($file)) {
+                            $totalSize += filesize($file);
+                        }
+                    }
+                }
+                
+                $healthData['file_cache']['statistics'] = [
+                    'total_files' => $fileCount,
+                    'total_size' => $totalSize,
+                    'total_size_formatted' => $this->formatBytes($totalSize),
+                    'writable' => is_writable($cachePath),
+                ];
+            } catch (\Exception $e) {
+                $healthData['file_cache']['error'] = $e->getMessage();
+            }
+        }
+        
+        // Memcached Check (only if configured as cache driver or session driver)
+        $memcachedConfigured = in_array(config('cache.default'), ['memcached']) 
+                            || in_array(config('session.driver'), ['memcached']);
+        
         $healthData['memcached'] = [
-            'configured' => in_array(config('cache.default'), ['memcached']),
+            'configured' => $memcachedConfigured,
             'extension_loaded' => extension_loaded('memcached'),
             'status' => 'not_checked',
             'host' => config('cache.stores.memcached.servers.0.host', '127.0.0.1'),
             'port' => config('cache.stores.memcached.servers.0.port', 11211),
         ];
+        
+        // Only check Memcached if it's actually being used
+        if (!$memcachedConfigured) {
+            $healthData['memcached']['status'] = 'not_configured';
+            $healthData['memcached']['message'] = 'Memcached is not configured as cache or session driver';
+        }
 
-        if ($healthData['memcached']['extension_loaded']) {
+        if ($memcachedConfigured && $healthData['memcached']['extension_loaded']) {
             try {
                 $memcached = new \Memcached();
                 $memcached->setOption(\Memcached::OPT_CONNECT_TIMEOUT, 2000);
