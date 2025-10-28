@@ -200,11 +200,42 @@ Returns JSON with cache statistics:
 All controllers have been updated to use `CacheManager`:
 
 1. ✅ `DashboardController` - Uses centralized cache methods
-2. ✅ `AccountController` - Removed manual invalidation
-3. ✅ `OrderController` - Removed manual invalidation
-4. ✅ `UserController` - Removed manual invalidation
-5. ✅ `CardController` - Removed manual invalidation
-6. ✅ `ManagerController` - Uses `CacheManager::invalidateGames()`
+2. ✅ `AccountController` - Removed manual invalidation + **CACHES LISTINGS**
+3. ✅ `OrderController` - Removed manual invalidation (listings pending)
+4. ✅ `UserController` - Removed manual invalidation + **CACHES LISTINGS**
+5. ✅ `CardController` - Removed manual invalidation (listings pending)
+6. ✅ `ManagerController` - Uses `CacheManager::invalidateGames()` + **CACHES LISTINGS**
+
+### 🎯 New Feature: Listing Cache
+
+Paginated listings are now cached with automatic invalidation:
+
+**Cached Listings:**
+- ✅ User listings (all roles, all pages) - TTL: 60 seconds
+- ✅ Game listings (all platforms, all pages) - TTL: 60 seconds  
+- ✅ Account listings (all pages) - TTL: 60 seconds
+
+**How It Works:**
+```php
+// Before: Direct database query every time
+$users = User::with('storeProfile')->paginate(15);
+
+// After: Cached for 60 seconds, auto-invalidated on changes
+$users = CacheManager::getUserListing($role, $page, function() {
+    return User::with('storeProfile')->paginate(15);
+});
+```
+
+**Cache Keys Generated:**
+```
+users:list:role_any:page_1
+users:list:role_2:page_1      (sales users)
+users:list:role_1:page_2      (admin users, page 2)
+games:list:platform_all:page_1
+games:list:platform_ps4:page_1
+accounts:list:page_1
+accounts:list:page_2
+```
 
 ## Testing
 
@@ -363,8 +394,10 @@ The old manual cache system still works alongside the new system. Gradually migr
 
 ## Future Enhancements
 
+- [x] Add listing caching (users, games, accounts) ✅ DONE
+- [ ] Add order listing caching (complex due to role-based filters)
+- [ ] Add card listing caching
 - [ ] Add cache warming (pre-populate caches after deployment)
-- [ ] Add query result caching for complex queries
 - [ ] Add API response caching
 - [ ] Add cache metrics dashboard
 - [ ] Add automated cache performance reports
