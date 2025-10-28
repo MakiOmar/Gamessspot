@@ -389,7 +389,7 @@
         .main-header {
             position: fixed;
             top: 0;
-            width: 100%;
+            width: calc( 100% - 250px );
             z-index: 1030;
         }
         
