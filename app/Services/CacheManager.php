@@ -52,13 +52,33 @@ class CacheManager
             // Register this key
             self::registerKey($key);
             
+            // Start timing
+            $startTime = microtime(true);
+            
             // Check if cache exists (for hit/miss tracking)
             $cacheExists = Cache::has($key);
             
-            $result = Cache::remember($key, $ttl, $callback);
-            
-            // Store cache metadata for debugging
-            self::storeCacheMetadata($key, $cacheExists);
+            if ($cacheExists) {
+                // Cache hit - get from cache
+                $result = Cache::get($key);
+                $executionTime = (microtime(true) - $startTime) * 1000; // Convert to milliseconds
+                
+                // Store metadata with cache hit timing
+                self::storeCacheMetadata($key, true, $executionTime);
+            } else {
+                // Cache miss - execute callback
+                $callbackStartTime = microtime(true);
+                $result = $callback();
+                $callbackTime = (microtime(true) - $callbackStartTime) * 1000;
+                
+                // Store in cache
+                Cache::put($key, $result, $ttl);
+                
+                $totalTime = (microtime(true) - $startTime) * 1000;
+                
+                // Store metadata with cache miss timing
+                self::storeCacheMetadata($key, false, $totalTime, $callbackTime);
+            }
             
             return $result;
         } catch (\Exception $e) {
@@ -77,15 +97,20 @@ class CacheManager
      *
      * @param string $key
      * @param bool $wasHit
+     * @param float $executionTime Execution time in milliseconds
+     * @param float|null $queryTime Query/callback execution time in milliseconds (for cache miss)
      * @return void
      */
-    protected static function storeCacheMetadata(string $key, bool $wasHit): void
+    protected static function storeCacheMetadata(string $key, bool $wasHit, float $executionTime = 0, ?float $queryTime = null): void
     {
         try {
             $metadata = [
                 'was_hit' => $wasHit,
                 'timestamp' => now()->timestamp,
                 'datetime' => now()->toDateTimeString(),
+                'execution_time_ms' => round($executionTime, 2),
+                'query_time_ms' => $queryTime !== null ? round($queryTime, 2) : null,
+                'cache_saving_ms' => $queryTime !== null ? round($queryTime - $executionTime, 2) : null,
             ];
             
             // Store metadata with a short TTL

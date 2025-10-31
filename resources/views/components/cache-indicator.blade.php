@@ -10,6 +10,9 @@
                     <i class="fas fa-clock"></i>
                     Cached {{ isset($cacheMetadata['datetime']) ? \Carbon\Carbon::parse($cacheMetadata['datetime'])->diffForHumans() : 'recently' }}
                     | Expires in ~{{ \App\Services\CacheManager::TTL_SHORT }}s
+                    @if(isset($cacheMetadata['execution_time_ms']))
+                        | <strong class="text-success">⚡ {{ $cacheMetadata['execution_time_ms'] }}ms</strong>
+                    @endif
                 </small>
             @else
                 <span class="badge badge-warning mr-2" style="font-size: 0.9rem;">
@@ -17,6 +20,9 @@
                 </span>
                 <small class="text-muted">
                     Direct from database - now cached for {{ \App\Services\CacheManager::TTL_SHORT }}s
+                    @if(isset($cacheMetadata['query_time_ms']))
+                        | <strong class="text-warning">🐢 {{ $cacheMetadata['query_time_ms'] }}ms</strong>
+                    @endif
                 </small>
             @endif
         </div>
@@ -63,6 +69,14 @@
                                 Created: {{ \Carbon\Carbon::parse($cacheMetadata['datetime'])->format('Y-m-d H:i:s') }}
                             </li>
                         @endif
+                        @if(isset($cacheMetadata['execution_time_ms']))
+                            <li><i class="fas fa-circle {{ ($fromCache ?? false) ? 'text-success' : 'text-warning' }}"></i> 
+                                <strong>Load Time: {{ $cacheMetadata['execution_time_ms'] }}ms</strong>
+                                @if(isset($cacheMetadata['query_time_ms']) && isset($cacheMetadata['cache_saving_ms']))
+                                    <span class="text-muted">(Query: {{ $cacheMetadata['query_time_ms'] }}ms)</span>
+                                @endif
+                            </li>
+                        @endif
                     </ul>
                 </div>
             </div>
@@ -73,6 +87,14 @@
                     <li><strong>From Cache:</strong> This page was loaded from {{ config('cache.default') }}, which is much faster than querying the database.</li>
                     <li><strong>Fresh Query:</strong> This page was loaded directly from the database and is now cached for future requests.</li>
                     <li><strong>Auto-Invalidation:</strong> Cache automatically clears when data is created, updated, or deleted.</li>
+                    @if(isset($cacheMetadata['execution_time_ms']) && isset($cacheMetadata['query_time_ms']))
+                        <li class="mt-2">
+                            <strong>⚡ Performance Impact:</strong><br>
+                            <span class="text-success">• Cache Hit: {{ $cacheMetadata['execution_time_ms'] }}ms</span><br>
+                            <span class="text-warning">• Database Query: {{ $cacheMetadata['query_time_ms'] }}ms</span><br>
+                            <span class="text-primary">• Speed Improvement: {{ round(($cacheMetadata['query_time_ms'] / max($cacheMetadata['execution_time_ms'], 0.1)), 1) }}x faster with cache!</span>
+                        </li>
+                    @endif
                 </ul>
             </div>
         </div>
