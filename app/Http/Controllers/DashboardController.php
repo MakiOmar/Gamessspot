@@ -15,6 +15,7 @@ use App\Models\DeviceRepair;
 use Carbon\Carbon;
 use App\Services\SettingsService;
 use App\Services\CacheManager;
+use Illuminate\Support\Facades\Redis;
 
 class DashboardController extends Controller
 {
@@ -249,7 +250,7 @@ class DashboardController extends Controller
         // Check Redis specifically
         if ( config('cache.default') === 'redis' || config('session.driver') === 'redis' ) {
             try {
-                $redis = \Redis::connection();
+                $redis = Redis::connection();
                 $redis->ping();
                 $health['redis_status'] = 'connected';
                 // Get Redis info
