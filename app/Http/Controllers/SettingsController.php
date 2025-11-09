@@ -2,11 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\StoresProfile;
+use App\Services\SettingsService;
 use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\View\View;
 use Rawilk\Settings\Facades\Settings;
-use Illuminate\Support\Facades\Validator;
 
 class SettingsController extends Controller
 {
@@ -52,7 +54,40 @@ class SettingsController extends Controller
             ],
         ];
 
-        return view('manager.settings', compact('settings'));
+        $storeProfiles = StoresProfile::orderBy('id')->get(['id', 'name']);
+        $defaultLocationMap = SettingsService::getDefaultPosLocationMap();
+        $configuredLocationMap = Settings::get('pos.location_map', []);
+        if (! is_array($configuredLocationMap)) {
+            $configuredLocationMap = [];
+        }
+
+        $posLocationProfiles = $storeProfiles->map(function ($profile) use ($defaultLocationMap, $configuredLocationMap) {
+            $key = 'profile_' . $profile->id;
+            $defaultValue = $defaultLocationMap[$key] ?? null;
+            $currentValue = $configuredLocationMap[$key] ?? $defaultValue;
+
+            return [
+                'id' => $profile->id,
+                'name' => $profile->name,
+                'key' => $key,
+                'default' => $defaultValue,
+                'value' => $currentValue,
+            ];
+        })->values()->toArray();
+
+        if (empty($posLocationProfiles)) {
+            $posLocationProfiles = collect($defaultLocationMap)->map(function ($value, $key) {
+                return [
+                    'id' => (int) str_replace('profile_', '', $key),
+                    'name' => 'Store Profile ' . str_replace('profile_', '#', $key),
+                    'key' => $key,
+                    'default' => $value,
+                    'value' => $value,
+                ];
+            })->values()->toArray();
+        }
+
+        return view('manager.settings', compact('settings', 'posLocationProfiles'));
     }
 
     /**
@@ -85,6 +120,8 @@ class SettingsController extends Controller
             'pos.username' => 'required|string|max:50',
             'pos.password' => 'required|string|max:100',
             'pos.base_url' => 'required|url|max:255',
+            'pos_location' => 'array',
+            'pos_location.*' => 'nullable|integer|min:0',
         ]);
 
         if ($validator->fails()) {
@@ -127,6 +164,24 @@ class SettingsController extends Controller
         Settings::set('pos.password', $request->input('pos.password'));
         Settings::set('pos.base_url', $request->input('pos.base_url'));
 
+        $posLocationInput = $request->input('pos_location', []);
+        $posLocationMap = [];
+        foreach (StoresProfile::pluck('id') as $storeProfileId) {
+            $key = 'profile_' . $storeProfileId;
+            if (! array_key_exists($key, $posLocationInput)) {
+                continue;
+            }
+
+            $value = $posLocationInput[$key];
+            if ($value === null || $value === '') {
+                continue;
+            }
+
+            $posLocationMap[$key] = (int) $value;
+        }
+
+        Settings::set('pos.location_map', $posLocationMap);
+
         return redirect()->route('settings.index')
             ->with('success', 'Settings updated successfully!');
     }
@@ -161,6 +216,7 @@ class SettingsController extends Controller
         Settings::forget('pos.username');
         Settings::forget('pos.password');
         Settings::forget('pos.base_url');
+        Settings::forget('pos.location_map');
 
         return redirect()->route('settings.index')
             ->with('success', 'Settings reset to default values!');

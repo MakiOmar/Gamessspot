@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\StoresProfile;
 use Rawilk\Settings\Facades\Settings;
 
 class SettingsService
@@ -189,6 +190,68 @@ class SettingsService
             'primary' => Settings::get('pos.primary_id', '139'),
             'card' => Settings::get('pos.card_id', '142'),
         ];
+    }
+
+    /**
+     * Get default POS location map keyed by store profile identifier.
+     */
+    public static function getDefaultPosLocationMap(): array
+    {
+        return [
+            'profile_13' => 1, // New Cairo
+            'profile_14' => 8, // Beverly Hills
+            'profile_15' => 4, // Elserag mall
+            'profile_16' => 5, // City stars
+            'profile_17' => 6, // WooCommerce
+            'profile_18' => 7, // El Shorouk city
+        ];
+    }
+
+    /**
+     * Retrieve POS location map with dynamic store profiles.
+     *
+     * @return array<string, int|null>
+     */
+    public static function getPosLocationMap(): array
+    {
+        $defaultMap = self::getDefaultPosLocationMap();
+        $configuredMap = Settings::get('pos.location_map', []);
+        if (!is_array($configuredMap)) {
+            $configuredMap = [];
+        }
+
+        $merged = array_merge($defaultMap, $configuredMap);
+
+        return StoresProfile::query()
+            ->pluck('name', 'id')
+            ->mapWithKeys(function ($name, $id) use ($merged, $defaultMap) {
+                $key = 'profile_' . $id;
+                $value = $merged[$key] ?? ($defaultMap[$key] ?? null);
+
+                return [$key => $value !== null ? (int) $value : null];
+            })
+            ->toArray();
+    }
+
+    /**
+     * Get POS location id for a specific store profile.
+     */
+    public static function getPosLocationForStoreProfile(?int $storeProfileId): ?int
+    {
+        if (!$storeProfileId) {
+            return null;
+        }
+
+        $map = self::getPosLocationMap();
+        $key = 'profile_' . $storeProfileId;
+
+        if (array_key_exists($key, $map) && $map[$key] !== null) {
+            return (int) $map[$key];
+        }
+
+        $defaultMap = self::getDefaultPosLocationMap();
+
+        return $defaultMap[$key] ?? null;
     }
 
     /**

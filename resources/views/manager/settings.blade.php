@@ -446,6 +446,65 @@
                                 </div>
                             </div>
                             
+                            @if(!empty($posLocationProfiles))
+                            <div class="row mt-4">
+                                <div class="col-12">
+                                    <h6 class="text-muted mb-3">Store Profile POS Locations</h6>
+                                    <p class="text-sm text-muted">
+                                        Configure the POS location ID for each store profile. Defaults mirror the original mapping and can be adjusted as needed.
+                                    </p>
+                                    <div class="table-responsive">
+                                        <table class="table table-sm table-striped align-middle">
+                                            <thead class="table-light">
+                                                <tr>
+                                                    <th style="width: 35%;">Store Profile</th>
+                                                    <th style="width: 20%;">Default ID</th>
+                                                    <th style="width: 25%;">POS Location ID</th>
+                                                    <th style="width: 20%;">&nbsp;</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                @foreach($posLocationProfiles as $profile)
+                                                    <tr>
+                                                        <td>
+                                                            <strong>{{ $profile['name'] ?? 'Store #' . $profile['id'] }}</strong><br>
+                                                            <small class="text-muted">Key: {{ $profile['key'] }}</small>
+                                                        </td>
+                                                        <td>
+                                                            @if($profile['default'] !== null)
+                                                                <span class="badge bg-secondary">{{ $profile['default'] }}</span>
+                                                            @else
+                                                                <span class="text-muted">Not set</span>
+                                                            @endif
+                                                        </td>
+                                                        <td>
+                                                            <input
+                                                                type="number"
+                                                                min="0"
+                                                                class="form-control form-control-sm @error('pos_location.' . $profile['key']) is-invalid @enderror"
+                                                                name="pos_location[{{ $profile['key'] }}]"
+                                                                value="{{ old('pos_location.' . $profile['key'], $profile['value']) }}"
+                                                                placeholder="POS Location ID">
+                                                            @error('pos_location.' . $profile['key'])
+                                                                <div class="invalid-feedback">{{ $message }}</div>
+                                                            @enderror
+                                                        </td>
+                                                        <td>
+                                                            @if(($profile['value'] ?? null) !== null && $profile['default'] !== null && (int) $profile['value'] !== (int) $profile['default'])
+                                                                <span class="badge bg-info text-dark">Custom</span>
+                                                            @else
+                                                                <span class="text-muted">Using default</span>
+                                                            @endif
+                                                        </td>
+                                                    </tr>
+                                                @endforeach
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                            @endif
+
                             <!-- POS Credentials Section -->
                             <div class="row mt-4">
                                 <div class="col-12">

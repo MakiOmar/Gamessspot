@@ -961,15 +961,9 @@ class OrderController extends Controller
         // Get POS settings from database
         $posSkus = SettingsService::getPosSkus();
         $posIds = SettingsService::getPosIds();
-        $store_profile_ids = [
-            'profile_13' => 1, // New Cairo
-            'profile_14' => 8, // Beverly Hills.
-            'profile_15' => 4, // Elserag mall.
-            'profile_16' => 5, // City stars.
-            'profile_17' => 6, // WooComerce
-            'profile_18' => 7, // El shorouk city
-        ];
-        $pos_location = 1; // Default POS location (New Cairo) fallback
+        $store_profile_ids = SettingsService::getPosLocationMap();
+        $defaultPosLocation = SettingsService::getDefaultPosLocationMap()['profile_13'] ?? 1;
+        $pos_location = $defaultPosLocation; // Default POS location fallback
         // Get the array of order IDs
         $orderIds = $validated['order_ids'];
         $billing_details  = false;
@@ -1009,9 +1003,8 @@ class OrderController extends Controller
 
                 if ($sellerProfileId) {
                     $profileKey = 'profile_' . $sellerProfileId;
-                    if (isset($store_profile_ids[$profileKey])) {
-                        $pos_location = $store_profile_ids[$profileKey];
-                    }
+                    $locationValue = $store_profile_ids[$profileKey] ?? null;
+                    $pos_location = $locationValue !== null ? (int) $locationValue : $defaultPosLocation;
                 }
             } elseif ($orderModel->seller_id !== $referenceSellerId) {
                 return redirect()->route('manager.orders')->with('error', 'Selected orders must belong to the same seller to send to POS.');
