@@ -963,7 +963,7 @@ class OrderController extends Controller
         $posIds = SettingsService::getPosIds();
         $store_profile_ids = [
             'profile_13' => 1, // New Cairo
-            'profile_14' => 3, // Beverly Hills.
+            'profile_14' => 8, // Beverly Hills.
             'profile_15' => 4, // Elserag mall.
             'profile_16' => 5, // City stars.
             'profile_17' => 6, // WooComerce
