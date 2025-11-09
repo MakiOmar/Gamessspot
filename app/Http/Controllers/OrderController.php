@@ -969,10 +969,7 @@ class OrderController extends Controller
             'profile_17' => 6, // WooComerce
             'profile_18' => 7, // El shorouk city
         ];
-        //$user = auth()->user();
-        $user = User::findOrFail(44);
-        $store_profile_id = $user->store_profile_id ?? '0';
-        $pos_location = $store_profile_id == '0' ? 1 : $store_profile_ids['profile_' . $store_profile_id];
+        $pos_location = 1; // Default POS location (New Cairo) fallback
         // Get the array of order IDs
         $orderIds = $validated['order_ids'];
         $billing_details  = false;
@@ -991,6 +988,36 @@ class OrderController extends Controller
         if (empty($unsentOrderIds)) {
             return redirect()->route('manager.orders')->with('info', 'All selected orders have already been sent to POS.');
         }
+        // Determine POS location based on the seller's store profile
+        $ordersWithSeller = Order::with('seller')
+            ->whereIn('id', $unsentOrderIds)
+            ->get();
+
+        if ($ordersWithSeller->isEmpty()) {
+            return redirect()->route('manager.orders')->with('error', 'No eligible orders were found to send to POS.');
+        }
+
+        $referenceSellerId = null;
+        foreach ($ordersWithSeller as $orderModel) {
+            if (!$orderModel->seller) {
+                continue;
+            }
+
+            if (is_null($referenceSellerId)) {
+                $referenceSellerId = $orderModel->seller_id;
+                $sellerProfileId = $orderModel->seller->store_profile_id;
+
+                if ($sellerProfileId) {
+                    $profileKey = 'profile_' . $sellerProfileId;
+                    if (isset($store_profile_ids[$profileKey])) {
+                        $pos_location = $store_profile_ids[$profileKey];
+                    }
+                }
+            } elseif ($orderModel->seller_id !== $referenceSellerId) {
+                return redirect()->route('manager.orders')->with('error', 'Selected orders must belong to the same seller to send to POS.');
+            }
+        }
+
         // Process each order ID (e.g., send each order to the POS system)
         foreach ($orderIds as $orderId) {
             try {
