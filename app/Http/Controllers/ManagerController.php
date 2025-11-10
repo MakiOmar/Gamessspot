@@ -665,6 +665,17 @@ class ManagerController extends Controller
             $responsePayload = $psGames->toArray();
             $responsePayload['debug'] = $debugData;
 
+            Log::info('WooCommerce debug payload for game 138', array(
+                'payload_summary' => array(
+                    'total_ps4_offline_stock' => optional($debugData['aggregates_all'])->ps4_offline_stock,
+                    'total_ps4_primary_stock' => optional($debugData['aggregates_all'])->ps4_primary_stock,
+                    'wc_candidate_count' => $debugData['accounts_wc_candidates']->count(),
+                ),
+                'aggregates' => $debugData['aggregates_all'],
+                'accounts' => $debugData['accounts_all'],
+                'wc_candidates' => $debugData['accounts_wc_candidates'],
+            ));
+
             return response()->json( $responsePayload );
         }
 
