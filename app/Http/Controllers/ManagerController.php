@@ -227,6 +227,46 @@ class ManagerController extends Controller
 
         return response()->json(['message' => 'Game updated successfully!']);
     }
+    /**
+     * Delete a game and related assets.
+     *
+     * @param int $id
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function destroy($id)
+    {
+        $game = Game::findOrFail($id);
+
+        try {
+            DB::transaction(function () use ($game) {
+                // Delete associated images if they exist
+                if (!empty($game->ps4_image_url) && file_exists(public_path($game->ps4_image_url))) {
+                    @unlink(public_path($game->ps4_image_url));
+                }
+
+                if (!empty($game->ps5_image_url) && file_exists(public_path($game->ps5_image_url))) {
+                    @unlink(public_path($game->ps5_image_url));
+                }
+
+                $game->delete();
+            });
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Game deleted successfully.',
+            ]);
+        } catch (\Throwable $e) {
+            Log::error('Failed to delete game', [
+                'game_id' => $game->id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Unable to delete this game. Please try again or contact support.',
+            ], 500);
+        }
+    }
     // Function to sanitize filenames for URL safety
     public function sanitizeFilename($filename)
     {

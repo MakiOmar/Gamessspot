@@ -310,6 +310,56 @@
                 }
             });
         });
+
+        // Handle game deletion
+        $(document).on('click', '.delete-game', function (e) {
+            e.preventDefault();
+
+            const gameId = $(this).data('id');
+            const gameTitle = $(this).data('title');
+
+            Swal.fire({
+                title: 'Delete game?',
+                text: `This will remove "${gameTitle}" and related data.`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                confirmButtonText: 'Yes, delete it',
+                cancelButtonText: 'Cancel'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    $.ajax({
+                        url: '/manager/games/' + gameId,
+                        method: 'POST',
+                        data: {
+                            _method: 'DELETE'
+                        },
+                        success: function (response) {
+                            Swal.fire({
+                                title: 'Deleted!',
+                                text: response.message || 'Game deleted successfully.',
+                                icon: 'success',
+                                confirmButtonText: 'OK'
+                            }).then(() => {
+                                location.reload();
+                            });
+                        },
+                        error: function (xhr) {
+                            const message = xhr.responseJSON && xhr.responseJSON.message
+                                ? xhr.responseJSON.message
+                                : 'Failed to delete the game. Please try again.';
+
+                            Swal.fire({
+                                title: 'Error',
+                                text: message,
+                                icon: 'error',
+                                confirmButtonText: 'OK'
+                            });
+                        }
+                    });
+                }
+            });
+        });
     });
 
 </script>

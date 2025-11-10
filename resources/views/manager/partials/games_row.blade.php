@@ -5,7 +5,7 @@
             <th>Game Name</th>
             <th>Code</th>
             <th>Reports</th>
-            <th>Edit</th>
+            <th>Actions</th>
         </tr>
     </thead>
     <tbody>
@@ -15,7 +15,19 @@
                 <td><span class="wraptext" style="max-width:90%;">{{ $game->title }}<span></td>
                 <td>{{ $game->code }}</td>
                 <td><a href="#">View Reports</a></td>
-                <td><a href="#" class="btn btn-primary edit-game" data-id="{{ $game->id }}" data-bs-toggle="modal" data-bs-target="#editGameModal">Edit</a></td>
+                <td>
+                    <div class="d-flex flex-wrap gap-2">
+                        <a href="#" class="btn btn-primary btn-sm edit-game" data-id="{{ $game->id }}" data-bs-toggle="modal" data-bs-target="#editGameModal">Edit</a>
+                        @if(auth()->user()->roles->contains('name', 'admin'))
+                            <button type="button"
+                                class="btn btn-danger btn-sm delete-game"
+                                data-id="{{ $game->id }}"
+                                data-title="{{ $game->title }}">
+                                Delete
+                            </button>
+                        @endif
+                    </div>
+                </td>
             </tr>
         @endforeach
     </tbody>

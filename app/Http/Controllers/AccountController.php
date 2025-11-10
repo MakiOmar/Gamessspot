@@ -10,6 +10,7 @@ use App\Imports\AccountsImport;
 use Maatwebsite\Excel\Facades\Excel;
 use Illuminate\Support\Facades\Cache;
 use App\Services\CacheManager;
+use Illuminate\Support\Facades\Log;
 
 class AccountController extends Controller
 {
@@ -241,5 +242,35 @@ class AccountController extends Controller
         $account->update($request->all());
 
         return response()->json(['success' => 'Account updated successfully!']);
+    }
+
+    /**
+     * Remove the specified account from storage.
+     *
+     * @param int $id
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function destroy($id)
+    {
+        $account = Account::findOrFail($id);
+
+        try {
+            $account->delete();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Account deleted successfully.',
+            ]);
+        } catch (\Throwable $e) {
+            Log::error('Failed to delete account', [
+                'account_id' => $account->id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Unable to delete this account. Please try again or contact support.',
+            ], 500);
+        }
     }
 }

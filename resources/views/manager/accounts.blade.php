@@ -480,6 +480,57 @@
             }
         });
 
+        // Handle account deletion
+        $(document).on('click', '.deleteAccount', function (e) {
+            e.preventDefault();
+
+            const accountId = $(this).data('id');
+            const accountMail = $(this).data('mail');
+
+            Swal.fire({
+                title: 'Delete account?',
+                text: `This will permanently remove ${accountMail}.`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                confirmButtonText: 'Yes, delete',
+                cancelButtonText: 'Cancel'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    $.ajax({
+                        url: '/manager/accounts/' + accountId,
+                        method: 'POST',
+                        data: {
+                            _method: 'DELETE',
+                            _token: '{{ csrf_token() }}'
+                        },
+                        success: function (response) {
+                            Swal.fire({
+                                title: 'Deleted!',
+                                text: response.message || 'Account deleted successfully.',
+                                icon: 'success',
+                                confirmButtonText: 'OK'
+                            }).then(() => {
+                                location.reload();
+                            });
+                        },
+                        error: function (xhr) {
+                            const message = xhr.responseJSON && xhr.responseJSON.message
+                                ? xhr.responseJSON.message
+                                : 'Failed to delete the account. Please try again.';
+
+                            Swal.fire({
+                                title: 'Error',
+                                text: message,
+                                icon: 'error',
+                                confirmButtonText: 'OK'
+                            });
+                        }
+                    });
+                }
+            });
+        });
+
         // Special PS5 Offline Logic: If only PS5 offline is checked, add two offline stocks
         $('input[name="ps5_offline"]').on('change', function() {
             const ps5OfflineChecked = $(this).is(':checked');

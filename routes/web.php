@@ -590,6 +590,7 @@ Route::prefix('manager')->group(function () {
                 Route::get('/{id}/edit', [ManagerController::class, 'edit'])->name('manager.games.edit');
                 Route::post('/store', [ManagerController::class, 'store'])->name('games.store');
                 Route::put('/{id}', [ManagerController::class, 'update'])->name('manager.games.update');
+                Route::delete('/{id}', [ManagerController::class, 'destroy'])->name('manager.games.destroy');
             });
         });
 
@@ -604,6 +605,7 @@ Route::prefix('manager')->group(function () {
                 Route::get('/template', [AccountController::class, 'template'])->name('manager.accounts.template');
                 Route::get('/{id}/edit', [AccountController::class, 'edit'])->name('manager.accounts.edit');
                 Route::put('/{id}', [AccountController::class, 'update'])->name('manager.accounts.update');
+                Route::delete('/{id}', [AccountController::class, 'destroy'])->name('manager.accounts.destroy');
             });
         });
 
