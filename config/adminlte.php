@@ -339,6 +339,11 @@ return [
                     'icon' => 'bi bi-circle',
                 ],
                 [
+                    'text' => 'WooCommerce eligible PS4',
+                    'route' => 'manager.games.ps4.woocommerce',
+                    'icon' => 'bi bi-circle',
+                ],
+                [
                     'text' => 'PS5 Games',
                     'route' => 'manager.games.ps5',
                     'icon' => 'bi bi-circle',
@@ -532,6 +537,11 @@ return [
                 [
                     'text' => 'PS4 Games',
                     'route' => 'manager.games.ps4',
+                    'icon' => 'bi bi-circle',
+                ],
+                [
+                    'text' => 'WooCommerce eligible PS4',
+                    'route' => 'manager.games.ps4.woocommerce',
                     'icon' => 'bi bi-circle',
                 ],
                 [
