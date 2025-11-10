@@ -251,6 +251,10 @@ class ManagerController extends Controller
                 $game->delete();
             });
 
+            // Invalidate caches impacted by this deletion
+            CacheManager::invalidateGames();
+            CacheManager::invalidateAccounts();
+
             return response()->json([
                 'success' => true,
                 'message' => 'Game deleted successfully.',

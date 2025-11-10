@@ -257,6 +257,10 @@ class AccountController extends Controller
         try {
             $account->delete();
 
+            // Invalidate caches impacted by account deletion
+            CacheManager::invalidateAccounts();
+            CacheManager::invalidateGames();
+
             return response()->json([
                 'success' => true,
                 'message' => 'Account deleted successfully.',
