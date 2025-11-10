@@ -261,11 +261,6 @@ class ManagerController extends Controller
                 'message' => 'Game deleted successfully.',
             ]);
         } catch (\Throwable $e) {
-            Log::error('Failed to delete game', [
-                'game_id' => $game->id,
-                'error' => $e->getMessage(),
-            ]);
-
             return response()->json([
                 'success' => false,
                 'message' => 'Unable to delete this game. Please try again or contact support.',
@@ -697,44 +692,13 @@ class ManagerController extends Controller
                     )),
             );
 
-            Log::info('WooCommerce debug snapshot for game 138', array(
-                'platform' => $platform,
-                'request_url' => request()->fullUrl(),
-                'present_in_results' => $gameIsPresent,
-                'payload_summary' => array(
-                    'total_ps4_offline_stock' => optional($debugData['aggregates_all'])->ps4_offline_stock,
-                    'total_ps4_primary_stock' => optional($debugData['aggregates_all'])->ps4_primary_stock,
-                    'wc_candidate_count' => $debugData['accounts_wc_candidates']->count(),
-                    'total_accounts_considered' => $debugData['accounts_all']->count(),
-                ),
-            ));
-
             if ( $gameIsPresent ) {
                 $responsePayload = $psGames->toArray();
                 $responsePayload['debug'] = $debugData;
 
-                Log::info('WooCommerce debug payload for game 138', array(
-                    'platform' => $platform,
-                    'request_url' => request()->fullUrl(),
-                    'payload_summary' => array(
-                        'total_ps4_offline_stock' => optional($debugData['aggregates_all'])->ps4_offline_stock,
-                        'total_ps4_primary_stock' => optional($debugData['aggregates_all'])->ps4_primary_stock,
-                        'wc_candidate_count' => $debugData['accounts_wc_candidates']->count(),
-                    ),
-                    'aggregates' => $debugData['aggregates_all'],
-                    'accounts' => $debugData['accounts_all'],
-                    'wc_candidates' => $debugData['accounts_wc_candidates'],
-                ));
-
                 return response()->json( $responsePayload );
             }
         }
-
-        Log::info('Games platform API called', array(
-            'platform' => $platform,
-            'request_url' => request()->fullUrl(),
-            'result_count' => $psGames->count(),
-        ));
 
         return response()->json( $psGames );
     }
