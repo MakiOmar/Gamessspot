@@ -194,6 +194,10 @@ class CacheManager
     {
         try {
             self::unregisterKey($key);
+
+            // Also drop metadata associated with this key
+            Cache::forget("meta:{$key}");
+
             return Cache::forget($key);
         } catch (\Exception $e) {
             Log::error('Cache forget failed: ' . $e->getMessage(), ['key' => $key]);
@@ -274,13 +278,22 @@ class CacheManager
     {
         try {
             $registry = Cache::get(self::REGISTRY_KEY, []);
-            
-            // Convert wildcard pattern to regex
-            $regex = '/^' . str_replace(['*', ':'], ['.*', '\:'], preg_quote($pattern, '/')) . '$/';
-            
-            return array_filter($registry, fn($key) => preg_match($regex, $key));
+
+            // If the pattern contains a wildcard, treat everything before the first
+            // asterisk as a prefix match to avoid brittle regular-expression logic.
+            if (str_contains($pattern, '*')) {
+                $prefix = strstr($pattern, '*', true) ?: '';
+
+                return array_values(array_filter(
+                    $registry,
+                    fn($key) => str_starts_with($key, $prefix)
+                ));
+            }
+
+            // Exact match fallback
+            return in_array($pattern, $registry, true) ? [$pattern] : [];
         } catch (\Exception $e) {
-            Log::debug('Cache getKeysByPattern failed', ['pattern' => $pattern]);
+            Log::debug('Cache getKeysByPattern failed', ['pattern' => $pattern, 'error' => $e->getMessage()]);
             return [];
         }
     }
