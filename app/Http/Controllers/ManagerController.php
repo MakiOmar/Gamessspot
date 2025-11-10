@@ -666,6 +666,8 @@ class ManagerController extends Controller
             $responsePayload['debug'] = $debugData;
 
             Log::info('WooCommerce debug payload for game 138', array(
+                'platform' => $platform,
+                'request_url' => request()->fullUrl(),
                 'payload_summary' => array(
                     'total_ps4_offline_stock' => optional($debugData['aggregates_all'])->ps4_offline_stock,
                     'total_ps4_primary_stock' => optional($debugData['aggregates_all'])->ps4_primary_stock,
@@ -678,6 +680,12 @@ class ManagerController extends Controller
 
             return response()->json( $responsePayload );
         }
+
+        Log::info('Games platform API called', array(
+            'platform' => $platform,
+            'request_url' => request()->fullUrl(),
+            'result_count' => $psGames->count(),
+        ));
 
         return response()->json( $psGames );
     }
