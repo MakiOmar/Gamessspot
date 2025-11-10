@@ -597,12 +597,6 @@ class ManagerController extends Controller
                      ->where('special_prices.is_available', '=', 1);
             });
 
-        if ( 4 === $platform ) {
-            $psGamesQuery
-                ->where( 'accounts.ps4_offline_stock', '=', 0 )
-                ->where( 'accounts.ps4_primary_stock', '>', 0 );
-        }
-
         $psGames = $psGamesQuery
             ->groupBy(
                 'games.id',
