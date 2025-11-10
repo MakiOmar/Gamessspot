@@ -652,6 +652,11 @@ class ManagerController extends Controller
             // Use pre-fetched data to avoid N+1 query
             $available_account = in_array( $game_id, $ps4PrimaryAvailableGames );
 
+            // Fallback: if the aggregated offline stock is already zero, trust the query result
+            if ( ! $available_account && isset( $game->total_offline_stock ) && (int) $game->total_offline_stock === 0 ) {
+                $available_account = true;
+            }
+
             if ( ! $available_account ) {
                 $available = false;
                 $reason    = 'PS4 primary accounts require offline stock to be 0. All available primary accounts currently have offline stock.';
