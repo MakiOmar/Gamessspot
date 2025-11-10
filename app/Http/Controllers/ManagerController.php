@@ -616,9 +616,10 @@ class ManagerController extends Controller
         // Set the transformed collection back to the paginator
         $psGames->setCollection( $transformed_games );
 
-        // Optional debug hook for inspecting specific game data
-        $debugGameId = (int) request()->query('debug_game_id', 0);
-        if ( $debugGameId > 0 ) {
+        // Automatic debug data for specific games (e.g., game ID 138)
+        if ( $platform === 4 && $psGames->getCollection()->contains('id', 138) ) {
+            $debugGameId = 138;
+
             $debugData = array(
                 'aggregates_all' => DB::table('accounts')
                     ->where('game_id', $debugGameId)
