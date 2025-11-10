@@ -616,6 +616,57 @@ class ManagerController extends Controller
         // Set the transformed collection back to the paginator
         $psGames->setCollection( $transformed_games );
 
+        // Optional debug hook for inspecting specific game data
+        $debugGameId = (int) request()->query('debug_game_id', 0);
+        if ( $debugGameId > 0 ) {
+            $debugData = array(
+                'aggregates_all' => DB::table('accounts')
+                    ->where('game_id', $debugGameId)
+                    ->selectRaw('
+                        SUM(ps4_offline_stock) as ps4_offline_stock,
+                        SUM(ps4_primary_stock) as ps4_primary_stock,
+                        SUM(ps4_secondary_stock) as ps4_secondary_stock,
+                        SUM(ps5_offline_stock) as ps5_offline_stock,
+                        SUM(ps5_primary_stock) as ps5_primary_stock,
+                        SUM(ps5_secondary_stock) as ps5_secondary_stock
+                    ')
+                    ->first(),
+                'accounts_all' => DB::table('accounts')
+                    ->where('game_id', $debugGameId)
+                    ->select(
+                        'id',
+                        'seller_id',
+                        'store_profile_id',
+                        'ps4_offline_stock',
+                        'ps4_primary_stock',
+                        'ps4_secondary_stock',
+                        'ps5_offline_stock',
+                        'ps5_primary_stock',
+                        'ps5_secondary_stock'
+                    )
+                    ->orderBy('id')
+                    ->get(),
+                'accounts_wc_candidates' => DB::table('accounts')
+                    ->where('game_id', $debugGameId)
+                    ->where('ps4_offline_stock', '=', 0)
+                    ->where('ps4_primary_stock', '>', 0)
+                    ->select(
+                        'id',
+                        'seller_id',
+                        'store_profile_id',
+                        'ps4_offline_stock',
+                        'ps4_primary_stock'
+                    )
+                    ->orderBy('id')
+                    ->get(),
+            );
+
+            $responsePayload = $psGames->toArray();
+            $responsePayload['debug'] = $debugData;
+
+            return response()->json( $responsePayload );
+        }
+
         return response()->json( $psGames );
     }
 
