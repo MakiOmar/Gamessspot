@@ -660,9 +660,10 @@ class ManagerController extends Controller
         // Set the transformed collection back to the paginator
         $psGames->setCollection( $transformed_games );
 
-        // Automatic debug data for specific games (e.g., game ID 138)
-        if ( $platform === 4 && $psGames->getCollection()->contains('id', 138) ) {
-            $debugGameId = 138;
+        // Automatic debug data for WooCommerce game (ID 138)
+        if ( $platform === 4 ) {
+            $debugGameId  = 138;
+            $gameIsPresent = in_array( $debugGameId, $gameIds, true );
 
             $debugData = array(
                 'aggregates_all' => DB::table('accounts')
@@ -706,23 +707,37 @@ class ManagerController extends Controller
                     ->get(),
             );
 
-            $responsePayload = $psGames->toArray();
-            $responsePayload['debug'] = $debugData;
-
-            Log::info('WooCommerce debug payload for game 138', array(
+            Log::info('WooCommerce debug snapshot for game 138', array(
                 'platform' => $platform,
                 'request_url' => request()->fullUrl(),
+                'present_in_results' => $gameIsPresent,
                 'payload_summary' => array(
                     'total_ps4_offline_stock' => optional($debugData['aggregates_all'])->ps4_offline_stock,
                     'total_ps4_primary_stock' => optional($debugData['aggregates_all'])->ps4_primary_stock,
                     'wc_candidate_count' => $debugData['accounts_wc_candidates']->count(),
+                    'total_accounts_considered' => $debugData['accounts_all']->count(),
                 ),
-                'aggregates' => $debugData['aggregates_all'],
-                'accounts' => $debugData['accounts_all'],
-                'wc_candidates' => $debugData['accounts_wc_candidates'],
             ));
 
-            return response()->json( $responsePayload );
+            if ( $gameIsPresent ) {
+                $responsePayload = $psGames->toArray();
+                $responsePayload['debug'] = $debugData;
+
+                Log::info('WooCommerce debug payload for game 138', array(
+                    'platform' => $platform,
+                    'request_url' => request()->fullUrl(),
+                    'payload_summary' => array(
+                        'total_ps4_offline_stock' => optional($debugData['aggregates_all'])->ps4_offline_stock,
+                        'total_ps4_primary_stock' => optional($debugData['aggregates_all'])->ps4_primary_stock,
+                        'wc_candidate_count' => $debugData['accounts_wc_candidates']->count(),
+                    ),
+                    'aggregates' => $debugData['aggregates_all'],
+                    'accounts' => $debugData['accounts_all'],
+                    'wc_candidates' => $debugData['accounts_wc_candidates'],
+                ));
+
+                return response()->json( $responsePayload );
+            }
         }
 
         Log::info('Games platform API called', array(
