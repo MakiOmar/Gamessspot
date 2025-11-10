@@ -62,11 +62,6 @@ class AccountObserver
     {
         try {
             CacheManager::invalidateAccounts();
-            
-            Log::debug('Account cache invalidated', [
-                'event' => $event,
-                'observer' => 'AccountObserver'
-            ]);
         } catch (\Exception $e) {
             Log::error('Failed to invalidate account cache', [
                 'event' => $event,

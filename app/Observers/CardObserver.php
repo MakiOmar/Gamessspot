@@ -62,11 +62,6 @@ class CardObserver
     {
         try {
             CacheManager::invalidateCards();
-            
-            Log::debug('Card cache invalidated', [
-                'event' => $event,
-                'observer' => 'CardObserver'
-            ]);
         } catch (\Exception $e) {
             Log::error('Failed to invalidate card cache', [
                 'event' => $event,

@@ -62,11 +62,6 @@ class OrderObserver
     {
         try {
             CacheManager::invalidateOrders();
-            
-            Log::debug('Order cache invalidated', [
-                'event' => $event,
-                'observer' => 'OrderObserver'
-            ]);
         } catch (\Exception $e) {
             Log::error('Failed to invalidate order cache', [
                 'event' => $event,

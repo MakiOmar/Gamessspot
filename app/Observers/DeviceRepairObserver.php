@@ -62,11 +62,6 @@ class DeviceRepairObserver
     {
         try {
             CacheManager::invalidateDeviceRepairs();
-            
-            Log::debug('Device repair cache invalidated', [
-                'event' => $event,
-                'observer' => 'DeviceRepairObserver'
-            ]);
         } catch (\Exception $e) {
             Log::error('Failed to invalidate device repair cache', [
                 'event' => $event,

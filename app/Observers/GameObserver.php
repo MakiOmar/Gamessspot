@@ -63,11 +63,6 @@ class GameObserver
         try {
             // Invalidate all game caches (PS4 and PS5 pages)
             CacheManager::invalidateGames();
-            
-            Log::debug('Game cache invalidated', [
-                'event' => $event,
-                'observer' => 'GameObserver'
-            ]);
         } catch (\Exception $e) {
             Log::error('Failed to invalidate game cache', [
                 'event' => $event,

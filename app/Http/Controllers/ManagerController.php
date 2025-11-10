@@ -552,6 +552,8 @@ class ManagerController extends Controller
      */
     public function getGamesByPlatformApi($platform)
     {
+        $platform = (int) $platform;
+
         // Validate the platform input (should be 4 or 5)
         if ( ! in_array( $platform, array( 4, 5 ) ) ) {
             return response()->json( array( 'error' => 'Invalid platform. Use 4 for PS4 or 5 for PS5.' ), 400 );

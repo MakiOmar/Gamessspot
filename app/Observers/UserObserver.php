@@ -62,11 +62,6 @@ class UserObserver
     {
         try {
             CacheManager::invalidateUsers();
-            
-            Log::debug('User cache invalidated', [
-                'event' => $event,
-                'observer' => 'UserObserver'
-            ]);
         } catch (\Exception $e) {
             Log::error('Failed to invalidate user cache', [
                 'event' => $event,

@@ -82,7 +82,5 @@ class AppServiceProvider extends ServiceProvider
         \App\Models\Card::observe(\App\Observers\CardObserver::class);
         \App\Models\Game::observe(\App\Observers\GameObserver::class);
         \App\Models\DeviceRepair::observe(\App\Observers\DeviceRepairObserver::class);
-
-        Log::info('Model observers registered for automatic cache invalidation');
     }
 }
