@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use App\Models\StoresProfile;
+use App\Models\Account;
 use App\Models\SpecialPrice;
 use App\Services\ImageUploadService;
 use App\Services\CacheManager;
@@ -667,9 +668,10 @@ class ManagerController extends Controller
             $debugGameId  = 138;
             $gameIsPresent = in_array( $debugGameId, $gameIds, true );
 
+            $accountBaseQuery = Account::query()->where('game_id', $debugGameId);
+
             $debugData = array(
-                'aggregates_all' => DB::table('accounts')
-                    ->where('game_id', $debugGameId)
+                'aggregates_all' => (clone $accountBaseQuery)
                     ->selectRaw('
                         SUM(ps4_offline_stock) as ps4_offline_stock,
                         SUM(ps4_primary_stock) as ps4_primary_stock,
@@ -679,32 +681,26 @@ class ManagerController extends Controller
                         SUM(ps5_secondary_stock) as ps5_secondary_stock
                     ')
                     ->first(),
-                'accounts_all' => DB::table('accounts')
-                    ->where('game_id', $debugGameId)
-                    ->select(
+                'accounts_all' => (clone $accountBaseQuery)
+                    ->orderBy('id')
+                    ->get(array(
                         'id',
-                        'store_profile_id',
                         'ps4_offline_stock',
                         'ps4_primary_stock',
                         'ps4_secondary_stock',
                         'ps5_offline_stock',
                         'ps5_primary_stock',
-                        'ps5_secondary_stock'
-                    )
-                    ->orderBy('id')
-                    ->get(),
-                'accounts_wc_candidates' => DB::table('accounts')
-                    ->where('game_id', $debugGameId)
+                        'ps5_secondary_stock',
+                    )),
+                'accounts_wc_candidates' => (clone $accountBaseQuery)
                     ->where('ps4_offline_stock', '=', 0)
                     ->where('ps4_primary_stock', '>', 0)
-                    ->select(
-                        'id',
-                        'store_profile_id',
-                        'ps4_offline_stock',
-                        'ps4_primary_stock'
-                    )
                     ->orderBy('id')
-                    ->get(),
+                    ->get(array(
+                        'id',
+                        'ps4_offline_stock',
+                        'ps4_primary_stock',
+                    )),
             );
 
             Log::info('WooCommerce debug snapshot for game 138', array(
