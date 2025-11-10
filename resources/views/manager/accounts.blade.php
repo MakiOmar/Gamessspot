@@ -243,6 +243,58 @@
     </div>
 </div>
 
+<!-- Stock Edit Modal -->
+<div class="modal fade" id="stockModal" tabindex="-1" aria-labelledby="stockModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form id="stockForm" method="POST">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="stockModalLabel">Edit Account Stock</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    @csrf
+                    <input type="hidden" name="_method" value="PATCH">
+
+                    <div class="form-group mb-3">
+                        <label for="ps4PrimaryStock">PS4 Primary Stock</label>
+                        <input type="number" min="0" class="form-control" id="ps4PrimaryStock" name="ps4_primary_stock" required>
+                    </div>
+
+                    <div class="form-group mb-3">
+                        <label for="ps4SecondaryStock">PS4 Secondary Stock</label>
+                        <input type="number" min="0" class="form-control" id="ps4SecondaryStock" name="ps4_secondary_stock" required>
+                    </div>
+
+                    <div class="form-group mb-3">
+                        <label for="ps4OfflineStock">PS4 Offline Stock</label>
+                        <input type="number" min="0" class="form-control" id="ps4OfflineStock" name="ps4_offline_stock" required>
+                    </div>
+
+                    <div class="form-group mb-3">
+                        <label for="ps5PrimaryStock">PS5 Primary Stock</label>
+                        <input type="number" min="0" class="form-control" id="ps5PrimaryStock" name="ps5_primary_stock" required>
+                    </div>
+
+                    <div class="form-group mb-3">
+                        <label for="ps5SecondaryStock">PS5 Secondary Stock</label>
+                        <input type="number" min="0" class="form-control" id="ps5SecondaryStock" name="ps5_secondary_stock" required>
+                    </div>
+
+                    <div class="form-group mb-0">
+                        <label for="ps5OfflineStock">PS5 Offline Stock</label>
+                        <input type="number" min="0" class="form-control" id="ps5OfflineStock" name="ps5_offline_stock" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 <!-- Import Modal -->
 <div class="modal fade" id="importModal" tabindex="-1" aria-labelledby="importModalLabel" aria-hidden="true">
     <div class="modal-dialog">
@@ -321,6 +373,66 @@
             $('#cost').val($(this).data('cost'));
             $('#birthdate').val($(this).data('birthdate'));
             $('#login_code').val($(this).data('login_code'));
+        });
+
+        // Handle Stock Edit Button
+        $(document).on('click', '.editStock', function() {
+            const button = $(this);
+            const form = $('#stockForm');
+
+            form[0].reset();
+            form.attr('action', button.data('update-url'));
+
+            $('#ps4PrimaryStock').val(button.data('ps4_primary_stock'));
+            $('#ps4SecondaryStock').val(button.data('ps4_secondary_stock'));
+            $('#ps4OfflineStock').val(button.data('ps4_offline_stock'));
+            $('#ps5PrimaryStock').val(button.data('ps5_primary_stock'));
+            $('#ps5SecondaryStock').val(button.data('ps5_secondary_stock'));
+            $('#ps5OfflineStock').val(button.data('ps5_offline_stock'));
+        });
+
+        // Handle Stock Form Submission
+        $('#stockForm').on('submit', function(e) {
+            e.preventDefault();
+
+            const form = $(this);
+            const submitButton = form.find('button[type=\"submit\"]');
+            const originalText = submitButton.html();
+
+            submitButton.prop('disabled', true).html('<i class=\"fas fa-spinner fa-spin\"></i> Saving...');
+
+            $.ajax({
+                url: form.attr('action'),
+                method: 'POST',
+                data: form.serialize(),
+                success: function(response) {
+                    $('#stockModal').modal('hide');
+                    Swal.fire({
+                        title: 'Success!',
+                        text: response.success,
+                        icon: 'success',
+                        confirmButtonText: 'OK'
+                    }).then(() => {
+                        location.reload();
+                    });
+                },
+                error: function(xhr) {
+                    let message = 'Failed to update stock. Please try again.';
+
+                    if (xhr.responseJSON) {
+                        if (xhr.responseJSON.errors) {
+                            message = Object.values(xhr.responseJSON.errors).flat().join('\\n');
+                        } else if (xhr.responseJSON.message) {
+                            message = xhr.responseJSON.message;
+                        }
+                    }
+
+                    Swal.fire('Error', message, 'error');
+                },
+                complete: function() {
+                    submitButton.prop('disabled', false).html(originalText);
+                }
+            });
         });
         // Handle form submission
         $('#accountForm').on('submit', function(e) {

@@ -39,6 +39,21 @@
             </button>
 
             <button type="button"
+                class="btn btn-secondary btn-sm editStock"
+                data-id="{{ $account->id }}"
+                data-ps4_primary_stock="{{ $account->ps4_primary_stock }}"
+                data-ps4_secondary_stock="{{ $account->ps4_secondary_stock }}"
+                data-ps4_offline_stock="{{ $account->ps4_offline_stock }}"
+                data-ps5_primary_stock="{{ $account->ps5_primary_stock }}"
+                data-ps5_secondary_stock="{{ $account->ps5_secondary_stock }}"
+                data-ps5_offline_stock="{{ $account->ps5_offline_stock }}"
+                data-update-url="{{ route('manager.accounts.updateStock', $account->id) }}"
+                data-bs-toggle="modal"
+                data-bs-target="#stockModal">
+                Edit Stock
+            </button>
+
+            <button type="button"
                 class="btn btn-danger btn-sm deleteAccount"
                 data-id="{{ $account->id }}"
                 data-mail="{{ $account->mail }}">

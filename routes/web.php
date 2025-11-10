@@ -604,6 +604,7 @@ Route::prefix('manager')->group(function () {
                 Route::post('/import', [AccountController::class, 'import'])->name('manager.accounts.import');
                 Route::get('/template', [AccountController::class, 'template'])->name('manager.accounts.template');
                 Route::get('/{id}/edit', [AccountController::class, 'edit'])->name('manager.accounts.edit');
+                Route::patch('/{id}/stock', [AccountController::class, 'updateStock'])->name('manager.accounts.updateStock');
                 Route::put('/{id}', [AccountController::class, 'update'])->name('manager.accounts.update');
                 Route::delete('/{id}', [AccountController::class, 'destroy'])->name('manager.accounts.destroy');
             });

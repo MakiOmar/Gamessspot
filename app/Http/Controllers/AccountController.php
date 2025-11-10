@@ -244,6 +244,24 @@ class AccountController extends Controller
         return response()->json(['success' => 'Account updated successfully!']);
     }
 
+    public function updateStock(Request $request, $id)
+    {
+        $account = Account::findOrFail($id);
+
+        $validated = $request->validate([
+            'ps4_primary_stock' => 'required|integer|min:0',
+            'ps4_secondary_stock' => 'required|integer|min:0',
+            'ps4_offline_stock' => 'required|integer|min:0',
+            'ps5_primary_stock' => 'required|integer|min:0',
+            'ps5_secondary_stock' => 'required|integer|min:0',
+            'ps5_offline_stock' => 'required|integer|min:0',
+        ]);
+
+        $account->update($validated);
+
+        return response()->json(['success' => 'Account stock levels updated successfully!']);
+    }
+
     /**
      * Remove the specified account from storage.
      *
