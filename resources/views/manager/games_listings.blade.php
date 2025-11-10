@@ -1,5 +1,12 @@
 @extends('layouts.admin')
 
+@php
+    $pageTitle = $pageTitle ?? 'Manager - Games';
+    $pageHeading = $pageHeading ?? null;
+    $pageDescription = $pageDescription ?? null;
+    $showSearch = $showSearch ?? true;
+@endphp
+
 @push('css')
 <link rel="stylesheet" href="{{ asset('assets/css/intlTelInput.min.css') }}">
 <style>
@@ -27,18 +34,30 @@
     }
 </style>
 @endpush
-@section('title', 'Manager - Games')
+@section('title', $pageTitle)
 
 @section('content')
     <div class="container mb-4">
+        @if($pageHeading || $pageDescription)
+            <div class="mb-3">
+                @if($pageHeading)
+                    <h1 class="h3 mb-1">{{ $pageHeading }}</h1>
+                @endif
+                @if($pageDescription)
+                    <p class="text-muted mb-0">{{ $pageDescription }}</p>
+                @endif
+            </div>
+        @endif
         {{-- Cache Indicator --}}
         @include('components.cache-indicator')
         
-        <div class="row d-flex justify-content-center mt-3">
-            <div class="col-md-6">
-                <input type="text" id="searchBox" class="form-control" placeholder="Search games...">
+        @if($showSearch)
+            <div class="row d-flex justify-content-center mt-3">
+                <div class="col-md-6">
+                    <input type="text" id="searchBox" class="form-control" placeholder="Search games...">
+                </div>
             </div>
-        </div>
+        @endif
     </div>
     <div class="container" id="gamesListings">
         <div class="row">

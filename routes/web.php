@@ -576,6 +576,7 @@ Route::prefix('manager')->group(function () {
             Route::prefix('games')->group(function () {
                 Route::get('/', [ManagerController::class, 'showGames'])->name('manager.games');
                 Route::get('/ps4', [ManagerController::class, 'showPS4Games'])->name('manager.games.ps4');
+                Route::get('/ps4/woocommerce', [ManagerController::class, 'showWooCommerceEligiblePS4Games'])->name('manager.games.ps4.woocommerce');
                 Route::get('/ps5', [ManagerController::class, 'showPS5Games'])->name('manager.games.ps5');
                 Route::get('/search/ps4', [ManagerController::class, 'searchPS4Games'])->name('manager.games.search.ps4');
                 Route::get('/search/ps5', [ManagerController::class, 'searchPS5Games'])->name('manager.games.search.ps5');

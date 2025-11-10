@@ -420,6 +420,59 @@ class ManagerController extends Controller
             ->havingRaw("SUM(accounts.{$offline_stock}) > 0 OR SUM(accounts.{$primary_stock}) > 0 OR SUM(accounts.{$secondary_stock}) > 0")
             ->get();
     }
+
+    /**
+     * Fetch PS4 games that have at least one account with offline stock = 0 and primary stock > 0.
+     *
+     * @param int|null $storeProfileId
+     * @return \Illuminate\Support\Collection
+     */
+    private function fetchWooCommerceEligiblePS4Games(?int $storeProfileId)
+    {
+        return DB::table('accounts')
+            ->select(
+                'games.id',
+                'games.title',
+                'games.code',
+                'games.ps4_image_url',
+                'games.ps4_offline_status',
+                'games.ps4_primary_status',
+                'games.ps4_secondary_status',
+                DB::raw('COALESCE(special_prices.ps4_primary_price, games.ps4_primary_price) as ps4_primary_price'),
+                DB::raw('COALESCE(special_prices.ps4_secondary_price, games.ps4_secondary_price) as ps4_secondary_price'),
+                DB::raw('COALESCE(special_prices.ps4_offline_price, games.ps4_offline_price) as ps4_offline_price'),
+                DB::raw('SUM(accounts.ps4_offline_stock) as ps4_offline_stock'),
+                DB::raw('SUM(accounts.ps4_primary_stock) as ps4_primary_stock'),
+                DB::raw('SUM(accounts.ps4_secondary_stock) as ps4_secondary_stock')
+            )
+            ->join('games', 'accounts.game_id', '=', 'games.id')
+            ->leftJoin('special_prices', function ($join) use ($storeProfileId) {
+                $join->on('games.id', '=', 'special_prices.game_id');
+
+                if ($storeProfileId !== null) {
+                    $join->where('special_prices.store_profile_id', '=', $storeProfileId);
+                }
+            })
+            ->where('accounts.ps4_offline_stock', '=', 0)
+            ->where('accounts.ps4_primary_stock', '>', 0)
+            ->groupBy(
+                'games.id',
+                'games.title',
+                'games.code',
+                'games.ps4_image_url',
+                'games.ps4_offline_status',
+                'games.ps4_primary_status',
+                'games.ps4_secondary_status',
+                'games.ps4_offline_price',
+                'games.ps4_primary_price',
+                'games.ps4_secondary_price',
+                'special_prices.ps4_primary_price',
+                'special_prices.ps4_secondary_price',
+                'special_prices.ps4_offline_price'
+            )
+            ->orderBy('games.title')
+            ->get();
+    }
     protected function isPrimaryActive(&$psGames, $primary_stock, $offline_stock, $n)
     {
         // PS5 always has primary active
@@ -616,6 +669,50 @@ class ManagerController extends Controller
     public function showPS4Games()
     {
         return $this->getGamesByPlatform(4);
+    }
+
+    /**
+     * Show WooCommerce eligible PS4 games (offline stock = 0 with available primary stock).
+     *
+     * @return \Illuminate\View\View
+     */
+    public function showWooCommerceEligiblePS4Games()
+    {
+        $page = request()->get('page', 1);
+
+        $user = Auth::user();
+        $storeProfileId = $user->store_profile_id;
+
+        $cacheKey = CacheManager::getGameListingKey('ps4_wc', $page, $storeProfileId);
+
+        $psGames = CacheManager::getGameListing('ps4_wc', $page, function () use ($storeProfileId) {
+            return $this->fetchWooCommerceEligiblePS4Games($storeProfileId);
+        }, $storeProfileId);
+
+        $this->isPrimaryActive($psGames, 'ps4_primary_stock', 'ps4_offline_stock', 4);
+
+        $storeProfiles = StoresProfile::all();
+        $cacheMetadata = CacheManager::getCacheMetadata($cacheKey);
+        $fromCache = CacheManager::wasCacheHit($cacheKey);
+
+        $n = 4;
+        $pageTitle = 'Manager - WooCommerce Eligible PS4 Games';
+        $pageHeading = 'WooCommerce eligible PS4';
+        $pageDescription = 'Games with primary accounts that can sync to WooCommerce (offline stock is zero).';
+        $showSearch = false;
+
+        return view('manager.games_listings', compact(
+            'psGames',
+            'n',
+            'storeProfiles',
+            'cacheKey',
+            'cacheMetadata',
+            'fromCache',
+            'pageTitle',
+            'pageHeading',
+            'pageDescription',
+            'showSearch'
+        ));
     }
 
 

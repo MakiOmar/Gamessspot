@@ -30,6 +30,11 @@
                             </a>
                         </li>
                         <li class="nav-item">
+                            <a href="{{ route('manager.games.ps4.woocommerce') }}" class="nav-link"><i class="nav-icon bi bi-circle"></i>
+                                <p>WooCommerce eligible ps4</p>
+                            </a>
+                        </li>
+                        <li class="nav-item">
                             <a href="{{ route('manager.games.ps5') }}" class="nav-link"> <i class="nav-icon bi bi-circle"></i>
                                 <p>PS5 Games</p>
                             </a>
