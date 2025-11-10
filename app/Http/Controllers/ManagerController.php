@@ -526,7 +526,7 @@ class ManagerController extends Controller
 
         // Fetch all games that have any stock for this platform
         // Join with special_prices table to get store-specific prices
-        $psGames = DB::table( 'accounts' )
+        $psGamesQuery = DB::table( 'accounts' )
             ->select(
                 'games.id',
                 'games.title',
@@ -548,7 +548,15 @@ class ManagerController extends Controller
                 $join->on('games.id', '=', 'special_prices.game_id')
                      ->where('special_prices.store_profile_id', '=', $storeProfileId)
                      ->where('special_prices.is_available', '=', 1);
-            })
+            });
+
+        if ( 4 === $platform ) {
+            $psGamesQuery
+                ->where( 'accounts.ps4_offline_stock', '=', 0 )
+                ->where( 'accounts.ps4_primary_stock', '>', 0 );
+        }
+
+        $psGames = $psGamesQuery
             ->groupBy(
                 'games.id',
                 'games.title',
