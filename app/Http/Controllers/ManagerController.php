@@ -683,7 +683,6 @@ class ManagerController extends Controller
                     ->where('game_id', $debugGameId)
                     ->select(
                         'id',
-                        'seller_id',
                         'store_profile_id',
                         'ps4_offline_stock',
                         'ps4_primary_stock',
@@ -700,7 +699,6 @@ class ManagerController extends Controller
                     ->where('ps4_primary_stock', '>', 0)
                     ->select(
                         'id',
-                        'seller_id',
                         'store_profile_id',
                         'ps4_offline_stock',
                         'ps4_primary_stock'
