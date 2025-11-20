@@ -101,67 +101,120 @@
     </div>
 </div>
 
-@push('scripts')
+@push('js')
 <script>
-$(document).ready(function() {
-    // Handle clear cache button
-    $('.clear-cache-btn').on('click', function() {
-        var btn = $(this);
-        var cacheKey = btn.data('cache-key');
-        var originalHtml = btn.html();
-        
-        // Disable button and show loading
-        btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Clearing...');
-        
-        // Send AJAX request
-        $.ajax({
-            url: '/cache/clear-key',
-            method: 'POST',
-            data: {
-                key: cacheKey,
-                _token: '{{ csrf_token() }}'
-            },
-            success: function(response) {
-                if (response.success) {
-                    // Show success message
-                    btn.removeClass('btn-outline-danger')
-                       .addClass('btn-success')
-                       .html('<i class="fas fa-check"></i> Cleared!');
-                    
-                    // Show alert
-                    Swal.fire({
-                        icon: 'success',
-                        title: 'Cache Cleared!',
-                        text: 'Page will refresh to load fresh data.',
-                        timer: 1500,
-                        showConfirmButton: false
-                    }).then(function() {
-                        // Reload page after showing success
-                        location.reload();
-                    });
-                } else {
-                    // Show error
+(function($) {
+    'use strict';
+    
+    $(document).ready(function() {
+        // Handle clear cache button - use event delegation for dynamically added buttons
+        $(document).on('click', '.clear-cache-btn', function(e) {
+            e.preventDefault();
+            
+            var btn = $(this);
+            var cacheKey = btn.data('cache-key');
+            
+            if (!cacheKey) {
+                console.error('Cache key not found');
+                if (typeof Swal !== 'undefined') {
                     Swal.fire({
                         icon: 'error',
                         title: 'Error',
-                        text: response.message || 'Failed to clear cache'
+                        text: 'Cache key not found'
                     });
+                } else {
+                    alert('Cache key not found');
+                }
+                return;
+            }
+            
+            var originalHtml = btn.html();
+            
+            // Disable button and show loading
+            btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Clearing...');
+            
+            // Get CSRF token from meta tag or use inline
+            var token = $('meta[name="csrf-token"]').attr('content') || '{{ csrf_token() }}';
+            
+            // Send AJAX request
+            $.ajax({
+                url: '/cache/clear-key',
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': token
+                },
+                data: {
+                    key: cacheKey,
+                    _token: token
+                },
+                success: function(response) {
+                    if (response && response.success) {
+                        // Show success message
+                        btn.removeClass('btn-outline-danger')
+                           .addClass('btn-success')
+                           .html('<i class="fas fa-check"></i> Cleared!');
+                        
+                        // Show alert
+                        if (typeof Swal !== 'undefined') {
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Cache Cleared!',
+                                text: 'Page will refresh to load fresh data.',
+                                timer: 1500,
+                                showConfirmButton: false
+                            }).then(function() {
+                                // Reload page after showing success
+                                location.reload();
+                            });
+                        } else {
+                            alert('Cache cleared! Page will refresh.');
+                            location.reload();
+                        }
+                    } else {
+                        // Show error
+                        var errorMsg = (response && response.message) ? response.message : 'Failed to clear cache';
+                        
+                        if (typeof Swal !== 'undefined') {
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Error',
+                                text: errorMsg
+                            });
+                        } else {
+                            alert('Error: ' + errorMsg);
+                        }
+                        
+                        btn.html(originalHtml).prop('disabled', false);
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('AJAX Error:', error, xhr.responseText);
+                    
+                    var errorMsg = 'Failed to clear cache. Please try again.';
+                    if (xhr.responseJSON && xhr.responseJSON.message) {
+                        errorMsg = xhr.responseJSON.message;
+                    } else if (xhr.status === 401) {
+                        errorMsg = 'Unauthorized. Please login again.';
+                    } else if (xhr.status === 403) {
+                        errorMsg = 'Access denied. You do not have permission to clear cache.';
+                    }
+                    
+                    if (typeof Swal !== 'undefined') {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error',
+                            text: errorMsg
+                        });
+                    } else {
+                        alert('Error: ' + errorMsg);
+                    }
                     
                     btn.html(originalHtml).prop('disabled', false);
                 }
-            },
-            error: function(xhr) {
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Error',
-                    text: 'Failed to clear cache. Please try again.'
-                });
-                
-                btn.html(originalHtml).prop('disabled', false);
-            }
+            });
         });
     });
-});
+})(jQuery || $);
 </script>
 @endpush
 

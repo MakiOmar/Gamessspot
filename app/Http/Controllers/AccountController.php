@@ -241,6 +241,10 @@ class AccountController extends Controller
 
         $account->update($request->all());
 
+        // Invalidate caches impacted by account update
+        CacheManager::invalidateAccounts();
+        CacheManager::invalidateGames();
+
         return response()->json(['success' => 'Account updated successfully!']);
     }
 
@@ -258,6 +262,10 @@ class AccountController extends Controller
         ]);
 
         $account->update($validated);
+
+        // Invalidate caches impacted by stock update
+        CacheManager::invalidateAccounts();
+        CacheManager::invalidateGames();
 
         return response()->json(['success' => 'Account stock levels updated successfully!']);
     }

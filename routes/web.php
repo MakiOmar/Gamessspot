@@ -358,14 +358,21 @@ Route::post('/cache/clear-key', function (Illuminate\Http\Request $request) {
         ], 400);
     }
     
-    $deleted = \App\Services\CacheManager::forget($key);
-    
-    return response()->json([
-        'success' => $deleted,
-        'message' => $deleted ? 'Cache cleared successfully!' : 'Failed to clear cache',
-        'key' => $key
-    ]);
-})->middleware(['auth:admin', 'checkRole:admin']);
+    try {
+        $deleted = \App\Services\CacheManager::forget($key);
+        
+        return response()->json([
+            'success' => $deleted,
+            'message' => $deleted ? 'Cache cleared successfully!' : 'Failed to clear cache',
+            'key' => $key
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Error clearing cache: ' . $e->getMessage()
+        ], 500);
+    }
+})->middleware(['web', 'auth:admin']);
 
 // Quick Memcached Test - Access via: /test-memcached
 Route::get('/test-memcached', function () {
