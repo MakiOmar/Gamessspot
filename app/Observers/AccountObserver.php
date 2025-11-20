@@ -4,7 +4,6 @@ namespace App\Observers;
 
 use App\Models\Account;
 use App\Services\CacheManager;
-use Illuminate\Support\Facades\Log;
 
 class AccountObserver
 {
@@ -63,10 +62,7 @@ class AccountObserver
         try {
             CacheManager::invalidateAccounts();
         } catch (\Exception $e) {
-            Log::error('Failed to invalidate account cache', [
-                'event' => $event,
-                'error' => $e->getMessage()
-            ]);
+            // Silently fail - cache invalidation should not break the application
         }
     }
 }

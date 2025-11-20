@@ -4,7 +4,6 @@ namespace App\Observers;
 
 use App\Models\Order;
 use App\Services\CacheManager;
-use Illuminate\Support\Facades\Log;
 
 class OrderObserver
 {
@@ -70,10 +69,7 @@ class OrderObserver
             // Invalidate games cache since game listings show account stock
             CacheManager::invalidateGames();
         } catch (\Exception $e) {
-            Log::error('Failed to invalidate order cache', [
-                'event' => $event,
-                'error' => $e->getMessage()
-            ]);
+            // Silently fail - cache invalidation should not break the application
         }
     }
 }

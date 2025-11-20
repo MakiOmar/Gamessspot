@@ -4,7 +4,6 @@ namespace App\Observers;
 
 use App\Models\User;
 use App\Services\CacheManager;
-use Illuminate\Support\Facades\Log;
 
 class UserObserver
 {
@@ -63,10 +62,7 @@ class UserObserver
         try {
             CacheManager::invalidateUsers();
         } catch (\Exception $e) {
-            Log::error('Failed to invalidate user cache', [
-                'event' => $event,
-                'error' => $e->getMessage()
-            ]);
+            // Silently fail - cache invalidation should not break the application
         }
     }
 }

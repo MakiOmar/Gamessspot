@@ -3,7 +3,6 @@
 namespace App\Services;
 
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Log;
 
 /**
  * Centralized Cache Manager
@@ -82,11 +81,6 @@ class CacheManager
             
             return $result;
         } catch (\Exception $e) {
-            Log::error('Cache remember failed: ' . $e->getMessage(), [
-                'key' => $key,
-                'exception' => get_class($e)
-            ]);
-            
             // If cache fails, execute callback directly
             return $callback();
         }
@@ -117,7 +111,6 @@ class CacheManager
             Cache::put("meta:{$key}", $metadata, 120); // 2 minutes
         } catch (\Exception $e) {
             // Silently fail - metadata is optional
-            Log::debug('Failed to store cache metadata', ['key' => $key]);
         }
     }
     
@@ -160,7 +153,6 @@ class CacheManager
         try {
             return Cache::get($key, $default);
         } catch (\Exception $e) {
-            Log::error('Cache get failed: ' . $e->getMessage(), ['key' => $key]);
             return $default;
         }
     }
@@ -179,7 +171,6 @@ class CacheManager
             self::registerKey($key);
             return Cache::put($key, $value, $ttl);
         } catch (\Exception $e) {
-            Log::error('Cache put failed: ' . $e->getMessage(), ['key' => $key]);
             return false;
         }
     }
@@ -200,7 +191,6 @@ class CacheManager
 
             return Cache::forget($key);
         } catch (\Exception $e) {
-            Log::error('Cache forget failed: ' . $e->getMessage(), ['key' => $key]);
             return false;
         }
     }
@@ -225,7 +215,6 @@ class CacheManager
             
             return $count;
         } catch (\Exception $e) {
-            Log::error('Cache forgetByPattern failed: ' . $e->getMessage(), ['pattern' => $pattern]);
             return 0;
         }
     }
@@ -247,7 +236,6 @@ class CacheManager
             }
         } catch (\Exception $e) {
             // Silently fail - registry is optional
-            Log::debug('Cache registry registration failed', ['key' => $key]);
         }
     }
     
@@ -264,7 +252,7 @@ class CacheManager
             $registry = array_filter($registry, fn($k) => $k !== $key);
             Cache::put(self::REGISTRY_KEY, array_values($registry), self::TTL_VERY_LONG);
         } catch (\Exception $e) {
-            Log::debug('Cache registry unregistration failed', ['key' => $key]);
+            // Silently fail - registry is optional
         }
     }
     
@@ -293,7 +281,6 @@ class CacheManager
             // Exact match fallback
             return in_array($pattern, $registry, true) ? [$pattern] : [];
         } catch (\Exception $e) {
-            Log::debug('Cache getKeysByPattern failed', ['pattern' => $pattern, 'error' => $e->getMessage()]);
             return [];
         }
     }
@@ -585,7 +572,6 @@ class CacheManager
         $count += self::forget(self::PREFIX_DEVICES . 'repair_stats') ? 1 : 0;
         $count += self::forget(self::PREFIX_USERS . 'new_users_role_5_count') ? 1 : 0;
         
-        Log::info('Dashboard cache invalidated', ['keys_cleared' => $count]);
         return $count;
     }
     
@@ -600,7 +586,6 @@ class CacheManager
         $count += self::forgetByPattern(self::PREFIX_ORDERS . '*');
         $count += self::forget(self::PREFIX_DASHBOARD . 'today_order_count') ? 1 : 0;
         
-        Log::info('Order cache invalidated', ['keys_cleared' => $count]);
         return $count;
     }
     
@@ -614,7 +599,6 @@ class CacheManager
         $count = 0;
         $count += self::forgetByPattern(self::PREFIX_USERS . '*');
         
-        Log::info('User cache invalidated', ['keys_cleared' => $count]);
         return $count;
     }
     
@@ -628,7 +612,6 @@ class CacheManager
         $count = 0;
         $count += self::forgetByPattern(self::PREFIX_ACCOUNTS . '*');
         
-        Log::info('Account cache invalidated', ['keys_cleared' => $count]);
         return $count;
     }
     
@@ -642,7 +625,6 @@ class CacheManager
         $count = 0;
         $count += self::forgetByPattern(self::PREFIX_CARDS . '*');
         
-        Log::info('Card cache invalidated', ['keys_cleared' => $count]);
         return $count;
     }
     
@@ -665,7 +647,6 @@ class CacheManager
             $count += self::forgetByPattern(self::PREFIX_GAMES . '*');
         }
         
-        Log::info('Game cache invalidated', ['keys_cleared' => $count, 'page' => $page]);
         return $count;
     }
     
@@ -679,7 +660,6 @@ class CacheManager
         $count = 0;
         $count += self::forgetByPattern(self::PREFIX_DEVICES . '*');
         
-        Log::info('Device repair cache invalidated', ['keys_cleared' => $count]);
         return $count;
     }
     
@@ -693,10 +673,8 @@ class CacheManager
     {
         try {
             Cache::flush();
-            Log::warning('All application cache cleared');
             return true;
         } catch (\Exception $e) {
-            Log::error('Cache clear all failed: ' . $e->getMessage());
             return false;
         }
     }
@@ -726,7 +704,6 @@ class CacheManager
                 ]
             ];
         } catch (\Exception $e) {
-            Log::error('Cache stats failed: ' . $e->getMessage());
             return ['error' => $e->getMessage()];
         }
     }

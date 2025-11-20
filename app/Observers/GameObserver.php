@@ -4,7 +4,6 @@ namespace App\Observers;
 
 use App\Models\Game;
 use App\Services\CacheManager;
-use Illuminate\Support\Facades\Log;
 
 class GameObserver
 {
@@ -64,10 +63,7 @@ class GameObserver
             // Invalidate all game caches (PS4 and PS5 pages)
             CacheManager::invalidateGames();
         } catch (\Exception $e) {
-            Log::error('Failed to invalidate game cache', [
-                'event' => $event,
-                'error' => $e->getMessage()
-            ]);
+            // Silently fail - cache invalidation should not break the application
         }
     }
 }

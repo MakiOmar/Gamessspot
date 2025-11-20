@@ -4,7 +4,6 @@ namespace App\Observers;
 
 use App\Models\Card;
 use App\Services\CacheManager;
-use Illuminate\Support\Facades\Log;
 
 class CardObserver
 {
@@ -63,10 +62,7 @@ class CardObserver
         try {
             CacheManager::invalidateCards();
         } catch (\Exception $e) {
-            Log::error('Failed to invalidate card cache', [
-                'event' => $event,
-                'error' => $e->getMessage()
-            ]);
+            // Silently fail - cache invalidation should not break the application
         }
     }
 }

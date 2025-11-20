@@ -10,7 +10,6 @@ use App\Exports\CustomersExport;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Log;
 use App\Models\Report;
 use App\Models\Card;
 use Illuminate\Support\Facades\DB;
@@ -441,7 +440,11 @@ class OrderController extends Controller
                 $this->deleteOrderAndReports($order);
 
                 DB::commit();
-                // ✅ No need to manually clear cache - OrderObserver handles it automatically
+                
+                // Flush accounts and orders cache after undo (stock restored)
+                CacheManager::invalidateAccounts();
+                CacheManager::invalidateOrders();
+                CacheManager::invalidateGames(); // Games listings show aggregated account stock
                 
                 // ✅ NEW: Send webhook to WordPress when order is undone (stock restored)
                 if ($gameId && $platform && $type) {
@@ -454,19 +457,8 @@ class OrderController extends Controller
                             'stock_updated'  // Different event type for restock
                         );
                         
-                        \Log::info('Restock webhook dispatched', [
-                            'order_id' => $order->id,
-                            'game_id'  => $gameId,
-                            'platform' => $platform,
-                            'type'     => $type,
-                            'new_stock' => $newStock,
-                        ]);
                     } catch (\Exception $e) {
                         // Don't fail the undo operation if webhook fails
-                        \Log::warning('Restock webhook dispatch failed', [
-                            'error' => $e->getMessage(),
-                            'order_id' => $order->id,
-                        ]);
                     }
                 }
                 
@@ -526,14 +518,6 @@ class OrderController extends Controller
                 } elseif ($stockField === 'ps5_secondary_stock') {
                     $account->ps4_secondary_stock = 1;
                 }
-                
-                Log::info('Secondary stock restored for both platforms', [
-                    'account_id' => $account->id,
-                    'game_id' => $account->game_id,
-                    'restored_field' => $stockField,
-                    'ps4_secondary_stock' => $account->ps4_secondary_stock,
-                    'ps5_secondary_stock' => $account->ps5_secondary_stock,
-                ]);
             }
             
             $account->save();
@@ -559,11 +543,6 @@ class OrderController extends Controller
             if ($account->ps4_secondary_stock == 0) {
                 $account->ps5_secondary_stock = 0;
                 $account->save();
-                
-                Log::info('Secondary stock synced: PS4 secondary reached 0, PS5 secondary set to 0', [
-                    'account_id' => $account->id,
-                    'game_id' => $account->game_id,
-                ]);
             }
         } elseif ($soldItem === 'ps5_secondary_stock') {
             // Refresh to get the current value after decrement
@@ -573,11 +552,6 @@ class OrderController extends Controller
             if ($account->ps5_secondary_stock == 0) {
                 $account->ps4_secondary_stock = 0;
                 $account->save();
-                
-                Log::info('Secondary stock synced: PS5 secondary reached 0, PS4 secondary set to 0', [
-                    'account_id' => $account->id,
-                    'game_id' => $account->game_id,
-                ]);
             }
         }
     }
@@ -1295,7 +1269,6 @@ class OrderController extends Controller
             return redirect()->route('manager.orders')->with('success', 'Orders successfully sent to POS');
         } else {
             // Handle errors from the API
-            Log::emergency($response->body());
             return redirect()->route('manager.orders')->with('error', 'Failed to create order');
         }
     }
