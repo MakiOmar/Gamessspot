@@ -342,6 +342,7 @@ return [
                     'text' => 'WooCommerce eligible PS4',
                     'route' => 'manager.games.ps4.woocommerce',
                     'icon' => 'bi bi-circle',
+                    'can' => 'manage-options',
                 ],
                 [
                     'text' => 'PS5 Games',
@@ -543,6 +544,7 @@ return [
                     'text' => 'WooCommerce eligible PS4',
                     'route' => 'manager.games.ps4.woocommerce',
                     'icon' => 'bi bi-circle',
+                    'can' => 'manage-options',
                 ],
                 [
                     'text' => 'PS5 Games',
