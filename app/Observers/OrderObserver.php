@@ -61,7 +61,14 @@ class OrderObserver
     protected function invalidateOrderCaches(string $event)
     {
         try {
+            // Invalidate orders cache
             CacheManager::invalidateOrders();
+            
+            // Also invalidate accounts cache since orders affect account stock
+            CacheManager::invalidateAccounts();
+            
+            // Invalidate games cache since game listings show account stock
+            CacheManager::invalidateGames();
         } catch (\Exception $e) {
             Log::error('Failed to invalidate order cache', [
                 'event' => $event,
