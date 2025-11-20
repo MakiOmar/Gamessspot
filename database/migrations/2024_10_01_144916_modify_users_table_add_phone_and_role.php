@@ -14,8 +14,12 @@ class ModifyUsersTableAddPhoneAndRole extends Migration
     public function up()
     {
         Schema::table('users', function (Blueprint $table) {
-            $table->string('phone')->after('id'); // Adds a phone column after the ID
-            $table->integer('role')->after('phone'); // Adds a role column for numeric values
+            if (!Schema::hasColumn('users', 'phone')) {
+                $table->string('phone')->after('id'); // Adds a phone column after the ID
+            }
+            if (!Schema::hasColumn('users', 'role')) {
+                $table->integer('role')->after('phone'); // Adds a role column for numeric values
+            }
         });
     }
 

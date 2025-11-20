@@ -14,7 +14,9 @@ class AddUniqueCodeToGamesTable extends Migration
     public function up()
     {
         Schema::table('games', function (Blueprint $table) {
-            $table->string('code')->unique()->change(); // Make the 'code' column unique
+            if (Schema::hasColumn('games', 'code')) {
+                $table->string('code')->unique()->change(); // Make the 'code' column unique
+            }
         });
     }
 

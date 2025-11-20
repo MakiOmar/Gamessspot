@@ -14,8 +14,12 @@ class UpdateCardCategoriesTableReplaceDescriptionWithPrice extends Migration
     public function up()
     {
         Schema::table('card_categories', function (Blueprint $table) {
-            $table->dropColumn('description');  // Remove the description column
-            $table->decimal('price', 8, 2)->nullable(); // Add the price column with decimal type
+            if (Schema::hasColumn('card_categories', 'description')) {
+                $table->dropColumn('description');  // Remove the description column
+            }
+            if (!Schema::hasColumn('card_categories', 'price')) {
+                $table->decimal('price', 8, 2)->nullable(); // Add the price column with decimal type
+            }
         });
     }
 

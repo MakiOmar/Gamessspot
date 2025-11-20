@@ -14,8 +14,10 @@ class UpdateStatusColumnInReportsTable extends Migration
     public function up()
     {
         Schema::table('reports', function (Blueprint $table) {
-            // Modify the ENUM column to include 'solved'
-            $table->enum('status', ['has_problem', 'needs_return', 'solved'])->change();
+            if (Schema::hasColumn('reports', 'status')) {
+                // Modify the ENUM column to include 'solved'
+                $table->enum('status', ['has_problem', 'needs_return', 'solved'])->change();
+            }
         });
     }
 

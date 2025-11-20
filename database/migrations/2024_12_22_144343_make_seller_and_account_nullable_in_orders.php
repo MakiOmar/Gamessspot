@@ -10,8 +10,12 @@ class MakeSellerAndAccountNullableInOrders extends Migration
     {
         Schema::table('orders', function (Blueprint $table) {
             // Modify the columns to be nullable
-            $table->unsignedBigInteger('seller_id')->nullable()->change();
-            $table->unsignedBigInteger('account_id')->nullable()->change();
+            if (Schema::hasColumn('orders', 'seller_id')) {
+                $table->unsignedBigInteger('seller_id')->nullable()->change();
+            }
+            if (Schema::hasColumn('orders', 'account_id')) {
+                $table->unsignedBigInteger('account_id')->nullable()->change();
+            }
         });
     }
 

@@ -14,8 +14,12 @@ class AddPs5SecondaryFieldsToGamesTable extends Migration
     public function up()
     {
         Schema::table('games', function (Blueprint $table) {
-            $table->decimal('ps5_secondary_price', 8, 2)->default(0); // Adding price field
-            $table->integer('ps5_secondary_status')->default(0);      // Adding status field
+            if (!Schema::hasColumn('games', 'ps5_secondary_price')) {
+                $table->decimal('ps5_secondary_price', 8, 2)->default(0); // Adding price field
+            }
+            if (!Schema::hasColumn('games', 'ps5_secondary_status')) {
+                $table->integer('ps5_secondary_status')->default(0);      // Adding status field
+            }
         });
     }
 

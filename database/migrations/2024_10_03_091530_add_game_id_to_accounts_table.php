@@ -14,8 +14,10 @@ class AddGameIdToAccountsTable extends Migration
     public function up()
     {
         Schema::table('accounts', function (Blueprint $table) {
-            // Add game_id as a foreign key
-            $table->foreignId('game_id')->constrained()->onDelete('cascade')->after('ps5_secondary_stock');
+            if (!Schema::hasColumn('accounts', 'game_id')) {
+                // Add game_id as a foreign key
+                $table->foreignId('game_id')->constrained()->onDelete('cascade')->after('ps5_secondary_stock');
+            }
         });
     }
 

@@ -12,7 +12,9 @@ return new class extends Migration
     public function up()
     {
         Schema::table('users', function (Blueprint $table) {
-            $table->integer('role')->default(1)->change(); // Set default value for role to 1
+            if (Schema::hasColumn('users', 'role')) {
+                $table->integer('role')->default(1)->change(); // Set default value for role to 1
+            }
         });
     }
     

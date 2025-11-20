@@ -12,8 +12,10 @@ return new class extends Migration
     public function up()
     {
         Schema::table('orders', function (Blueprint $table) {
-            $table->unsignedBigInteger('store_profile_id')->nullable()->after('seller_id');
-            $table->foreign('store_profile_id')->references('id')->on('stores_profile')->onDelete('set null');
+            if (!Schema::hasColumn('orders', 'store_profile_id')) {
+                $table->unsignedBigInteger('store_profile_id')->nullable()->after('seller_id');
+                $table->foreign('store_profile_id')->references('id')->on('stores_profile')->onDelete('set null');
+            }
         });
     }
 

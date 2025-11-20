@@ -14,7 +14,9 @@ class AddBirthdateToAccountsTable extends Migration
     public function up()
     {
         Schema::table('accounts', function (Blueprint $table) {
-            $table->date('birthdate')->nullable(); // Add birthdate column
+            if (!Schema::hasColumn('accounts', 'birthdate')) {
+                $table->date('birthdate')->nullable(); // Add birthdate column
+            }
         });
     }
 

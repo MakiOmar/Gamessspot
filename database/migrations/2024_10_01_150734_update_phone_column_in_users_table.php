@@ -14,7 +14,9 @@ class UpdatePhoneColumnInUsersTable extends Migration
     public function up()
     {
         Schema::table('users', function (Blueprint $table) {
-            $table->string('phone')->unique()->change();
+            if (Schema::hasColumn('users', 'phone')) {
+                $table->string('phone')->unique()->change();
+            }
         });
     }
 

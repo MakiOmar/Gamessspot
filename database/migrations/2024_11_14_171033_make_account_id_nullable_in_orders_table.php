@@ -9,7 +9,9 @@ class MakeAccountIdNullableInOrdersTable extends Migration
     public function up()
     {
         Schema::table('orders', function (Blueprint $table) {
-            $table->unsignedBigInteger('account_id')->nullable()->change();
+            if (Schema::hasColumn('orders', 'account_id')) {
+                $table->unsignedBigInteger('account_id')->nullable()->change();
+            }
         });
     }
 

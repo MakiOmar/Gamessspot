@@ -12,7 +12,9 @@ return new class extends Migration
     public function up()
     {
         Schema::table('users', function (Blueprint $table) {
-            $table->dropColumn('role'); // Remove the single 'role' column
+            if (Schema::hasColumn('users', 'role')) {
+                $table->dropColumn('role'); // Remove the single 'role' column
+            }
         });
     }
 

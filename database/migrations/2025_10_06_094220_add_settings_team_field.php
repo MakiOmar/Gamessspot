@@ -14,15 +14,20 @@ return new class extends Migration
             return;
         }
 
-        Schema::table(config('settings.table'), function (Blueprint $table) {
-            $table->unsignedBigInteger(config('settings.team_foreign_key'))->nullable()->after('id');
-            $table->index(config('settings.team_foreign_key'), 'settings_team_id_index');
+        $tableName = config('settings.table');
+        $teamForeignKey = config('settings.team_foreign_key');
+
+        Schema::table($tableName, function (Blueprint $table) use ($teamForeignKey) {
+            if (!Schema::hasColumn($tableName, $teamForeignKey)) {
+                $table->unsignedBigInteger($teamForeignKey)->nullable()->after('id');
+                $table->index($teamForeignKey, 'settings_team_id_index');
+            }
 
             $table->dropUnique('settings_key_unique');
 
             $table->unique([
                 'key',
-                config('settings.team_foreign_key'),
+                $teamForeignKey,
             ], 'settings_key_team_id_unique');
         });
     }

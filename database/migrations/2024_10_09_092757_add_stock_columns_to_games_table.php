@@ -15,12 +15,24 @@ class AddStockColumnsToGamesTable extends Migration
     {
         Schema::table('games', function (Blueprint $table) {
             // Add stock columns for each status (nullable in case not all games have stock for every status)
-            $table->integer('ps4_offline_stock')->nullable();
-            $table->integer('ps4_primary_stock')->nullable();
-            $table->integer('ps4_secondary_stock')->nullable();
-            $table->integer('ps5_offline_stock')->nullable();
-            $table->integer('ps5_primary_stock')->nullable();
-            $table->integer('ps5_secondary_stock')->nullable();
+            if (!Schema::hasColumn('games', 'ps4_offline_stock')) {
+                $table->integer('ps4_offline_stock')->nullable();
+            }
+            if (!Schema::hasColumn('games', 'ps4_primary_stock')) {
+                $table->integer('ps4_primary_stock')->nullable();
+            }
+            if (!Schema::hasColumn('games', 'ps4_secondary_stock')) {
+                $table->integer('ps4_secondary_stock')->nullable();
+            }
+            if (!Schema::hasColumn('games', 'ps5_offline_stock')) {
+                $table->integer('ps5_offline_stock')->nullable();
+            }
+            if (!Schema::hasColumn('games', 'ps5_primary_stock')) {
+                $table->integer('ps5_primary_stock')->nullable();
+            }
+            if (!Schema::hasColumn('games', 'ps5_secondary_stock')) {
+                $table->integer('ps5_secondary_stock')->nullable();
+            }
         });
     }
 

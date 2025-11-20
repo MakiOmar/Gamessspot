@@ -12,13 +12,17 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('device_repairs', function (Blueprint $table) {
-            // Add device_model_id foreign key
-            $table->foreignId('device_model_id')->nullable()->after('id')->constrained('device_models')->onDelete('set null');
+            if (!Schema::hasColumn('device_repairs', 'device_model_id')) {
+                // Add device_model_id foreign key
+                $table->foreignId('device_model_id')->nullable()->after('id')->constrained('device_models')->onDelete('set null');
+                
+                $table->index('device_model_id');
+            }
             
             // Make device_model column nullable for backward compatibility
-            $table->string('device_model')->nullable()->change();
-            
-            $table->index('device_model_id');
+            if (Schema::hasColumn('device_repairs', 'device_model')) {
+                $table->string('device_model')->nullable()->change();
+            }
         });
     }
 

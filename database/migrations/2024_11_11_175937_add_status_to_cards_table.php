@@ -14,7 +14,9 @@ class AddStatusToCardsTable extends Migration
     public function up()
     {
         Schema::table('cards', function (Blueprint $table) {
-            $table->boolean('status')->default(true)->after('cost'); // Add the status column with default true
+            if (!Schema::hasColumn('cards', 'status')) {
+                $table->boolean('status')->default(true)->after('cost'); // Add the status column with default true
+            }
         });
     }
 

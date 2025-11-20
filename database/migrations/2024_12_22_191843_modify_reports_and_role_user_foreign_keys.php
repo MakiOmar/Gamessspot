@@ -25,14 +25,16 @@ class ModifyReportsAndRoleUserForeignKeys extends Migration
             DB::statement("ALTER TABLE reports DROP FOREIGN KEY {$reportsForeignKeys[0]->CONSTRAINT_NAME}");
         }
         
-        Schema::table('reports', function (Blueprint $table) {
-            // Make the column nullable to support SET NULL
-            $table->unsignedBigInteger('seller_id')->nullable()->change();
-            // Create the new foreign key with SET NULL
-            $table->foreign('seller_id')
-                ->references('id')->on('users')
-                ->onDelete('set null'); // Change to SET NULL
-        });
+        if (Schema::hasColumn('reports', 'seller_id')) {
+            Schema::table('reports', function (Blueprint $table) {
+                // Make the column nullable to support SET NULL
+                $table->unsignedBigInteger('seller_id')->nullable()->change();
+                // Create the new foreign key with SET NULL
+                $table->foreign('seller_id')
+                    ->references('id')->on('users')
+                    ->onDelete('set null'); // Change to SET NULL
+            });
+        }
 
         // Handle role_user table
         // Check if foreign key exists and drop it
@@ -50,14 +52,16 @@ class ModifyReportsAndRoleUserForeignKeys extends Migration
             DB::statement("ALTER TABLE role_user DROP FOREIGN KEY {$roleUserForeignKeys[0]->CONSTRAINT_NAME}");
         }
         
-        Schema::table('role_user', function (Blueprint $table) {
-            // Make the column nullable to support SET NULL
-            $table->unsignedBigInteger('user_id')->nullable()->change();
-            // Create the new foreign key with SET NULL
-            $table->foreign('user_id')
-                ->references('id')->on('users')
-                ->onDelete('set null'); // Change to SET NULL
-        });
+        if (Schema::hasColumn('role_user', 'user_id')) {
+            Schema::table('role_user', function (Blueprint $table) {
+                // Make the column nullable to support SET NULL
+                $table->unsignedBigInteger('user_id')->nullable()->change();
+                // Create the new foreign key with SET NULL
+                $table->foreign('user_id')
+                    ->references('id')->on('users')
+                    ->onDelete('set null'); // Change to SET NULL
+            });
+        }
     }
 
     public function down()

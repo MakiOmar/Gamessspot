@@ -9,10 +9,12 @@ return new class extends Migration
     public function up()
     {
         Schema::table('users', function (Blueprint $table) {
-            $table->foreignId('store_profile_id')
-              ->nullable()
-              ->after('role') // Adds the column after the 'role' column
-              ->constrained('stores_profile');
+            if (!Schema::hasColumn('users', 'store_profile_id')) {
+                $table->foreignId('store_profile_id')
+                  ->nullable()
+                  ->after('role') // Adds the column after the 'role' column
+                  ->constrained('stores_profile');
+            }
         });
     }
 

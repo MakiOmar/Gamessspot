@@ -9,14 +9,17 @@ class UpdateOrdersForeignKeys extends Migration
     public function up()
     {
         Schema::table('orders', function (Blueprint $table) {
-
             // Re-add foreign keys with onDelete('set null')
-            $table->foreign('seller_id')
-                ->references('id')->on('users')
-                ->onDelete('set null');
-            $table->foreign('account_id')
-                ->references('id')->on('accounts')
-                ->onDelete('set null');
+            if (Schema::hasColumn('orders', 'seller_id')) {
+                $table->foreign('seller_id')
+                    ->references('id')->on('users')
+                    ->onDelete('set null');
+            }
+            if (Schema::hasColumn('orders', 'account_id')) {
+                $table->foreign('account_id')
+                    ->references('id')->on('accounts')
+                    ->onDelete('set null');
+            }
         });
     }
 

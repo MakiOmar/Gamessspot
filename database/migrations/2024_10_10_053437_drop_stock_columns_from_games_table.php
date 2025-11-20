@@ -14,14 +14,28 @@ class DropStockColumnsFromGamesTable extends Migration
     public function up()
     {
         Schema::table('games', function (Blueprint $table) {
-            $table->dropColumn([
-                'ps4_offline_stock',
-                'ps4_primary_stock',
-                'ps4_secondary_stock',
-                'ps5_offline_stock',
-                'ps5_primary_stock',
-                'ps5_secondary_stock',
-            ]);
+            $columnsToDrop = [];
+            if (Schema::hasColumn('games', 'ps4_offline_stock')) {
+                $columnsToDrop[] = 'ps4_offline_stock';
+            }
+            if (Schema::hasColumn('games', 'ps4_primary_stock')) {
+                $columnsToDrop[] = 'ps4_primary_stock';
+            }
+            if (Schema::hasColumn('games', 'ps4_secondary_stock')) {
+                $columnsToDrop[] = 'ps4_secondary_stock';
+            }
+            if (Schema::hasColumn('games', 'ps5_offline_stock')) {
+                $columnsToDrop[] = 'ps5_offline_stock';
+            }
+            if (Schema::hasColumn('games', 'ps5_primary_stock')) {
+                $columnsToDrop[] = 'ps5_primary_stock';
+            }
+            if (Schema::hasColumn('games', 'ps5_secondary_stock')) {
+                $columnsToDrop[] = 'ps5_secondary_stock';
+            }
+            if (!empty($columnsToDrop)) {
+                $table->dropColumn($columnsToDrop);
+            }
         });
     }
 

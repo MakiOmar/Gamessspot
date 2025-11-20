@@ -12,7 +12,9 @@ class AddIsAvailableToSpecialPricesTable extends Migration
     public function up()
     {
         Schema::table('special_prices', function (Blueprint $table) {
-            $table->boolean('is_available')->default(true)->after('ps5_offline_price');
+            if (!Schema::hasColumn('special_prices', 'is_available')) {
+                $table->boolean('is_available')->default(true)->after('ps5_offline_price');
+            }
         });
     }
 

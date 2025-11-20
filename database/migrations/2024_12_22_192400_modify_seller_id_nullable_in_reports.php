@@ -9,7 +9,9 @@ class ModifySellerIdNullableInReports extends Migration
     public function up()
     {
         Schema::table('reports', function (Blueprint $table) {
-            $table->unsignedBigInteger('seller_id')->nullable()->change();
+            if (Schema::hasColumn('reports', 'seller_id')) {
+                $table->unsignedBigInteger('seller_id')->nullable()->change();
+            }
         });
     }
 

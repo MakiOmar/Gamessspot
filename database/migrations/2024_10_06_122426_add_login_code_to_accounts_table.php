@@ -14,7 +14,9 @@ class AddLoginCodeToAccountsTable extends Migration
     public function up()
     {
         Schema::table('accounts', function (Blueprint $table) {
-            $table->longText('login_code')->nullable()->after('password'); // Add the login_code column
+            if (!Schema::hasColumn('accounts', 'login_code')) {
+                $table->longText('login_code')->nullable()->after('password'); // Add the login_code column
+            }
         });
     }
 
