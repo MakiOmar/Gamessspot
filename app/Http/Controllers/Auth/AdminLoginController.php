@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 
 class AdminLoginController extends Controller
 {
@@ -49,38 +50,66 @@ class AdminLoginController extends Controller
             )
         );
 
+        // Debug: Log login attempt
+        Log::info('Login attempt', [
+            'phone' => $request->phone,
+            'has_password' => !empty($request->password),
+        ]);
+
         // Attempt to log the manager in using phone number and password
-        if (
-            Auth::guard('admin')->attempt(
-                array(
+        $attemptResult = Auth::guard('admin')->attempt(
+            array(
                 'phone'    => $request->phone,
                 'password' => $request->password,
-                ),
-                $request->remember
-            )
-        ) {
+            ),
+            $request->remember
+        );
+
+        Log::info('Login attempt result', [
+            'success' => $attemptResult,
+            'authenticated_user_id' => Auth::guard('admin')->check() ? Auth::guard('admin')->id() : null,
+        ]);
+
+        if ($attemptResult) {
             // Get the authenticated user and ensure roles are loaded
             $user = Auth::guard('admin')->user();
             $user->loadMissing('roles');
             
+            Log::info('Authenticated user roles', [
+                'user_id' => $user->id,
+                'roles' => $user->roles->pluck('name')->toArray(),
+            ]);
+            
             // Check if the authenticated user has 'admin', 'sales', 'accountatnt', or 'account manager' role
             // Note: 'accountatnt' is the actual role name in database (typo)
-            if (
-                $user->roles->contains(
-                    function ($role) {
-                        return in_array($role->name, array( 'admin', 'sales', 'accountatnt', 'account manager' ));
-                    }
-                )
-            ) {
+            $hasValidRole = $user->roles->contains(
+                function ($role) {
+                    return in_array($role->name, array( 'admin', 'sales', 'accountatnt', 'account manager' ));
+                }
+            );
+
+            Log::info('Role check result', [
+                'has_valid_role' => $hasValidRole,
+            ]);
+
+            if ($hasValidRole) {
                 // If the user has one of the allowed roles, redirect to the dashboard
+                Log::info('Login successful, redirecting to dashboard');
                 return redirect()->intended(route('manager.dashboard'));
             }
             // If the user doesn't have one of the specified roles, log them out and show an error
+            Log::warning('User logged in but lacks required roles', [
+                'user_id' => $user->id,
+                'roles' => $user->roles->pluck('name')->toArray(),
+            ]);
             Auth::guard('admin')->logout();
             return redirect()->route('manager.login')->withErrors(array( 'You do not have the required role to access this area.' ));
         }
 
         // If unsuccessful, redirect back with an error
+        Log::warning('Login failed - invalid credentials', [
+            'phone' => $request->phone,
+        ]);
         return redirect()->back()->withInput($request->only('phone', 'remember'))->withErrors(
             array(
                 'phone' => 'These credentials do not match our records.',
