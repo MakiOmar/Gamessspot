@@ -21,6 +21,24 @@ class RedirectIfAuthenticated
 
         foreach ($guards as $guard) {
             if (Auth::guard($guard)->check()) {
+                $user = Auth::guard($guard)->user();
+                
+                // For admin guard, check if user has proper roles before redirecting
+                // This prevents redirect loops when user is authenticated but lacks roles
+                if ($guard === 'admin') {
+                    $user->loadMissing('roles');
+                    if ($user->roles->contains(function ($role) {
+                        return in_array($role->name, array( 'admin', 'sales', 'accountatnt', 'account manager' ));
+                    })) {
+                        return redirect(RouteServiceProvider::HOME);
+                    } else {
+                        // User is authenticated but doesn't have required roles
+                        // Log them out and allow them to see the login page
+                        Auth::guard($guard)->logout();
+                        return $next($request);
+                    }
+                }
+                
                 return redirect(RouteServiceProvider::HOME);
             }
         }
