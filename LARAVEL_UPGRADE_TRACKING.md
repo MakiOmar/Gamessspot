@@ -4,7 +4,7 @@ This branch tracks the Laravel version upgrade process.
 
 ## Current Version
 - **Laravel Version:** 10.48.22
-- **PHP Version:** 8.1+ (check with `php --version`)
+- **PHP Version:** 8.2.13
 - **Upgrade Target:** _[To be determined - e.g., Laravel 11]_
 
 ## Upgrade Checklist
