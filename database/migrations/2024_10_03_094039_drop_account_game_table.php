@@ -23,12 +23,14 @@ class DropAccountGameTable extends Migration
      */
     public function down()
     {
-        Schema::create('account_game', function (Blueprint $table) {
+        if (!Schema::hasTable('account_game')) {
+            Schema::create('account_game', function (Blueprint $table) {
             $table->id();
             $table->foreignId('account_id')->constrained()->onDelete('cascade');
             $table->foreignId('game_id')->constrained()->onDelete('cascade');
             $table->timestamps();
-        });
+            });
+        }
     }
 }
 

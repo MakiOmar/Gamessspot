@@ -8,12 +8,14 @@ return new class extends Migration
 {
     public function up()
     {
-        Schema::create('stores_profile', function (Blueprint $table) {
+        if (!Schema::hasTable('stores_profile')) {
+            Schema::create('stores_profile', function (Blueprint $table) {
             $table->id(); // Primary key
             $table->string('name'); // Store name
             $table->string('phone_number'); // Store phone number
             $table->timestamps(); // Created_at and Updated_at columns
-        });
+            });
+        }
     }
 
     public function down()

@@ -13,7 +13,8 @@ class CreateOrdersTable extends Migration
      */
     public function up()
     {
-        Schema::create('orders', function (Blueprint $table) {
+        if (!Schema::hasTable('orders')) {
+            Schema::create('orders', function (Blueprint $table) {
             $table->id();  // Primary key
             $table->unsignedBigInteger('seller_id');  // Reference to the seller
             $table->unsignedBigInteger('account_id');  // Reference to the account sold
@@ -27,7 +28,8 @@ class CreateOrdersTable extends Migration
             // Foreign key constraints without cascading deletes
             $table->foreign('seller_id')->references('id')->on('users');
             $table->foreign('account_id')->references('id')->on('accounts');
-        });
+            });
+        }
     }
 
     /**

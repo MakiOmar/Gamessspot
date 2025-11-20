@@ -13,12 +13,14 @@ class CreateCardCategoriesTable extends Migration
      */
     public function up()
     {
-        Schema::create('card_categories', function (Blueprint $table) {
+        if (!Schema::hasTable('card_categories')) {
+            Schema::create('card_categories', function (Blueprint $table) {
             $table->id();
             $table->string('name')->unique();
             $table->text('description')->nullable();
             $table->timestamps();
-        });
+            });
+        }
     }
 
     /**

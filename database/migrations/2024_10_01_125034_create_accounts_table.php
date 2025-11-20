@@ -16,7 +16,8 @@ class CreateAccountsTable extends Migration
      */
     public function up()
     {
-        Schema::create('accounts', function (Blueprint $table) {
+        if (!Schema::hasTable('accounts')) {
+            Schema::create('accounts', function (Blueprint $table) {
             $table->id();
             $table->string('mail');
             $table->string('region', 2); // ISO 3166-1 alpha-2 country code
@@ -28,7 +29,8 @@ class CreateAccountsTable extends Migration
             $table->integer('ps5_secondary_stock')->default(0);
             $table->foreignId('game_id')->constrained()->onDelete('cascade'); // Foreign key to games table
             $table->timestamps();
-        });
+            });
+        }
     }
 
     /**

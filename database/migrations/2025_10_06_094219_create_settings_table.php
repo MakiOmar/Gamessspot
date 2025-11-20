@@ -8,10 +8,13 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create(config('settings.table'), function (Blueprint $table) {
+        $tableName = config('settings.table');
+        if (!Schema::hasTable($tableName)) {
+            Schema::create($tableName, function (Blueprint $table) {
             $table->bigIncrements('id');
             $table->string('key')->unique()->index();
             $table->longText('value')->nullable();
-        });
+            });
+        }
     }
 };

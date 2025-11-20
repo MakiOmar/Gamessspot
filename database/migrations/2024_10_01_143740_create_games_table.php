@@ -13,7 +13,8 @@ class CreateGamesTable extends Migration
      */
     public function up()
     {
-        Schema::create('games', function (Blueprint $table) {
+        if (!Schema::hasTable('games')) {
+            Schema::create('games', function (Blueprint $table) {
             $table->id();
             $table->string('title');
             $table->string('code');
@@ -31,7 +32,8 @@ class CreateGamesTable extends Migration
             $table->string('ps4_image_url')->nullable();
             $table->string('ps5_image_url')->nullable();
             $table->timestamps();
-        });
+            });
+        }
     }
 
     /**

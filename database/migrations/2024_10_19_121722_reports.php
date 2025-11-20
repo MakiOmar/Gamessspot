@@ -13,7 +13,8 @@ return new class extends Migration
      */
     public function up()
     {
-        Schema::create('reports', function (Blueprint $table) {
+        if (!Schema::hasTable('reports')) {
+            Schema::create('reports', function (Blueprint $table) {
             $table->id(); // Primary key
             $table->unsignedBigInteger('order_id'); // Foreign key referencing orders table
             $table->unsignedBigInteger('seller_id'); // Foreign key referencing users table
@@ -24,7 +25,8 @@ return new class extends Migration
             // Define the relationship to orders and users
             $table->foreign('order_id')->references('id')->on('orders')->onDelete('restrict');
             $table->foreign('seller_id')->references('id')->on('users')->onDelete('cascade'); // Cascade delete if the user is deleted
-        });
+            });
+        }
     }
 
     /**

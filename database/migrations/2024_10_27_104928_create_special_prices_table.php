@@ -11,7 +11,8 @@ class CreateSpecialPricesTable extends Migration
      */
     public function up()
     {
-        Schema::create('special_prices', function (Blueprint $table) {
+        if (!Schema::hasTable('special_prices')) {
+            Schema::create('special_prices', function (Blueprint $table) {
             $table->bigIncrements('id');
             $table->unsignedBigInteger('game_id');  // Foreign key to games
             $table->unsignedBigInteger('store_profile_id');  // Foreign key to stores_profile
@@ -30,7 +31,8 @@ class CreateSpecialPricesTable extends Migration
 
             // Timestamps
             $table->timestamps();
-        });
+            });
+        }
     }
 
     /**

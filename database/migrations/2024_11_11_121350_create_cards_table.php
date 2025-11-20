@@ -13,13 +13,15 @@ class CreateCardsTable extends Migration
      */
     public function up()
     {
-        Schema::create('cards', function (Blueprint $table) {
+        if (!Schema::hasTable('cards')) {
+            Schema::create('cards', function (Blueprint $table) {
             $table->id();
             $table->string('code')->unique();
             $table->decimal('cost', 8, 2);
             $table->foreignId('card_category_id')->constrained('card_categories')->onDelete('cascade');
             $table->timestamps();
-        });
+            });
+        }
     }
 
     /**

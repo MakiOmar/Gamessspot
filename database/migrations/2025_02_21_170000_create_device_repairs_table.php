@@ -11,7 +11,8 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('device_repairs', function (Blueprint $table) {
+        if (!Schema::hasTable('device_repairs')) {
+            Schema::create('device_repairs', function (Blueprint $table) {
             $table->id();
             $table->string('device_model');
             $table->string('device_serial_number');
@@ -26,7 +27,8 @@ return new class extends Migration
             $table->index('tracking_code');
             $table->index('status');
             $table->index('user_id');
-        });
+            });
+        }
     }
 
     /**

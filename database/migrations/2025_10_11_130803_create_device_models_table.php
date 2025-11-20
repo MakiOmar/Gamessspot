@@ -11,7 +11,8 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('device_models', function (Blueprint $table) {
+        if (!Schema::hasTable('device_models')) {
+            Schema::create('device_models', function (Blueprint $table) {
             $table->id();
             $table->string('name');
             $table->string('brand')->nullable();
@@ -21,7 +22,8 @@ return new class extends Migration
             
             $table->index('is_active');
             $table->index(['brand', 'name']);
-        });
+            });
+        }
     }
 
     /**

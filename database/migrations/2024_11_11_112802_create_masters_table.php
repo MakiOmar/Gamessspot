@@ -13,7 +13,8 @@ class CreateMastersTable extends Migration
      */
     public function up()
     {
-        Schema::create('masters', function (Blueprint $table) {
+        if (!Schema::hasTable('masters')) {
+            Schema::create('masters', function (Blueprint $table) {
             $table->id();
             $table->string('mail')->unique();
             $table->string('password');
@@ -21,7 +22,8 @@ class CreateMastersTable extends Migration
             $table->decimal('value', 15, 2)->nullable();
             $table->decimal('rate', 8, 4)->nullable();
             $table->timestamps();
-        });
+            });
+        }
     }
 
     /**
