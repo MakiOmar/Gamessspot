@@ -77,7 +77,7 @@ class AdminLoginController extends Controller
             }
             // If the user doesn't have one of the specified roles, log them out and show an error
             Auth::guard('admin')->logout();
-            return redirect()->route('login')->withErrors(array( 'You do not have the required role to access this area.' ));
+            return redirect()->route('manager.login')->withErrors(array( 'You do not have the required role to access this area.' ));
         }
 
         // If unsuccessful, redirect back with an error
