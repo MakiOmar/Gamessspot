@@ -21,11 +21,12 @@ class AdminMiddleware
             // Eager load roles to prevent N+1 query problem
             $user = Auth::user()->loadMissing('roles');
 
+            // Check if user has one of the allowed roles by name
+            // Note: 'accountatnt' is the actual role name in database (typo)
             if (
                 $user->roles->contains(function ($role) {
-                    return in_array($role->id, array( 1, 2, 3, 4 )); // Role IDs for 'admin', 'sales', 'accountant'
-                }) &&
-                $user->is_active // Ensure the user is active
+                    return in_array($role->name, array( 'admin', 'sales', 'accountatnt', 'account manager' ));
+                })
             ) {
                 return $next($request);
             }

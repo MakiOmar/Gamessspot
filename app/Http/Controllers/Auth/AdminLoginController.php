@@ -59,11 +59,16 @@ class AdminLoginController extends Controller
                 $request->remember
             )
         ) {
-            // Check if the authenticated user has 'admin', 'sales', or 'accountant' role
+            // Get the authenticated user and ensure roles are loaded
+            $user = Auth::guard('admin')->user();
+            $user->loadMissing('roles');
+            
+            // Check if the authenticated user has 'admin', 'sales', 'accountatnt', or 'account manager' role
+            // Note: 'accountatnt' is the actual role name in database (typo)
             if (
-                Auth::guard('admin')->user()->roles->contains(
+                $user->roles->contains(
                     function ($role) {
-                        return in_array($role->name, array( 'admin', 'sales', 'accountant', 'account manager' ));
+                        return in_array($role->name, array( 'admin', 'sales', 'accountatnt', 'account manager' ));
                     }
                 )
             ) {

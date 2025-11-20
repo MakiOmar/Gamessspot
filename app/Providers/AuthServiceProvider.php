@@ -21,62 +21,81 @@ class AuthServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Gate::define('access-dashboard', function ($user) {
-            return $user->hasRole(['admin', 'sales', 'account manager', 'accountant']);
+            // Ensure roles are loaded
+            $user->loadMissing('roles');
+            // Note: 'accountatnt' is the actual role name in database (typo)
+            return $user->hasRole(['admin', 'sales', 'account manager', 'accountatnt']);
         });
 
         Gate::define('manage-games', function ($user) {
+            $user->loadMissing('roles');
             return $user->hasRole(['admin', 'sales', 'account manager']);
         });
 
         Gate::define('manage-gift-cards', function ($user) {
+            $user->loadMissing('roles');
             return $user->hasRole(['admin', 'sales']);
         });
 
         Gate::define('view-sell-log', function ($user) {
-            return $user->hasRole(['admin', 'sales', 'account manager', 'accountant']);
+            $user->loadMissing('roles');
+            // Note: 'accountatnt' is the actual role name in database (typo)
+            return $user->hasRole(['admin', 'sales', 'account manager', 'accountatnt']);
         });
 
         Gate::define('manage-accounts', function ($user) {
+            $user->loadMissing('roles');
             return $user->hasRole(['admin', 'account manager']);
         });
 
         Gate::define('manage-options', function ($user) {
+            $user->loadMissing('roles');
             return $user->hasRole('admin');
         });
         Gate::define('view-reports', function ($user) {
+            $user->loadMissing('roles');
             return $user->hasRole('admin');
         });
 
         Gate::define('manage-categories', function ($user) {
+            $user->loadMissing('roles');
             return $user->hasRole('admin');
         });
 
 
         Gate::define('edit-games', function ($user) {
+            $user->loadMissing('roles');
             return $user->hasRole('admin');
         });
 
         Gate::define('manage-users', function ($user) {
+            $user->loadMissing('roles');
             return $user->hasRole('admin');
         });
 
         Gate::define('manage-store-profiles', function ($user) {
-            return $user->hasRole(['admin', 'accountant']);
+            $user->loadMissing('roles');
+            // Note: 'accountatnt' is the actual role name in database (typo)
+            return $user->hasRole(['admin', 'accountatnt']);
         });
 
         Gate::define('manage-device-repairs', function ($user) {
+            $user->loadMissing('roles');
             return $user->hasRole(['admin', 'sales', 'account manager']);
         });
 
         Gate::define('delete-device-repairs', function ($user) {
+            $user->loadMissing('roles');
             return $user->hasRole('admin');
         });
 
         Gate::define('submit-device-request', function ($user) {
+            $user->loadMissing('roles');
             return $user->hasRole(['customer', 'admin', 'sales']);
         });
 
         Gate::define('track-device-status', function ($user) {
+            $user->loadMissing('roles');
             return $user->hasRole(['customer', 'admin', 'sales']);
         });
     }
