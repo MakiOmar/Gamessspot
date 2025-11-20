@@ -499,8 +499,86 @@ class OrderController extends Controller
 
         if ($account) {
             $stockField = $this->getStockField($order->sold_item);
+            
+            // If restoring a secondary stock, also restore the other platform's secondary stock
+            // Check the state BEFORE incrementing to ensure we capture the current values
+            $shouldRestoreBoth = false;
+            if ($stockField === 'ps4_secondary_stock') {
+                // If PS5 secondary stock is 0, we'll restore it too
+                if ($account->ps5_secondary_stock == 0) {
+                    $shouldRestoreBoth = true;
+                }
+            } elseif ($stockField === 'ps5_secondary_stock') {
+                // If PS4 secondary stock is 0, we'll restore it too
+                if ($account->ps4_secondary_stock == 0) {
+                    $shouldRestoreBoth = true;
+                }
+            }
+            
+            // Increment the stock field that was decremented
             $account->$stockField += 1;
+            
+            // If restoring a secondary stock and the other platform's secondary stock is 0,
+            // restore it to 1 to maintain consistency (both should be 1 together)
+            if ($shouldRestoreBoth) {
+                if ($stockField === 'ps4_secondary_stock') {
+                    $account->ps5_secondary_stock = 1;
+                } elseif ($stockField === 'ps5_secondary_stock') {
+                    $account->ps4_secondary_stock = 1;
+                }
+                
+                Log::info('Secondary stock restored for both platforms', [
+                    'account_id' => $account->id,
+                    'game_id' => $account->game_id,
+                    'restored_field' => $stockField,
+                    'ps4_secondary_stock' => $account->ps4_secondary_stock,
+                    'ps5_secondary_stock' => $account->ps5_secondary_stock,
+                ]);
+            }
+            
             $account->save();
+        }
+    }
+    
+    /**
+     * Sync secondary stocks: When one platform's secondary stock reaches 0,
+     * set the other platform's secondary stock to 0 as well
+     *
+     * @param Account $account
+     * @param string $soldItem
+     * @return void
+     */
+    private function syncSecondaryStocks($account, $soldItem)
+    {
+        // Only handle secondary stock fields
+        if ($soldItem === 'ps4_secondary_stock') {
+            // Refresh to get the current value after decrement
+            $account->refresh();
+            
+            // If PS4 secondary stock is now 0, set PS5 secondary stock to 0
+            if ($account->ps4_secondary_stock == 0) {
+                $account->ps5_secondary_stock = 0;
+                $account->save();
+                
+                Log::info('Secondary stock synced: PS4 secondary reached 0, PS5 secondary set to 0', [
+                    'account_id' => $account->id,
+                    'game_id' => $account->game_id,
+                ]);
+            }
+        } elseif ($soldItem === 'ps5_secondary_stock') {
+            // Refresh to get the current value after decrement
+            $account->refresh();
+            
+            // If PS5 secondary stock is now 0, set PS4 secondary stock to 0
+            if ($account->ps5_secondary_stock == 0) {
+                $account->ps4_secondary_stock = 0;
+                $account->save();
+                
+                Log::info('Secondary stock synced: PS5 secondary reached 0, PS4 secondary set to 0', [
+                    'account_id' => $account->id,
+                    'game_id' => $account->game_id,
+                ]);
+            }
         }
     }
 
@@ -604,6 +682,9 @@ class OrderController extends Controller
 
             // Reduce the stock by 1
             $account->decrement($sold_item, 1);
+            
+            // Sync secondary stocks: If secondary stock reaches 0, set the other platform's secondary stock to 0
+            $this->syncSecondaryStocks($account, $sold_item);
             
             // Create the order
             $order_data = [
@@ -734,6 +815,9 @@ class OrderController extends Controller
 
             // Reduce the corresponding stock by 1 for the account
             $account->decrement($sold_item, 1);
+            
+            // Sync secondary stocks: If secondary stock reaches 0, set the other platform's secondary stock to 0
+            $this->syncSecondaryStocks($account, $sold_item);
 
             // Check if this was an "offline" order with only 1 stock left before decrement
             $recentOrder = null;
