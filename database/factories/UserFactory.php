@@ -26,7 +26,7 @@ class UserFactory extends Factory
             'name' => $this->faker->name(),
             'email' => $this->faker->unique()->safeEmail(),
             'phone' => $this->faker->phoneNumber(),
-            'role' => 1, // Default to regular user ( 0 -> admin, 1 -> employee, 2 -> sales)
+            // Note: 'role' column was removed - use roles() relationship instead
             'email_verified_at' => now(),
             'password' => bcrypt('password'), // password
             'remember_token' => Str::random(10),
