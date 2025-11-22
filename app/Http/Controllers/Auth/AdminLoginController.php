@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Models\Role;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -114,9 +115,9 @@ class AdminLoginController extends Controller
                 return redirect()->route('manager.login')->withErrors(array( 'Your account has no roles assigned. Please contact an administrator.' ));
             }
             
-            // Check if the authenticated user has 'admin', 'sales', 'accountatnt', or 'account manager' role
-            // Note: 'accountatnt' is the actual role name in database (typo)
-            $allowedRoles = array( 'admin', 'sales', 'accountatnt', 'account manager' );
+            // Get allowed roles dynamically from database
+            // All roles in the database are considered valid for login
+            $allowedRoles = Role::getAllRoleNames();
             $hasValidRole = $user->roles->contains(
                 function ($role) use ($allowedRoles) {
                     return in_array($role->name, $allowedRoles);
