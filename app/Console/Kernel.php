@@ -13,6 +13,9 @@ class Kernel extends ConsoleKernel
     protected function schedule(Schedule $schedule): void
     {
         // $schedule->command('inspire')->hourly();
+        
+        // Sync account secondary stock - run every hour
+        $schedule->command('accounts:sync-secondary-stock')->hourly();
     }
 
     /**
