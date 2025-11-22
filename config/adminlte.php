@@ -398,7 +398,7 @@ return [
         [
             'text' => 'Reports',
             'icon' => 'bi bi-clipboard-fill',
-            'can' => 'manage-options',
+            'can' => 'view-reports',
             'submenu' => [
                 [
                     'text' => 'Needs Return',
