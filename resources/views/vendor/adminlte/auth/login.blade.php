@@ -48,7 +48,7 @@
             background-position: center;
             background-attachment: fixed;
             position: relative;
-            overflow-x: hidden;
+            overflow: hidden;
         }
         
         body::before {
