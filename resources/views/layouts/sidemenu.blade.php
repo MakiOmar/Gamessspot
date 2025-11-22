@@ -92,14 +92,9 @@
                 </li>
                 @endif
                 @php
-                    // Get report roles dynamically from database
-                    $reportRoleNames = ['admin', 'accountant'];
-                    $reportRoles = array_filter($reportRoleNames, function($name) {
-                        return \App\Models\Role::where('name', $name)->exists();
-                    });
-                    $userHasReportRole = Auth::user()->roles->contains(function($role) use ($reportRoles) {
-                        return in_array($role->name, $reportRoles);
-                    });
+                    // Check if user has report access role (admin or accountant)
+                    $userRoles = Auth::user()->roles->pluck('name')->toArray();
+                    $userHasReportRole = in_array('admin', $userRoles) || in_array('accountant', $userRoles);
                 @endphp
                 @if($userHasReportRole)
                     <li class="nav-item"> <a href="#" class="nav-link"> <i class="nav-icon bi bi-clipboard-fill"></i>
