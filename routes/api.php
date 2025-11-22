@@ -2,6 +2,7 @@
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Hash;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\ManagerController;
 use App\Http\Controllers\CardCategoryController;
@@ -32,6 +33,11 @@ Route::post('/login', function (Request $request) {
 
     if (!$user || !Hash::check($request->password, $user->password)) {
         return response()->json(['message' => 'Invalid credentials'], 401);
+    }
+
+    // Check if user is active
+    if ($user->is_active != 1) {
+        return response()->json(['message' => 'Your account has been deactivated. Please contact support.'], 403);
     }
 
     // Generate a token

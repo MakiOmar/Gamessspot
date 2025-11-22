@@ -57,10 +57,12 @@ class AdminLoginController extends Controller
         ]);
 
         // Attempt to log the manager in using phone number and password
+        // Include is_active check in credentials to prevent inactive users from logging in
         $attemptResult = Auth::guard('admin')->attempt(
             array(
                 'phone'    => $request->phone,
                 'password' => $request->password,
+                'is_active' => 1,
             ),
             $request->remember
         );
