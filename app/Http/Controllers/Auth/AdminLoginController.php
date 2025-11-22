@@ -3,8 +3,10 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 
 class AdminLoginController extends Controller
@@ -55,6 +57,24 @@ class AdminLoginController extends Controller
             'phone' => $request->phone,
             'has_password' => !empty($request->password),
         ]);
+
+        // First, check if user exists and if account is inactive
+        $user = User::where('phone', $request->phone)->first();
+
+        // If user exists and password is correct but account is inactive
+        if ($user && Hash::check($request->password, $user->password)) {
+            if ($user->is_active != 1) {
+                Log::warning('Login attempt failed - account is inactive', [
+                    'phone' => $request->phone,
+                    'user_id' => $user->id,
+                ]);
+                return redirect()->back()->withInput($request->only('phone', 'remember'))->withErrors(
+                    array(
+                        'phone' => 'Your account has been deactivated. Please contact support.',
+                    )
+                );
+            }
+        }
 
         // Attempt to log the manager in using phone number and password
         // Include is_active check in credentials to prevent inactive users from logging in

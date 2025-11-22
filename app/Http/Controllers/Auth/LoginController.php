@@ -3,8 +3,10 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Models\User;
 use Illuminate\Foundation\Auth\AuthenticatesUsers;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
 
 class LoginController extends Controller
 {
@@ -50,5 +52,34 @@ class LoginController extends Controller
         $credentials = $request->only($this->username(), 'password');
         $credentials['is_active'] = 1;
         return $credentials;
+    }
+
+    /**
+     * Get the failed login response instance.
+     * Override to provide specific error message for inactive users.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Symfony\Component\HttpFoundation\Response
+     *
+     * @throws \Illuminate\Validation\ValidationException
+     */
+    protected function sendFailedLoginResponse(Request $request)
+    {
+        // Check if user exists and if account is inactive
+        $user = User::where($this->username(), $request->{$this->username()})->first();
+
+        // If user exists and password is correct but account is inactive
+        if ($user && Hash::check($request->password, $user->password)) {
+            if ($user->is_active != 1) {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    $this->username() => ['Your account has been deactivated. Please contact support.'],
+                ]);
+            }
+        }
+
+        // Default error message for invalid credentials
+        throw \Illuminate\Validation\ValidationException::withMessages([
+            $this->username() => [trans('auth.failed')],
+        ]);
     }
 }
