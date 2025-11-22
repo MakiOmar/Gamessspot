@@ -25,7 +25,7 @@ class AuthServiceProvider extends ServiceProvider
             // Ensure roles are loaded
             $user->loadMissing('roles');
             // Get allowed roles dynamically from database - all staff roles can access dashboard
-            $allowedRoleNames = ['admin', 'sales', 'account manager', 'accountatnt', 'accountant'];
+            $allowedRoleNames = ['admin', 'sales', 'account manager', 'accountant'];
             $allowedRoles = array_filter($allowedRoleNames, function($roleName) {
                 return Role::roleExists($roleName);
             });
@@ -52,7 +52,7 @@ class AuthServiceProvider extends ServiceProvider
 
         Gate::define('view-sell-log', function ($user) {
             $user->loadMissing('roles');
-            $allowedRoleNames = ['admin', 'sales', 'account manager', 'accountatnt', 'accountant'];
+            $allowedRoleNames = ['admin', 'sales', 'account manager', 'accountant'];
             $allowedRoles = array_filter($allowedRoleNames, function($roleName) {
                 return Role::roleExists($roleName);
             });
@@ -77,7 +77,7 @@ class AuthServiceProvider extends ServiceProvider
         });
         Gate::define('view-reports', function ($user) {
             $user->loadMissing('roles');
-            $allowedRoleNames = ['admin', 'accountatnt', 'accountant'];
+            $allowedRoleNames = ['admin', 'accountant'];
             $allowedRoles = array_filter($allowedRoleNames, function($roleName) {
                 return Role::roleExists($roleName);
             });
@@ -111,7 +111,7 @@ class AuthServiceProvider extends ServiceProvider
 
         Gate::define('manage-store-profiles', function ($user) {
             $user->loadMissing('roles');
-            $allowedRoleNames = ['admin', 'accountatnt', 'accountant'];
+            $allowedRoleNames = ['admin', 'accountant'];
             $allowedRoles = array_filter($allowedRoleNames, function($roleName) {
                 return Role::roleExists($roleName);
             });
@@ -120,7 +120,7 @@ class AuthServiceProvider extends ServiceProvider
 
         Gate::define('manage-device-repairs', function ($user) {
             $user->loadMissing('roles');
-            $allowedRoleNames = ['admin', 'sales', 'account manager', 'accountatnt', 'accountant'];
+            $allowedRoleNames = ['admin', 'sales', 'account manager', 'accountant'];
             $allowedRoles = array_filter($allowedRoleNames, function($roleName) {
                 return Role::roleExists($roleName);
             });

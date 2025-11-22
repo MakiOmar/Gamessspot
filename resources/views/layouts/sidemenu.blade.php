@@ -93,7 +93,7 @@
                 @endif
                 @php
                     // Get report roles dynamically from database
-                    $reportRoleNames = ['admin', 'accountatnt', 'accountant'];
+                    $reportRoleNames = ['admin', 'accountant'];
                     $reportRoles = array_filter($reportRoleNames, function($name) {
                         return \App\Models\Role::where('name', $name)->exists();
                     });
