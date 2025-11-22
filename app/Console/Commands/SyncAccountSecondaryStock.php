@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Models\Account;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 
 class SyncAccountSecondaryStock extends Command
@@ -13,7 +14,7 @@ class SyncAccountSecondaryStock extends Command
      *
      * @var string
      */
-    protected $signature = 'accounts:sync-secondary-stock';
+    protected $signature = 'accounts:sync-secondary-stock {--limit=100 : Number of accounts to process per run}';
 
     /**
      * The console command description.
@@ -27,15 +28,34 @@ class SyncAccountSecondaryStock extends Command
      */
     public function handle()
     {
-        $this->info('Starting secondary stock synchronization...');
+        $limit = (int) $this->option('limit');
+        $cacheKey = 'sync_secondary_stock_last_id';
+        
+        $this->info("Starting secondary stock synchronization (limit: {$limit})...");
+
+        // Get the last processed account ID from cache (start from 0 if not set)
+        $lastProcessedId = Cache::get($cacheKey, 0);
 
         // Find accounts where either ps4_secondary_stock or ps5_secondary_stock is 0
+        // Process in batches starting from the last processed ID
         $accounts = Account::where(function ($query) {
             $query->where('ps4_secondary_stock', 0)
                   ->orWhere('ps5_secondary_stock', 0);
-        })->get();
+        })
+        ->where('id', '>', $lastProcessedId)
+        ->orderBy('id', 'asc')
+        ->limit($limit)
+        ->get();
+
+        if ($accounts->isEmpty()) {
+            $this->info('No accounts found to process. Resetting offset for next cycle.');
+            // Reset to start from beginning for next cycle
+            Cache::forget($cacheKey);
+            return Command::SUCCESS;
+        }
 
         $updatedCount = 0;
+        $lastId = $lastProcessedId;
 
         foreach ($accounts as $account) {
             // Store before values for logging
@@ -87,9 +107,15 @@ class SyncAccountSecondaryStock extends Command
 
                 $updatedCount++;
             }
+
+            // Track the last processed ID
+            $lastId = $account->id;
         }
 
-        $this->info("Secondary stock synchronization completed. Updated {$updatedCount} account(s).");
+        // Store the last processed ID for next run
+        Cache::put($cacheKey, $lastId, now()->addDays(7)); // Cache for 7 days
+
+        $this->info("Secondary stock synchronization completed. Updated {$updatedCount} account(s). Last processed ID: {$lastId}");
 
         return Command::SUCCESS;
     }
