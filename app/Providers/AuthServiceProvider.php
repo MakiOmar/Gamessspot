@@ -54,7 +54,8 @@ class AuthServiceProvider extends ServiceProvider
         });
         Gate::define('view-reports', function ($user) {
             $user->loadMissing('roles');
-            return $user->hasRole('admin');
+            // Note: 'accountatnt' is the actual role name in database (typo)
+            return $user->hasRole(['admin', 'accountatnt']);
         });
 
         Gate::define('manage-categories', function ($user) {
@@ -81,7 +82,8 @@ class AuthServiceProvider extends ServiceProvider
 
         Gate::define('manage-device-repairs', function ($user) {
             $user->loadMissing('roles');
-            return $user->hasRole(['admin', 'sales', 'account manager']);
+            // Note: 'accountatnt' is the actual role name in database (typo)
+            return $user->hasRole(['admin', 'sales', 'account manager', 'accountatnt']);
         });
 
         Gate::define('delete-device-repairs', function ($user) {

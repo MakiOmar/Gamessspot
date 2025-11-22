@@ -91,7 +91,7 @@
                     </a>
                 </li>
                 @endif
-                @if( Auth::user()->roles->contains('name', 'admin') )
+                @if( Auth::user()->roles->contains('name', 'admin') || Auth::user()->roles->contains('name', 'accountatnt') )
                     <li class="nav-item"> <a href="#" class="nav-link"> <i class="nav-icon bi bi-clipboard-fill"></i>
                             <p>
                                 Reports <i class="nav-arrow bi bi-chevron-right"></i>
