@@ -37,6 +37,19 @@ class DeviceRepairController extends Controller
             $query->where('store_profile_id', $request->store_profile_id);
         }
 
+        // Filter by date range if both start and end dates are provided
+        $startDate = $request->input('start_date');
+        $endDate = $request->input('end_date');
+        if ($startDate && $endDate) {
+            if ($startDate === $endDate) {
+                // Filter repairs created on the exact date (whole day)
+                $query->whereDate('created_at', $startDate);
+            } else {
+                // Filter between the date range
+                $query->whereBetween('created_at', [$startDate, $endDate]);
+            }
+        }
+
         // Search functionality
         if ($request->filled('search')) {
             $search = $request->search;
