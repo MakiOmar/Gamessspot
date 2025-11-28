@@ -66,12 +66,6 @@ class WebhookService
                 ->post($this->webhookUrl, $payload);
             
             if ($response->successful()) {
-                Log::info('Webhook sent successfully', [
-                    'game_id'  => $gameId,
-                    'platform' => $platform,
-                    'type'     => $type,
-                    'event'    => $event,
-                ]);
                 return true;
             } else {
                 Log::error('Webhook failed', [

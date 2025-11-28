@@ -53,12 +53,6 @@ class AdminLoginController extends Controller
             )
         );
 
-        // Debug: Log login attempt
-        Log::info('Login attempt', [
-            'phone' => $request->phone,
-            'has_password' => !empty($request->password),
-        ]);
-
         // First, check if user exists and if account is inactive
         $user = User::where('phone', $request->phone)->first();
 
@@ -88,22 +82,12 @@ class AdminLoginController extends Controller
             $request->remember
         );
 
-        Log::info('Login attempt result', [
-            'success' => $attemptResult,
-            'authenticated_user_id' => Auth::guard('admin')->check() ? Auth::guard('admin')->id() : null,
-        ]);
-
         if ($attemptResult) {
             // Get the authenticated user and ensure roles are loaded
             $user = Auth::guard('admin')->user();
             $user->loadMissing('roles');
             
             $userRoles = $user->roles->pluck('name')->toArray();
-            
-            Log::info('Authenticated user roles', [
-                'user_id' => $user->id,
-                'roles' => $userRoles,
-            ]);
             
             // Check if user has any roles at all
             if ($user->roles->isEmpty()) {
@@ -124,15 +108,8 @@ class AdminLoginController extends Controller
                 }
             );
 
-            Log::info('Role check result', [
-                'has_valid_role' => $hasValidRole,
-                'user_roles' => $userRoles,
-                'allowed_roles' => $allowedRoles,
-            ]);
-
             if ($hasValidRole) {
                 // If the user has one of the allowed roles, redirect to the dashboard
-                Log::info('Login successful, redirecting to dashboard');
                 return redirect()->intended(route('manager.dashboard'));
             }
             // If the user doesn't have one of the specified roles, log them out and show an error
