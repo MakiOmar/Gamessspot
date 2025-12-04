@@ -133,7 +133,7 @@
                         <label for="mail">Mail</label>
                         <div class="input-group">
                             <input type="email" class="form-control" id="mail" name="mail" required>
-                            <button class="btn btn-outline-secondary" type="button" onclick="copyToClipboard('mail')" title="Copy email">
+                            <button class="btn btn-outline-secondary" type="button" onclick="copyToClipboard(event, 'mail')" title="Copy email">
                                 <i class="bi bi-clipboard"></i>
                             </button>
                         </div>
@@ -144,7 +144,7 @@
                         <label for="password">Password</label>
                         <div class="input-group">
                             <input type="text" class="form-control" id="password" name="password" required>
-                            <button class="btn btn-outline-secondary" type="button" onclick="copyToClipboard('password')" title="Copy password">
+                            <button class="btn btn-outline-secondary" type="button" onclick="copyToClipboard(event, 'password')" title="Copy password">
                                 <i class="bi bi-clipboard"></i>
                             </button>
                         </div>
@@ -360,7 +360,7 @@
 <!-- JavaScript for handling AJAX form submission -->
 <script>
     // Copy to clipboard function
-    function copyToClipboard(fieldId) {
+    function copyToClipboard(event, fieldId) {
         const field = document.getElementById(fieldId);
         const value = field.value;
         
