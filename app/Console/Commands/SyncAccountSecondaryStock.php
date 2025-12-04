@@ -21,7 +21,7 @@ class SyncAccountSecondaryStock extends Command
      *
      * @var string
      */
-    protected $description = 'Sync secondary stock: if ps4_secondary_stock is 0, set ps5_secondary_stock to 0, and vice versa';
+    protected $description = 'Sync secondary stock: if ps4_secondary_stock is 0, set ps5_secondary_stock to 0, and vice versa (excludes PS5 Only accounts)';
 
     /**
      * Execute the console command.
@@ -31,16 +31,23 @@ class SyncAccountSecondaryStock extends Command
         $limit = (int) $this->option('limit');
         $cacheKey = 'sync_secondary_stock_last_id';
         
-        $this->info("Starting secondary stock synchronization (limit: {$limit})...");
+        $this->info("Starting secondary stock synchronization (limit: {$limit}, excluding PS5 Only accounts)...");
 
         // Get the last processed account ID from cache (start from 0 if not set)
         $lastProcessedId = Cache::get($cacheKey, 0);
 
         // Find accounts where either ps4_secondary_stock or ps5_secondary_stock is 0
+        // Exclude "PS5 Only" accounts (where all PS4 stocks are 0)
         // Process in batches starting from the last processed ID
         $accounts = Account::where(function ($query) {
             $query->where('ps4_secondary_stock', 0)
                   ->orWhere('ps5_secondary_stock', 0);
+        })
+        ->where(function ($query) {
+            // Exclude PS5 Only accounts (accounts where ALL PS4 stocks are 0)
+            $query->where('ps4_primary_stock', '!=', 0)
+                  ->orWhere('ps4_secondary_stock', '!=', 0)
+                  ->orWhere('ps4_offline_stock', '!=', 0);
         })
         ->where('id', '>', $lastProcessedId)
         ->orderBy('id', 'asc')
