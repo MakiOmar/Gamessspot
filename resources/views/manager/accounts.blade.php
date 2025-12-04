@@ -131,13 +131,23 @@
                     <!-- Mail -->
                     <div class="form-group">
                         <label for="mail">Mail</label>
-                        <input type="email" class="form-control" id="mail" name="mail" required>
+                        <div class="input-group">
+                            <input type="email" class="form-control" id="mail" name="mail" required>
+                            <button class="btn btn-outline-secondary" type="button" onclick="copyToClipboard('mail')" title="Copy email">
+                                <i class="bi bi-clipboard"></i>
+                            </button>
+                        </div>
                     </div>
 
                     <!-- Password -->
                     <div class="form-group">
                         <label for="password">Password</label>
-                        <input type="text" class="form-control" id="password" name="password" required>
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="password" name="password" required>
+                            <button class="btn btn-outline-secondary" type="button" onclick="copyToClipboard('password')" title="Copy password">
+                                <i class="bi bi-clipboard"></i>
+                            </button>
+                        </div>
                     </div>
 
                     <!-- Game Dropdown -->
@@ -349,6 +359,30 @@
 @push('js')
 <!-- JavaScript for handling AJAX form submission -->
 <script>
+    // Copy to clipboard function
+    function copyToClipboard(fieldId) {
+        const field = document.getElementById(fieldId);
+        const value = field.value;
+        
+        if (value) {
+            navigator.clipboard.writeText(value).then(function() {
+                // Change icon to checkmark temporarily
+                const button = event.target.closest('button');
+                const icon = button.querySelector('i');
+                const originalClass = icon.className;
+                
+                icon.className = 'bi bi-check-lg text-success';
+                
+                setTimeout(function() {
+                    icon.className = originalClass;
+                }, 1500);
+            }).catch(function(err) {
+                console.error('Failed to copy: ', err);
+                alert('Failed to copy to clipboard');
+            });
+        }
+    }
+
     jQuery(document).ready(function($) {
         // Handle Add Account Button
         $(document).on('click','#addAccountButton',function() {
