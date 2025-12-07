@@ -425,22 +425,38 @@
             form.data('account-id', accountId); // Store account ID for row update
             form.data('row-reference', row); // Store reference to the row for easier access
 
-            // Read from HTML attributes directly (most up-to-date) to ensure we get latest values after updates
-            // Use .attr() to read directly from DOM, bypassing jQuery's data cache
-            $('#ps4PrimaryStock').val(button.attr('data-ps4_primary_stock') || button.data('ps4_primary_stock') || '0');
-            $('#ps4SecondaryStock').val(button.attr('data-ps4_secondary_stock') || button.data('ps4_secondary_stock') || '0');
-            $('#ps4OfflineStock').val(button.attr('data-ps4_offline_stock') || button.data('ps4_offline_stock') || '0');
-            $('#ps5PrimaryStock').val(button.attr('data-ps5_primary_stock') || button.data('ps5_primary_stock') || '0');
-            $('#ps5SecondaryStock').val(button.attr('data-ps5_secondary_stock') || button.data('ps5_secondary_stock') || '0');
-            $('#ps5OfflineStock').val(button.attr('data-ps5_offline_stock') || button.data('ps5_offline_stock') || '0');
+            // Read from HTML attributes ONLY - bypass jQuery's data cache completely
+            // jQuery's .data() caches values and doesn't always reflect updated attributes
+            const ps4Primary = button.attr('data-ps4_primary_stock') || '0';
+            const ps4Secondary = button.attr('data-ps4_secondary_stock') || '0';
+            const ps4Offline = button.attr('data-ps4_offline_stock') || '0';
+            const ps5Primary = button.attr('data-ps5_primary_stock') || '0';
+            const ps5Secondary = button.attr('data-ps5_secondary_stock') || '0';
+            const ps5Offline = button.attr('data-ps5_offline_stock') || '0';
             
-            console.log('Modal populated with values:', {
-                ps4Primary: $('#ps4PrimaryStock').val(),
-                ps4Secondary: $('#ps4SecondaryStock').val(),
-                ps4Offline: $('#ps4OfflineStock').val(),
-                ps5Primary: $('#ps5PrimaryStock').val(),
-                ps5Secondary: $('#ps5SecondaryStock').val(),
-                ps5Offline: $('#ps5OfflineStock').val()
+            $('#ps4PrimaryStock').val(ps4Primary);
+            $('#ps4SecondaryStock').val(ps4Secondary);
+            $('#ps4OfflineStock').val(ps4Offline);
+            $('#ps5PrimaryStock').val(ps5Primary);
+            $('#ps5SecondaryStock').val(ps5Secondary);
+            $('#ps5OfflineStock').val(ps5Offline);
+            
+            console.log('Modal populated with values from HTML attributes:', {
+                ps4Primary: ps4Primary,
+                ps4Secondary: ps4Secondary,
+                ps4Offline: ps4Offline,
+                ps5Primary: ps5Primary,
+                ps5Secondary: ps5Secondary,
+                ps5Offline: ps5Offline,
+                buttonElement: button[0],
+                allAttributes: {
+                    'data-ps4_primary_stock': button.attr('data-ps4_primary_stock'),
+                    'data-ps4_secondary_stock': button.attr('data-ps4_secondary_stock'),
+                    'data-ps4_offline_stock': button.attr('data-ps4_offline_stock'),
+                    'data-ps5_primary_stock': button.attr('data-ps5_primary_stock'),
+                    'data-ps5_secondary_stock': button.attr('data-ps5_secondary_stock'),
+                    'data-ps5_offline_stock': button.attr('data-ps5_offline_stock')
+                }
             });
         });
 
@@ -638,6 +654,18 @@
                         const editStockButton = row.find('button.editStock');
                         
                         // Update HTML data-* attributes (these persist in the DOM)
+                        // Use native DOM setAttribute to ensure it's actually set in the HTML
+                        const buttonElement = editStockButton[0];
+                        if (buttonElement) {
+                            buttonElement.setAttribute('data-ps4_primary_stock', ps4PrimaryStock);
+                            buttonElement.setAttribute('data-ps4_secondary_stock', ps4SecondaryStock);
+                            buttonElement.setAttribute('data-ps4_offline_stock', ps4OfflineStock);
+                            buttonElement.setAttribute('data-ps5_primary_stock', ps5PrimaryStock);
+                            buttonElement.setAttribute('data-ps5_secondary_stock', ps5SecondaryStock);
+                            buttonElement.setAttribute('data-ps5_offline_stock', ps5OfflineStock);
+                        }
+                        
+                        // Also update via jQuery for consistency
                         editStockButton.attr('data-ps4_primary_stock', ps4PrimaryStock);
                         editStockButton.attr('data-ps4_secondary_stock', ps4SecondaryStock);
                         editStockButton.attr('data-ps4_offline_stock', ps4OfflineStock);
@@ -653,14 +681,18 @@
                         editStockButton.removeData('ps5_secondary_stock');
                         editStockButton.removeData('ps5_offline_stock');
                         
-                        // Now jQuery will read from the updated HTML attributes
+                        // Verify the attributes were actually set
                         console.log('Updated editStock button data attributes:', {
                             ps4_primary_stock: editStockButton.attr('data-ps4_primary_stock'),
                             ps4_secondary_stock: editStockButton.attr('data-ps4_secondary_stock'),
                             ps4_offline_stock: editStockButton.attr('data-ps4_offline_stock'),
                             ps5_primary_stock: editStockButton.attr('data-ps5_primary_stock'),
                             ps5_secondary_stock: editStockButton.attr('data-ps5_secondary_stock'),
-                            ps5_offline_stock: editStockButton.attr('data-ps5_offline_stock')
+                            ps5_offline_stock: editStockButton.attr('data-ps5_offline_stock'),
+                            nativeCheck: buttonElement ? {
+                                ps4_primary: buttonElement.getAttribute('data-ps4_primary_stock'),
+                                ps5_primary: buttonElement.getAttribute('data-ps5_primary_stock')
+                            } : 'no element'
                         });
 
                         // Also update the editAccount button data attributes to keep them in sync
