@@ -1254,7 +1254,6 @@ class OrderController extends Controller
         // Make a POST request with Bearer token and $basic_details array as JSON
         $response = Http::withToken($token)  // Set Bearer token
                     ->post($endpoint, $basic_details);  // Send POST request with data
-        \Log::info($response->body());
         // Check if the request was successful
         if ($response->successful()) {
             $body = json_decode($response->body());
