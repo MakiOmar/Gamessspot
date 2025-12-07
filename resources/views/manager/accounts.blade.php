@@ -416,6 +416,7 @@
 
             form[0].reset();
             form.attr('action', button.data('update-url'));
+            form.data('account-id', button.data('id')); // Store account ID for row update
 
             $('#ps4PrimaryStock').val(button.data('ps4_primary_stock'));
             $('#ps4SecondaryStock').val(button.data('ps4_secondary_stock'));
@@ -432,6 +433,7 @@
             const form = $(this);
             const submitButton = form.find('button[type=\"submit\"]');
             const originalText = submitButton.html();
+            const accountId = form.data('account-id');
 
             submitButton.prop('disabled', true).html('<i class=\"fas fa-spinner fa-spin\"></i> Saving...');
 
@@ -440,14 +442,52 @@
                 method: 'POST',
                 data: form.serialize(),
                 success: function(response) {
+                    // Get the updated stock values from the form
+                    const ps4PrimaryStock = $('#ps4PrimaryStock').val();
+                    const ps4SecondaryStock = $('#ps4SecondaryStock').val();
+                    const ps4OfflineStock = $('#ps4OfflineStock').val();
+                    const ps5PrimaryStock = $('#ps5PrimaryStock').val();
+                    const ps5SecondaryStock = $('#ps5SecondaryStock').val();
+                    const ps5OfflineStock = $('#ps5OfflineStock').val();
+
+                    // Find the row by account ID and update stock cells
+                    const row = $(`tr:has(button.editStock[data-id="${accountId}"])`);
+                    if (row.length) {
+                        // Update table cells (columns are: ID, Mail, Game, Region, PS4 Offline, PS4 Primary, PS4 Secondary, PS5 Offline, PS5 Primary, PS5 Secondary, Cost, Password, Actions)
+                        row.find('td').eq(4).text(ps4OfflineStock);    // PS4 Offline
+                        row.find('td').eq(5).text(ps4PrimaryStock);    // PS4 Primary
+                        row.find('td').eq(6).text(ps4SecondaryStock);  // PS4 Secondary
+                        row.find('td').eq(7).text(ps5OfflineStock);    // PS5 Offline
+                        row.find('td').eq(8).text(ps5PrimaryStock);    // PS5 Primary
+                        row.find('td').eq(9).text(ps5SecondaryStock);  // PS5 Secondary
+
+                        // Update the editStock button data attributes
+                        const editStockButton = row.find('button.editStock');
+                        editStockButton.data('ps4_primary_stock', ps4PrimaryStock);
+                        editStockButton.data('ps4_secondary_stock', ps4SecondaryStock);
+                        editStockButton.data('ps4_offline_stock', ps4OfflineStock);
+                        editStockButton.data('ps5_primary_stock', ps5PrimaryStock);
+                        editStockButton.data('ps5_secondary_stock', ps5SecondaryStock);
+                        editStockButton.data('ps5_offline_stock', ps5OfflineStock);
+
+                        // Also update the editAccount button data attributes to keep them in sync
+                        const editAccountButton = row.find('button.editAccount');
+                        if (editAccountButton.length) {
+                            editAccountButton.data('ps4_primary', ps4PrimaryStock);
+                            editAccountButton.data('ps4_secondary', ps4SecondaryStock);
+                            editAccountButton.data('ps4_offline', ps4OfflineStock);
+                            editAccountButton.data('ps5_primary', ps5PrimaryStock);
+                            editAccountButton.data('ps5_secondary', ps5SecondaryStock);
+                            editAccountButton.data('ps5_offline', ps5OfflineStock);
+                        }
+                    }
+
                     $('#stockModal').modal('hide');
                     Swal.fire({
                         title: 'Success!',
                         text: response.success,
                         icon: 'success',
                         confirmButtonText: 'OK'
-                    }).then(() => {
-                        location.reload();
                     });
                 },
                 error: function(xhr) {
