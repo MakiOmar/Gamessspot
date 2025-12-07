@@ -555,6 +555,64 @@
                         
                         console.log('All cells updated successfully');
 
+                        // Update the mobile-detail-row if it exists (responsive view)
+                        const mobileDetailRow = row.next('.mobile-detail-row');
+                        if (mobileDetailRow.length) {
+                            console.log('Found mobile-detail-row, updating...');
+                            const detailContent = mobileDetailRow.find('td');
+                            
+                            // Update stock values in mobile detail row
+                            // The format is: <div><strong>Header:</strong> Value</div>
+                            const stockMappings = [
+                                { header: 'Offline (PS4)', value: ps4OfflineStock },
+                                { header: 'Primary (PS4)', value: ps4PrimaryStock },
+                                { header: 'Secondary (PS4)', value: ps4SecondaryStock },
+                                { header: 'Offline (PS5)', value: ps5OfflineStock },
+                                { header: 'Primary (PS5)', value: ps5PrimaryStock },
+                                { header: 'Secondary (PS5)', value: ps5SecondaryStock }
+                            ];
+                            
+                            stockMappings.forEach(function(mapping) {
+                                // Try to find the div by matching the header text
+                                const detailDiv = detailContent.find('div').filter(function() {
+                                    const strongText = $(this).find('strong').text().trim();
+                                    return strongText === mapping.header + ':' || strongText === mapping.header;
+                                });
+                                
+                                if (detailDiv.length) {
+                                    detailDiv.html('<strong>' + mapping.header + ':</strong> ' + mapping.value);
+                                    console.log('Updated mobile detail:', mapping.header, '=', mapping.value);
+                                } else {
+                                    console.log('Could not find mobile detail div for:', mapping.header);
+                                }
+                            });
+                            
+                            // Force update by reading from the actual table cells if direct update didn't work
+                            const tableHeaders = $('#accounts-table thead th');
+                            const maxVisible = tableHeaders.length > 5 ? 5 : tableHeaders.length; // Assuming maxVisibleCols is 5
+                            const hiddenIndexes = [];
+                            tableHeaders.each(function(i) {
+                                if (i >= maxVisible) {
+                                    hiddenIndexes.push(i);
+                                }
+                            });
+                            
+                            // Rebuild the detail row content from current cell values
+                            let newDetailHTML = '';
+                            hiddenIndexes.forEach(function(i) {
+                                const headerText = tableHeaders.eq(i).text().trim();
+                                const cellValue = cells.eq(i).html();
+                                newDetailHTML += '<div><strong>' + headerText + ':</strong> ' + cellValue + '</div>';
+                            });
+                            
+                            if (newDetailHTML) {
+                                detailContent.html(newDetailHTML);
+                                console.log('Rebuilt mobile detail row with current values');
+                            }
+                        } else {
+                            console.log('Mobile detail row not found, may need to be created by mobileTableToggle');
+                        }
+
                         // Update data attributes on table cells for responsive views
                         // These might be used by mobile/responsive table plugins
                         cells.eq(4).attr('data-label', 'Offline (PS4)');
@@ -596,10 +654,8 @@
                             editAccountButton.data('ps5_offline', ps5OfflineStock);
                         }
 
-                        // Trigger refresh for responsive table plugins if they exist
-                        if (typeof $.fn.mobileTableToggle !== 'undefined') {
-                            $('#accounts-table').mobileTableToggle('refresh');
-                        }
+                        // Note: mobileTableToggle doesn't have a refresh method, so we manually update the detail row above
+                        // If the table needs to be re-initialized, we would need to remove and re-add the plugin
                         
                         // Trigger a custom event for any listeners that might need to update views
                         $(document).trigger('accountStockUpdated', [accountId, {
