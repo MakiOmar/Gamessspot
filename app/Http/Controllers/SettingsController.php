@@ -7,6 +7,7 @@ use App\Services\SettingsService;
 use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 use Rawilk\Settings\Facades\Settings;
 
@@ -239,5 +240,142 @@ class SettingsController extends Controller
         Settings::set($key, $value);
 
         return response()->json(['success' => true, 'value' => $value]);
+    }
+
+    /**
+     * Export all settings to a JSON file.
+     */
+    public function export()
+    {
+        try {
+            // Get all settings from the database table directly
+            $tableName = config('settings.table', 'settings');
+            $settingsRows = DB::table($tableName)->get();
+            
+            // Build settings array - get actual values using Settings facade
+            // This ensures we get decrypted/unserialized values
+            $settings = [];
+            foreach ($settingsRows as $row) {
+                $key = $row->key;
+                // Use Settings facade to get the actual value (handles decryption/unserialization)
+                $value = Settings::get($key);
+                $settings[$key] = $value;
+            }
+
+            // Add metadata
+            $exportData = [
+                'export_date' => now()->toIso8601String(),
+                'export_version' => '1.0',
+                'settings' => $settings,
+            ];
+
+            // Generate filename with timestamp
+            $filename = 'settings_export_' . now()->format('Y-m-d_His') . '.json';
+
+            // Return JSON download response
+            return response()->json($exportData, 200, [
+                'Content-Type' => 'application/json',
+                'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+            ]);
+        } catch (\Exception $e) {
+            return redirect()->route('settings.index')
+                ->with('error', 'Failed to export settings: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Import settings from a JSON file.
+     */
+    public function import(Request $request)
+    {
+        $request->validate([
+            'settings_file' => 'required|file|mimes:json|max:5120', // 5MB max
+        ]);
+
+        try {
+            $file = $request->file('settings_file');
+            $content = file_get_contents($file->getRealPath());
+            $data = json_decode($content, true);
+
+            if (json_last_error() !== JSON_ERROR_NONE) {
+                return redirect()->route('settings.index')
+                    ->with('error', 'Invalid JSON file format: ' . json_last_error_msg());
+            }
+
+            // Check if the JSON has the expected structure
+            if (!isset($data['settings']) || !is_array($data['settings'])) {
+                return redirect()->route('settings.index')
+                    ->with('error', 'Invalid settings file format. Expected a "settings" array.');
+            }
+
+            $importedCount = 0;
+            $skippedCount = 0;
+            $errors = [];
+
+            // Import each setting
+            foreach ($data['settings'] as $key => $value) {
+                try {
+                    // Validate key format (should be a string)
+                    if (!is_string($key)) {
+                        $skippedCount++;
+                        $errors[] = "Skipped invalid key: " . var_export($key, true);
+                        continue;
+                    }
+
+                    // Set the setting value
+                    Settings::set($key, $value);
+                    $importedCount++;
+                } catch (\Exception $e) {
+                    $skippedCount++;
+                    $errors[] = "Failed to import '{$key}': " . $e->getMessage();
+                }
+            }
+
+            $message = "Settings imported successfully! {$importedCount} setting(s) imported.";
+            if ($skippedCount > 0) {
+                $message .= " {$skippedCount} setting(s) skipped.";
+            }
+
+            if (!empty($errors) && count($errors) <= 10) {
+                // Show errors if there are few
+                $message .= " Errors: " . implode('; ', $errors);
+            } elseif (!empty($errors)) {
+                $message .= " " . count($errors) . " errors occurred.";
+            }
+
+            return redirect()->route('settings.index')
+                ->with('success', $message);
+        } catch (\Exception $e) {
+            return redirect()->route('settings.index')
+                ->with('error', 'Failed to import settings: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Clear all settings from the database.
+     */
+    public function clear()
+    {
+        try {
+            // Get all settings from the database table
+            $tableName = config('settings.table', 'settings');
+            $settingsCount = DB::table($tableName)->count();
+            
+            // Delete all settings
+            DB::table($tableName)->delete();
+            
+            // Clear settings cache if caching is enabled
+            if (config('settings.cache', true)) {
+                $cachePrefix = config('settings.cache_key_prefix', 'settings.');
+                // Clear all cache entries that start with the settings prefix
+                \Illuminate\Support\Facades\Cache::flush();
+            }
+
+            return redirect()->route('settings.index')
+                ->with('success', "All settings cleared successfully! {$settingsCount} setting(s) removed.");
+        } catch (\Exception $e) {
+            return redirect()->route('settings.index')
+                ->with('error', 'Failed to clear settings: ' . $e->getMessage());
+        }
     }
 }

@@ -728,6 +728,9 @@ Route::prefix('manager')->group(function () {
                 Route::post('/reset', [SettingsController::class, 'reset'])->name('settings.reset');
                 Route::get('/get/{key}', [SettingsController::class, 'get'])->name('settings.get');
                 Route::post('/set/{key}', [SettingsController::class, 'set'])->name('settings.set');
+                Route::get('/export', [SettingsController::class, 'export'])->name('settings.export');
+                Route::post('/import', [SettingsController::class, 'import'])->name('settings.import');
+                Route::post('/clear', [SettingsController::class, 'clear'])->name('settings.clear');
             });
             
             // System Health Check Route (Admin only)

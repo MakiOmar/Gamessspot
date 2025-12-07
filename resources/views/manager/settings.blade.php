@@ -550,11 +550,22 @@
 
                         <!-- Action Buttons -->
                         <div class="settings-actions">
-                            <div class="d-flex justify-content-between">
-                                <a href="{{ route('settings.reset') }}" class="btn btn-warning" 
-                                   onclick="return confirm('Are you sure you want to reset all settings to default values?')">
-                                    <i class="fas fa-undo"></i> Reset to Defaults
-                                </a>
+                            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                                <div class="d-flex gap-2">
+                                    <a href="{{ route('settings.reset') }}" class="btn btn-warning" 
+                                       onclick="return confirm('Are you sure you want to reset all settings to default values?')">
+                                        <i class="fas fa-undo"></i> Reset to Defaults
+                                    </a>
+                                    <a href="{{ route('settings.export') }}" class="btn btn-info text-white">
+                                        <i class="fas fa-download"></i> Export Settings
+                                    </a>
+                                    <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#importSettingsModal">
+                                        <i class="fas fa-upload"></i> Import Settings
+                                    </button>
+                                    <button type="button" class="btn btn-danger" id="clearAllSettingsBtn">
+                                        <i class="fas fa-trash-alt"></i> Clear All Settings
+                                    </button>
+                                </div>
                                 <div>
                                     <button type="submit" class="btn btn-primary">
                                         <i class="fas fa-save"></i> Save Settings
@@ -565,6 +576,46 @@
                     </form>
                 </div>
             </div>
+        </div>
+    </div>
+</div>
+
+<!-- Import Settings Modal -->
+<div class="modal fade" id="importSettingsModal" tabindex="-1" aria-labelledby="importSettingsModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="importSettingsModalLabel">
+                    <i class="fas fa-upload"></i> Import Settings
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form action="{{ route('settings.import') }}" method="POST" enctype="multipart/form-data">
+                @csrf
+                <div class="modal-body">
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <strong>Warning:</strong> Importing settings will overwrite your current settings. Make sure to export your current settings first as a backup.
+                    </div>
+                    <div class="mb-3">
+                        <label for="settings_file" class="form-label">Select Settings File (JSON)</label>
+                        <input type="file" class="form-control @error('settings_file') is-invalid @enderror" 
+                               id="settings_file" name="settings_file" accept=".json" required>
+                        @error('settings_file')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
+                        <small class="form-text text-muted">
+                            Maximum file size: 5MB. Only JSON files are accepted.
+                        </small>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-upload"></i> Import Settings
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 </div>
@@ -605,6 +656,69 @@ document.addEventListener('DOMContentLoaded', function() {
         if (tabLink) {
             tabLink.click();
         }
+    }
+
+    // Clear All Settings with SweetAlert confirmation
+    const clearAllSettingsBtn = document.getElementById('clearAllSettingsBtn');
+    if (clearAllSettingsBtn) {
+        clearAllSettingsBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            
+            Swal.fire({
+                title: 'Are you absolutely sure?',
+                html: '<div class="text-start">' +
+                      '<p class="mb-3"><strong>This action will permanently delete ALL settings!</strong></p>' +
+                      '<p class="mb-2">This includes:</p>' +
+                      '<ul class="text-start mb-3">' +
+                      '<li>Application settings</li>' +
+                      '<li>Business information</li>' +
+                      '<li>Order settings</li>' +
+                      '<li>Notification preferences</li>' +
+                      '<li>POS configuration</li>' +
+                      '</ul>' +
+                      '<p class="text-danger"><strong>This action cannot be undone!</strong></p>' +
+                      '<p class="text-muted">Make sure to export your settings first as a backup.</p>' +
+                      '</div>',
+                icon: 'error',
+                showCancelButton: true,
+                confirmButtonText: 'Yes, delete all settings!',
+                cancelButtonText: 'No, cancel',
+                confirmButtonColor: '#dc3545',
+                cancelButtonColor: '#6c757d',
+                reverseButtons: true,
+                focusCancel: true,
+                allowOutsideClick: false,
+                allowEscapeKey: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    // Show loading state
+                    Swal.fire({
+                        title: 'Clearing Settings...',
+                        text: 'Please wait while we clear all settings.',
+                        allowOutsideClick: false,
+                        allowEscapeKey: false,
+                        didOpen: () => {
+                            Swal.showLoading();
+                        }
+                    });
+
+                    // Create a form and submit it
+                    const form = document.createElement('form');
+                    form.method = 'POST';
+                    form.action = '{{ route("settings.clear") }}';
+                    
+                    // Add CSRF token
+                    const csrfToken = document.createElement('input');
+                    csrfToken.type = 'hidden';
+                    csrfToken.name = '_token';
+                    csrfToken.value = '{{ csrf_token() }}';
+                    form.appendChild(csrfToken);
+                    
+                    document.body.appendChild(form);
+                    form.submit();
+                }
+            });
+        });
     }
 });
 </script>
