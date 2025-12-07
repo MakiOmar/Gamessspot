@@ -2,7 +2,7 @@
     $regionEmojis = $regionEmojis ?? config('flags.flags');
 @endphp
 @foreach($accounts as $account)
-<tr>
+<tr data-account-id="{{ $account->id }}">
     <td>{{ $account->id }}</td>
     <td>{{ $account->mail }}</td>
     <td>{{ $account->game->title }}</td>

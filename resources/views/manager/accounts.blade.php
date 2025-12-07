@@ -413,10 +413,12 @@
         $(document).on('click', '.editStock', function() {
             const button = $(this);
             const form = $('#stockForm');
+            const row = button.closest('tr'); // Get the row containing this button
 
             form[0].reset();
             form.attr('action', button.data('update-url'));
             form.data('account-id', button.data('id')); // Store account ID for row update
+            form.data('row-reference', row); // Store reference to the row for easier access
 
             $('#ps4PrimaryStock').val(button.data('ps4_primary_stock'));
             $('#ps4SecondaryStock').val(button.data('ps4_secondary_stock'));
@@ -450,17 +452,52 @@
                     const ps5SecondaryStock = $('#ps5SecondaryStock').val();
                     const ps5OfflineStock = $('#ps5OfflineStock').val();
 
-                    // Find the row by account ID and update stock cells
-                    const row = $(`tr:has(button.editStock[data-id="${accountId}"])`);
-                    if (row.length) {
+                    // Try multiple methods to find the row
+                    let row = null;
+                    
+                    // Method 1: Use stored reference
+                    const storedRow = form.data('row-reference');
+                    if (storedRow && storedRow.length) {
+                        row = storedRow;
+                    }
+                    
+                    // Method 2: Find by data-account-id attribute on the row
+                    if (!row || !row.length) {
+                        row = $(`tr[data-account-id="${accountId}"]`);
+                    }
+                    
+                    // Method 3: Find by button with the account ID and traverse to row
+                    if (!row || !row.length) {
+                        row = $(`button.editStock[data-id="${accountId}"]`).closest('tr');
+                    }
+                    
+                    // Method 4: Find by selector with :has
+                    if (!row || !row.length) {
+                        row = $(`tr:has(button.editStock[data-id="${accountId}"])`);
+                    }
+                    
+                    if (row && row.length) {
+                        console.log('Updating row for account ID:', accountId);
                         // Update table cells (columns are: ID, Mail, Game, Region, PS4 Offline, PS4 Primary, PS4 Secondary, PS5 Offline, PS5 Primary, PS5 Secondary, Cost, Password, Actions)
                         const cells = row.find('td');
-                        cells.eq(4).text(ps4OfflineStock);    // PS4 Offline
-                        cells.eq(5).text(ps4PrimaryStock);    // PS4 Primary
-                        cells.eq(6).text(ps4SecondaryStock);  // PS4 Secondary
-                        cells.eq(7).text(ps5OfflineStock);    // PS5 Offline
-                        cells.eq(8).text(ps5PrimaryStock);    // PS5 Primary
-                        cells.eq(9).text(ps5SecondaryStock);  // PS5 Secondary
+                        console.log('Found cells:', cells.length);
+                        
+                        // Update stock values
+                        if (cells.length > 4) cells.eq(4).text(ps4OfflineStock);    // PS4 Offline
+                        if (cells.length > 5) cells.eq(5).text(ps4PrimaryStock);    // PS4 Primary
+                        if (cells.length > 6) cells.eq(6).text(ps4SecondaryStock);  // PS4 Secondary
+                        if (cells.length > 7) cells.eq(7).text(ps5OfflineStock);    // PS5 Offline
+                        if (cells.length > 8) cells.eq(8).text(ps5PrimaryStock);    // PS5 Primary
+                        if (cells.length > 9) cells.eq(9).text(ps5SecondaryStock);  // PS5 Secondary
+                        
+                        console.log('Updated stock values:', {
+                            ps4Offline: ps4OfflineStock,
+                            ps4Primary: ps4PrimaryStock,
+                            ps4Secondary: ps4SecondaryStock,
+                            ps5Offline: ps5OfflineStock,
+                            ps5Primary: ps5PrimaryStock,
+                            ps5Secondary: ps5SecondaryStock
+                        });
 
                         // Update data attributes on table cells for responsive views
                         // These might be used by mobile/responsive table plugins
@@ -517,9 +554,18 @@
                             ps5_secondary_stock: ps5SecondaryStock,
                             ps5_offline_stock: ps5OfflineStock
                         }]);
+                    } else {
+                        console.error('Row not found for account ID:', accountId);
+                        console.log('Attempted selectors:', {
+                            storedReference: form.data('row-reference'),
+                            selector1: $(`tr:has(button.editStock[data-id="${accountId}"])`).length,
+                            selector2: $(`button.editStock[data-id="${accountId}"]`).closest('tr').length
+                        });
                     }
 
+                    // Hide modal first, then show success message
                     $('#stockModal').modal('hide');
+                    
                     Swal.fire({
                         title: 'Success!',
                         text: response.success,
