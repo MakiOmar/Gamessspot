@@ -1010,10 +1010,18 @@ class OrderController extends Controller
     }
     public function sendToPos(Request $request)
     {
+        // Check if order_ids are provided
+        if (!$request->has('order_ids') || empty($request->input('order_ids'))) {
+            return redirect()->route('manager.orders')->with('error', 'Please select at least one order that has not been sent to POS.');
+        }
+
         // Validate that the order_ids are provided and are an array of valid IDs
         $validated = $request->validate([
-            'order_ids' => 'required|array',
+            'order_ids' => 'required|array|min:1',
             'order_ids.*' => 'exists:orders,id' // Ensure each order ID exists in the orders table
+        ], [
+            'order_ids.required' => 'Please select at least one order to send to POS.',
+            'order_ids.min' => 'Please select at least one order to send to POS.',
         ]);
 
         // Get POS settings from database

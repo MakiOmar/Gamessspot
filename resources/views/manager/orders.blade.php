@@ -90,7 +90,7 @@
 
         <!-- Scrollable table container -->
         <div style="overflow-x:auto; max-width: 100%; white-space: nowrap;">
-            <form method="post" action="{{ route('manager.orders.sendToPos') }}">
+            <form method="post" action="{{ route('manager.orders.sendToPos') }}" id="sendToPosForm">
                 @csrf
                 <table class="table table-striped table-bordered orders-responsive-table">
                     <thead>
@@ -131,7 +131,7 @@
                 </table>
                 @unless(Auth::user()->hasRole('accountant'))
                     <p>
-                        <input type="submit" name="bulk_send_odoo" class="btn btn-primary" value="{{ __('Send to POS') }}" />
+                        <input type="submit" name="bulk_send_odoo" class="btn btn-primary" value="{{ __('Send to POS') }}" id="sendToPosBtn" />
                     </p>
                 @endunless
 
@@ -486,14 +486,48 @@
     </script>
     <script>
         // JavaScript to handle "Check All" functionality
+        // Only select checkboxes that are in the same form context
         document.getElementById('select_all').addEventListener('change', function() {
-            var checkboxes = document.querySelectorAll('input[name="order_ids[]"]');
+            // Get the form that contains the select_all checkbox
+            const form = this.closest('form');
+            if (form) {
+                // Only select checkboxes within this form
+                var checkboxes = form.querySelectorAll('input[name="order_ids[]"]');
+                checkboxes.forEach(function(checkbox) {
+                    checkbox.checked = document.getElementById('select_all').checked;
+                });
+            }
+            
+            // Also handle unsend checkboxes separately (they're in the same table but different form)
             var unsendCheckboxes = document.querySelectorAll('input[name="unsend_order_ids[]"]');
-            checkboxes.forEach(function(checkbox) {
-                checkbox.checked = document.getElementById('select_all').checked;
-            });
             unsendCheckboxes.forEach(function(checkbox) {
                 checkbox.checked = document.getElementById('select_all').checked;
+            });
+        });
+
+        // Handle Send to POS form submission - validate that order_ids are selected
+        jQuery(document).ready(function($) {
+            $('#sendToPosForm').on('submit', function(e) {
+                const checkedOrderIds = $('input[name="order_ids[]"]:checked');
+                
+                console.log('Send to POS form submitted, checked order_ids:', checkedOrderIds.length);
+                
+                if (checkedOrderIds.length === 0) {
+                    e.preventDefault();
+                    Swal.fire({
+                        title: 'No Orders Selected',
+                        text: 'Please select at least one order that has not been sent to POS. Orders that have already been sent to POS cannot be sent again.',
+                        icon: 'warning',
+                        confirmButtonText: 'OK'
+                    });
+                    return false;
+                }
+                
+                // Log the order IDs being sent
+                const orderIds = checkedOrderIds.map(function() {
+                    return $(this).val();
+                }).get();
+                console.log('Sending order IDs to POS:', orderIds);
             });
         });
 
