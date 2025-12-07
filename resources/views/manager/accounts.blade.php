@@ -414,10 +414,15 @@
             const button = $(this);
             const form = $('#stockForm');
             const row = button.closest('tr'); // Get the row containing this button
+            const accountId = button.data('id') || button.attr('data-id'); // Get account ID from data attribute
+
+            console.log('Edit Stock clicked, accountId:', accountId);
+            console.log('Row found:', row.length);
 
             form[0].reset();
             form.attr('action', button.data('update-url'));
-            form.data('account-id', button.data('id')); // Store account ID for row update
+            form.attr('data-account-id', accountId); // Store as attribute for persistence
+            form.data('account-id', accountId); // Store account ID for row update
             form.data('row-reference', row); // Store reference to the row for easier access
 
             $('#ps4PrimaryStock').val(button.data('ps4_primary_stock'));
@@ -435,7 +440,17 @@
             const form = $(this);
             const submitButton = form.find('button[type=\"submit\"]');
             const originalText = submitButton.html();
-            const accountId = form.data('account-id');
+            // Try multiple ways to get accountId
+            let accountId = form.data('account-id') || form.attr('data-account-id');
+            if (!accountId) {
+                // Fallback: extract from form action URL
+                const actionUrl = form.attr('action');
+                const match = actionUrl.match(/\/(\d+)$/);
+                if (match) {
+                    accountId = match[1];
+                }
+            }
+            console.log('Form submit, accountId:', accountId);
 
             submitButton.prop('disabled', true).html('<i class=\"fas fa-spinner fa-spin\"></i> Saving...');
 
@@ -444,6 +459,8 @@
                 method: 'POST',
                 data: form.serialize(),
                 success: function(response) {
+                    console.log('Stock update success, accountId:', accountId);
+                    
                     // Get the updated stock values from the form
                     const ps4PrimaryStock = $('#ps4PrimaryStock').val();
                     const ps4SecondaryStock = $('#ps4SecondaryStock').val();
@@ -451,53 +468,92 @@
                     const ps5PrimaryStock = $('#ps5PrimaryStock').val();
                     const ps5SecondaryStock = $('#ps5SecondaryStock').val();
                     const ps5OfflineStock = $('#ps5OfflineStock').val();
+                    
+                    console.log('Stock values from form:', {
+                        ps4Offline: ps4OfflineStock,
+                        ps4Primary: ps4PrimaryStock,
+                        ps4Secondary: ps4SecondaryStock,
+                        ps5Offline: ps5OfflineStock,
+                        ps5Primary: ps5PrimaryStock,
+                        ps5Secondary: ps5SecondaryStock
+                    });
 
                     // Try multiple methods to find the row
                     let row = null;
                     
-                    // Method 1: Use stored reference
-                    const storedRow = form.data('row-reference');
-                    if (storedRow && storedRow.length) {
-                        row = storedRow;
-                    }
+                    // Method 1: Find by data-account-id attribute on the row (most reliable)
+                    row = $(`tr[data-account-id="${accountId}"]`);
+                    console.log('Method 1 (data-account-id):', row.length);
                     
-                    // Method 2: Find by data-account-id attribute on the row
+                    // Method 2: Use stored reference
                     if (!row || !row.length) {
-                        row = $(`tr[data-account-id="${accountId}"]`);
+                        const storedRow = form.data('row-reference');
+                        if (storedRow && storedRow.length) {
+                            row = storedRow;
+                            console.log('Method 2 (stored reference):', row.length);
+                        }
                     }
                     
                     // Method 3: Find by button with the account ID and traverse to row
                     if (!row || !row.length) {
                         row = $(`button.editStock[data-id="${accountId}"]`).closest('tr');
+                        console.log('Method 3 (button closest):', row.length);
                     }
                     
                     // Method 4: Find by selector with :has
                     if (!row || !row.length) {
                         row = $(`tr:has(button.editStock[data-id="${accountId}"])`);
+                        console.log('Method 4 (:has selector):', row.length);
                     }
                     
                     if (row && row.length) {
-                        console.log('Updating row for account ID:', accountId);
+                        console.log('Row found! Updating cells...');
                         // Update table cells (columns are: ID, Mail, Game, Region, PS4 Offline, PS4 Primary, PS4 Secondary, PS5 Offline, PS5 Primary, PS5 Secondary, Cost, Password, Actions)
                         const cells = row.find('td');
                         console.log('Found cells:', cells.length);
                         
-                        // Update stock values
-                        if (cells.length > 4) cells.eq(4).text(ps4OfflineStock);    // PS4 Offline
-                        if (cells.length > 5) cells.eq(5).text(ps4PrimaryStock);    // PS4 Primary
-                        if (cells.length > 6) cells.eq(6).text(ps4SecondaryStock);  // PS4 Secondary
-                        if (cells.length > 7) cells.eq(7).text(ps5OfflineStock);    // PS5 Offline
-                        if (cells.length > 8) cells.eq(8).text(ps5PrimaryStock);    // PS5 Primary
-                        if (cells.length > 9) cells.eq(9).text(ps5SecondaryStock);  // PS5 Secondary
+                        // Update stock values - use both text() and html() to ensure update
+                        if (cells.length > 4) {
+                            const cell4 = cells.eq(4);
+                            cell4.text(ps4OfflineStock);
+                            cell4.html(ps4OfflineStock);
+                            console.log('Updated cell 4 (PS4 Offline):', ps4OfflineStock, 'New value:', cell4.text());
+                        }
+                        if (cells.length > 5) {
+                            const cell5 = cells.eq(5);
+                            cell5.text(ps4PrimaryStock);
+                            cell5.html(ps4PrimaryStock);
+                            console.log('Updated cell 5 (PS4 Primary):', ps4PrimaryStock, 'New value:', cell5.text());
+                        }
+                        if (cells.length > 6) {
+                            const cell6 = cells.eq(6);
+                            cell6.text(ps4SecondaryStock);
+                            cell6.html(ps4SecondaryStock);
+                            console.log('Updated cell 6 (PS4 Secondary):', ps4SecondaryStock, 'New value:', cell6.text());
+                        }
+                        if (cells.length > 7) {
+                            const cell7 = cells.eq(7);
+                            cell7.text(ps5OfflineStock);
+                            cell7.html(ps5OfflineStock);
+                            console.log('Updated cell 7 (PS5 Offline):', ps5OfflineStock, 'New value:', cell7.text());
+                        }
+                        if (cells.length > 8) {
+                            const cell8 = cells.eq(8);
+                            cell8.text(ps5PrimaryStock);
+                            cell8.html(ps5PrimaryStock);
+                            console.log('Updated cell 8 (PS5 Primary):', ps5PrimaryStock, 'New value:', cell8.text());
+                        }
+                        if (cells.length > 9) {
+                            const cell9 = cells.eq(9);
+                            cell9.text(ps5SecondaryStock);
+                            cell9.html(ps5SecondaryStock);
+                            console.log('Updated cell 9 (PS5 Secondary):', ps5SecondaryStock, 'New value:', cell9.text());
+                        }
                         
-                        console.log('Updated stock values:', {
-                            ps4Offline: ps4OfflineStock,
-                            ps4Primary: ps4PrimaryStock,
-                            ps4Secondary: ps4SecondaryStock,
-                            ps5Offline: ps5OfflineStock,
-                            ps5Primary: ps5PrimaryStock,
-                            ps5Secondary: ps5SecondaryStock
-                        });
+                        // Force a reflow to ensure the browser updates the display
+                        row[0].offsetHeight;
+                        
+                        console.log('All cells updated successfully');
 
                         // Update data attributes on table cells for responsive views
                         // These might be used by mobile/responsive table plugins
@@ -557,13 +613,16 @@
                     } else {
                         console.error('Row not found for account ID:', accountId);
                         console.log('Attempted selectors:', {
-                            storedReference: form.data('row-reference'),
-                            selector1: $(`tr:has(button.editStock[data-id="${accountId}"])`).length,
-                            selector2: $(`button.editStock[data-id="${accountId}"]`).closest('tr').length
+                            dataAccountId: $(`tr[data-account-id="${accountId}"]`).length,
+                            storedReference: form.data('row-reference') ? form.data('row-reference').length : 0,
+                            buttonClosest: $(`button.editStock[data-id="${accountId}"]`).closest('tr').length,
+                            hasSelector: $(`tr:has(button.editStock[data-id="${accountId}"])`).length
                         });
+                        console.log('All rows with data-account-id:', $('tr[data-account-id]').length);
+                        console.log('All editStock buttons:', $('button.editStock').length);
                     }
 
-                    // Hide modal first, then show success message
+                    // Hide modal and show success message
                     $('#stockModal').modal('hide');
                     
                     Swal.fire({
