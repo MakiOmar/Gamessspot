@@ -454,15 +454,31 @@
                     const row = $(`tr:has(button.editStock[data-id="${accountId}"])`);
                     if (row.length) {
                         // Update table cells (columns are: ID, Mail, Game, Region, PS4 Offline, PS4 Primary, PS4 Secondary, PS5 Offline, PS5 Primary, PS5 Secondary, Cost, Password, Actions)
-                        row.find('td').eq(4).text(ps4OfflineStock);    // PS4 Offline
-                        row.find('td').eq(5).text(ps4PrimaryStock);    // PS4 Primary
-                        row.find('td').eq(6).text(ps4SecondaryStock);  // PS4 Secondary
-                        row.find('td').eq(7).text(ps5OfflineStock);    // PS5 Offline
-                        row.find('td').eq(8).text(ps5PrimaryStock);    // PS5 Primary
-                        row.find('td').eq(9).text(ps5SecondaryStock);  // PS5 Secondary
+                        const cells = row.find('td');
+                        cells.eq(4).text(ps4OfflineStock);    // PS4 Offline
+                        cells.eq(5).text(ps4PrimaryStock);    // PS4 Primary
+                        cells.eq(6).text(ps4SecondaryStock);  // PS4 Secondary
+                        cells.eq(7).text(ps5OfflineStock);    // PS5 Offline
+                        cells.eq(8).text(ps5PrimaryStock);    // PS5 Primary
+                        cells.eq(9).text(ps5SecondaryStock);  // PS5 Secondary
+
+                        // Update data attributes on table cells for responsive views
+                        // These might be used by mobile/responsive table plugins
+                        cells.eq(4).attr('data-label', 'Offline (PS4)');
+                        cells.eq(5).attr('data-label', 'Primary (PS4)');
+                        cells.eq(6).attr('data-label', 'Secondary (PS4)');
+                        cells.eq(7).attr('data-label', 'Offline (PS5)');
+                        cells.eq(8).attr('data-label', 'Primary (PS5)');
+                        cells.eq(9).attr('data-label', 'Secondary (PS5)');
 
                         // Update the editStock button data attributes
                         const editStockButton = row.find('button.editStock');
+                        editStockButton.attr('data-ps4_primary_stock', ps4PrimaryStock);
+                        editStockButton.attr('data-ps4_secondary_stock', ps4SecondaryStock);
+                        editStockButton.attr('data-ps4_offline_stock', ps4OfflineStock);
+                        editStockButton.attr('data-ps5_primary_stock', ps5PrimaryStock);
+                        editStockButton.attr('data-ps5_secondary_stock', ps5SecondaryStock);
+                        editStockButton.attr('data-ps5_offline_stock', ps5OfflineStock);
                         editStockButton.data('ps4_primary_stock', ps4PrimaryStock);
                         editStockButton.data('ps4_secondary_stock', ps4SecondaryStock);
                         editStockButton.data('ps4_offline_stock', ps4OfflineStock);
@@ -473,6 +489,12 @@
                         // Also update the editAccount button data attributes to keep them in sync
                         const editAccountButton = row.find('button.editAccount');
                         if (editAccountButton.length) {
+                            editAccountButton.attr('data-ps4_primary', ps4PrimaryStock);
+                            editAccountButton.attr('data-ps4_secondary', ps4SecondaryStock);
+                            editAccountButton.attr('data-ps4_offline', ps4OfflineStock);
+                            editAccountButton.attr('data-ps5_primary', ps5PrimaryStock);
+                            editAccountButton.attr('data-ps5_secondary', ps5SecondaryStock);
+                            editAccountButton.attr('data-ps5_offline', ps5OfflineStock);
                             editAccountButton.data('ps4_primary', ps4PrimaryStock);
                             editAccountButton.data('ps4_secondary', ps4SecondaryStock);
                             editAccountButton.data('ps4_offline', ps4OfflineStock);
@@ -480,6 +502,21 @@
                             editAccountButton.data('ps5_secondary', ps5SecondaryStock);
                             editAccountButton.data('ps5_offline', ps5OfflineStock);
                         }
+
+                        // Trigger refresh for responsive table plugins if they exist
+                        if (typeof $.fn.mobileTableToggle !== 'undefined') {
+                            $('#accounts-table').mobileTableToggle('refresh');
+                        }
+                        
+                        // Trigger a custom event for any listeners that might need to update views
+                        $(document).trigger('accountStockUpdated', [accountId, {
+                            ps4_primary_stock: ps4PrimaryStock,
+                            ps4_secondary_stock: ps4SecondaryStock,
+                            ps4_offline_stock: ps4OfflineStock,
+                            ps5_primary_stock: ps5PrimaryStock,
+                            ps5_secondary_stock: ps5SecondaryStock,
+                            ps5_offline_stock: ps5OfflineStock
+                        }]);
                     }
 
                     $('#stockModal').modal('hide');
@@ -751,6 +788,22 @@
         $('.accounts-responsive-table').mobileTableToggle({
             maxVisibleColsDesktop: 5,
             enableOnDesktop: true
+        });
+
+        // Listen for account stock updates to refresh responsive views
+        $(document).on('accountStockUpdated', function(e, accountId, stockData) {
+            // Refresh the responsive table view
+            if (typeof $.fn.mobileTableToggle !== 'undefined') {
+                $('#accounts-table').mobileTableToggle('refresh');
+            }
+            
+            // Update any detail views or modals that might be showing this account's information
+            // This ensures responsive/mobile views get updated
+            const row = $(`tr:has(button.editStock[data-id="${accountId}"])`);
+            if (row.length) {
+                // Force a re-render by triggering a resize event (some responsive plugins listen to this)
+                $(window).trigger('resize');
+            }
         });
     });
 </script>
