@@ -1136,8 +1136,8 @@ class OrderController extends Controller
                         "currency" => "EGP",
                         "version" => "9.7.1",
                         "prices_include_tax" => false,
-                        "date_created" => $order->created_at->toDateString(),
-                        "date_modified" => $order->updated_at->toDateString(),
+                        "date_created" => $order->created_at->toIso8601String(),
+                        "date_modified" => $order->updated_at->toIso8601String(),
                         "discount_total" => "0.00",
                         "discount_tax" => "0.00",
                         "shipping_total" => "0.00",
@@ -1254,7 +1254,7 @@ class OrderController extends Controller
         // Make a POST request with Bearer token and $basic_details array as JSON
         $response = Http::withToken($token)  // Set Bearer token
                     ->post($endpoint, $basic_details);  // Send POST request with data
-
+        \Log::info($response->body());
         // Check if the request was successful
         if ($response->successful()) {
             $body = json_decode($response->body());
