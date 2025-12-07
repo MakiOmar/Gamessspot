@@ -248,18 +248,53 @@ class SettingsController extends Controller
     public function export()
     {
         try {
-            // Get all settings from the database table directly
-            $tableName = config('settings.table', 'settings');
-            $settingsRows = DB::table($tableName)->get();
+            // Define all known setting keys (since the package uses MD5 key hashing)
+            $knownSettings = [
+                // App settings
+                'app.name',
+                'app.timezone',
+                'app.locale',
+                
+                // Business settings
+                'business.company_name',
+                'business.phone',
+                'business.email',
+                'business.address',
+                
+                // Order settings
+                'orders.auto_approve',
+                'orders.notification_email',
+                'orders.max_order_amount',
+                
+                // Notification settings
+                'notifications.email_enabled',
+                'notifications.sms_enabled',
+                'notifications.order_notifications',
+                
+                // POS settings
+                'pos.offline_sku',
+                'pos.secondary_sku',
+                'pos.primary_sku',
+                'pos.card_sku',
+                'pos.offline_id',
+                'pos.secondary_id',
+                'pos.primary_id',
+                'pos.card_id',
+                'pos.username',
+                'pos.password',
+                'pos.base_url',
+                'pos.location_map',
+            ];
             
             // Build settings array - get actual values using Settings facade
             // This ensures we get decrypted/unserialized values
             $settings = [];
-            foreach ($settingsRows as $row) {
-                $key = $row->key;
-                // Use Settings facade to get the actual value (handles decryption/unserialization)
+            foreach ($knownSettings as $key) {
                 $value = Settings::get($key);
-                $settings[$key] = $value;
+                // Only include settings that have been set (not null or have a value)
+                if ($value !== null) {
+                    $settings[$key] = $value;
+                }
             }
 
             // Add metadata
