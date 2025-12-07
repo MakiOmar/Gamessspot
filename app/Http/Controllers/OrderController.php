@@ -1271,4 +1271,31 @@ class OrderController extends Controller
             return redirect()->route('manager.orders')->with('error', 'Failed to create order');
         }
     }
+
+    public function unsendFromPos(Request $request)
+    {
+        // Validate that the order_ids are provided and are an array of valid IDs
+        $validated = $request->validate([
+            'order_ids' => 'required|array',
+            'order_ids.*' => 'exists:orders,id' // Ensure each order ID exists in the orders table
+        ]);
+
+        $orderIds = $validated['order_ids'];
+        $updatedCount = 0;
+
+        // Update each order to set pos_order_id to null
+        foreach ($orderIds as $orderId) {
+            $order = Order::find($orderId);
+            if ($order && $order->pos_order_id) {
+                $order->update(['pos_order_id' => null]);
+                $updatedCount++;
+            }
+        }
+
+        if ($updatedCount > 0) {
+            return redirect()->route('manager.orders')->with('success', $updatedCount . ' order(s) successfully unsent from POS');
+        } else {
+            return redirect()->route('manager.orders')->with('info', 'No orders were unsent. Selected orders may not have been sent to POS.');
+        }
+    }
 }

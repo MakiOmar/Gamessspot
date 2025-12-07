@@ -136,6 +136,17 @@
                 @endunless
 
             </form>
+            
+            @unless(Auth::user()->hasRole('accountant'))
+            <!-- Form for unsending orders from POS -->
+            <form method="post" action="{{ route('manager.orders.unsendFromPos') }}" id="unsendPosForm" style="display: none;">
+                @csrf
+                <div id="unsendOrderIds"></div>
+                <p>
+                    <input type="submit" name="bulk_unsend_pos" class="btn btn-warning" value="{{ __('Unsend from POS') }}" />
+                </p>
+            </form>
+            @endunless
         </div>
         @if (isset($status))
         <input type="hidden" id="currentReportStatus" value="{{$status}}"/>
@@ -477,9 +488,64 @@
         // JavaScript to handle "Check All" functionality
         document.getElementById('select_all').addEventListener('change', function() {
             var checkboxes = document.querySelectorAll('input[name="order_ids[]"]');
+            var unsendCheckboxes = document.querySelectorAll('input[name="unsend_order_ids[]"]');
             checkboxes.forEach(function(checkbox) {
                 checkbox.checked = document.getElementById('select_all').checked;
             });
+            unsendCheckboxes.forEach(function(checkbox) {
+                checkbox.checked = document.getElementById('select_all').checked;
+            });
+        });
+
+        // Handle unsend checkboxes - show/hide unsend form
+        jQuery(document).ready(function($) {
+            function updateUnsendForm() {
+                const checkedUnsendBoxes = $('input[name="unsend_order_ids[]"]:checked');
+                const unsendForm = $('#unsendPosForm');
+                
+                if (checkedUnsendBoxes.length > 0) {
+                    // Populate hidden inputs with checked order IDs
+                    const unsendOrderIdsDiv = $('#unsendOrderIds');
+                    unsendOrderIdsDiv.empty();
+                    checkedUnsendBoxes.each(function() {
+                        unsendOrderIdsDiv.append('<input type="hidden" name="order_ids[]" value="' + $(this).val() + '" />');
+                    });
+                    unsendForm.show();
+                } else {
+                    unsendForm.hide();
+                }
+            }
+
+            // Listen for changes on unsend checkboxes
+            $(document).on('change', 'input[name="unsend_order_ids[]"]', function() {
+                updateUnsendForm();
+            });
+
+            // Handle unsend form submission with confirmation
+            $('#unsendPosForm').on('submit', function(e) {
+                e.preventDefault();
+                
+                const checkedCount = $('input[name="unsend_order_ids[]"]:checked').length;
+                
+                Swal.fire({
+                    title: 'Are you sure?',
+                    text: `Do you want to unsend ${checkedCount} order(s) from POS? This will set their pos_order_id to null.`,
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#d33',
+                    cancelButtonColor: '#3085d6',
+                    confirmButtonText: 'Yes, unsend them!',
+                    cancelButtonText: 'Cancel'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        // Submit the form
+                        this.submit();
+                    }
+                });
+            });
+
+            // Initialize form visibility
+            updateUnsendForm();
         });
     </script>
 @endpush

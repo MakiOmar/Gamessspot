@@ -2,7 +2,7 @@
     <tr id="orderRow-{{ $order->id }}">
         <td>
             @if ($order->pos_order_id)
-                <span class="text-success font-weight-bold">POS</span>
+                <input type="checkbox" name="unsend_order_ids[]" value="{{ $order->id }}" class="unsend-checkbox" />
             @else
                 <input type="checkbox" name="order_ids[]" value="{{ $order->id }}" />
             @endif

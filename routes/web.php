@@ -627,6 +627,7 @@ Route::prefix('manager')->group(function () {
                 Route::post('/store', [OrderController::class, 'store'])->name('orders.store');
                 Route::post('/sell-card', [OrderController::class, 'sellCard'])->name('manager.orders.sell.card');
                 Route::post('/send-to-pos', [OrderController::class, 'sendToPos'])->name('manager.orders.sendToPos');
+                Route::post('/unsend-from-pos', [OrderController::class, 'unsendFromPos'])->name('manager.orders.unsendFromPos');
                 
                 Route::get('/has-problem', [OrderController::class, 'ordersHasProblem'])->name('manager.orders.has_problem');
                 Route::get('/needs-return', [OrderController::class, 'ordersWithNeedsReturn'])->name('manager.orders.needs_return');
