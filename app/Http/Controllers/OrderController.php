@@ -1265,6 +1265,17 @@ class OrderController extends Controller
         // Check if the request was successful
         if ($response->successful()) {
             $body = json_decode($response->body());
+            
+            // Check if response body is valid and contains the expected structure
+            if (!$body || !isset($body->created) || !isset($body->created->id)) {
+                \Log::error('Invalid POS API response structure', [
+                    'response_body' => $response->body(),
+                    'status_code' => $response->status(),
+                    'order_ids' => $unsentOrderIds
+                ]);
+                return redirect()->route('manager.orders')->with('error', 'Invalid response from POS system. Please try again or contact support.');
+            }
+            
             $transaction_id = $body->created->id;
             // Loop through the order IDs and update each one
             foreach ($unsentOrderIds as $orderId) {
@@ -1276,7 +1287,12 @@ class OrderController extends Controller
             return redirect()->route('manager.orders')->with('success', 'Orders successfully sent to POS');
         } else {
             // Handle errors from the API
-            return redirect()->route('manager.orders')->with('error', 'Failed to create order');
+            \Log::error('POS API request failed', [
+                'status_code' => $response->status(),
+                'response_body' => $response->body(),
+                'order_ids' => $unsentOrderIds
+            ]);
+            return redirect()->route('manager.orders')->with('error', 'Failed to create order in POS system. Status: ' . $response->status());
         }
     }
 
