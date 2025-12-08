@@ -1259,6 +1259,23 @@ class OrderController extends Controller
         // API endpoint for creating an order
         $endpoint = $this->pos_base . '/api/accounts/orders/create/1';
 
+        // Prepare headers for logging
+        $headers = [
+            'Authorization' => 'Bearer ' . $token,
+            'Accept' => 'application/json',
+            'Content-Type' => 'application/json',
+        ];
+
+        // Log the full request with headers and authentication
+        \Log::info('sendToPos - Full Request Details', [
+            'endpoint' => $endpoint,
+            'method' => 'POST',
+            'headers' => $headers,
+            'authentication_token' => $token,
+            'request_body' => $basic_details,
+            'order_ids' => $unsentOrderIds,
+        ]);
+
         // Make a POST request with Bearer token and $basic_details array as JSON
         $response = Http::withToken($token)  // Set Bearer token
                     ->post($endpoint, $basic_details);  // Send POST request with data
