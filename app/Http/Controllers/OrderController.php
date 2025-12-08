@@ -69,6 +69,17 @@ class OrderController extends Controller
         // Return the existing token from the cache
         return $token;
     }
+
+    /**
+     * Clear the cached POS API token
+     * 
+     * @return bool
+     */
+    public function clearToken()
+    {
+        Cache::forget('api_token');
+        return true;
+    }
     /**
      * Display a listing of the orders.
      *
@@ -1266,15 +1277,7 @@ class OrderController extends Controller
             'Content-Type' => 'application/json',
         ];
 
-        // Log the full request with headers and authentication
-        \Log::info('sendToPos - Full Request Details', [
-            'endpoint' => $endpoint,
-            'method' => 'POST',
-            'headers' => $headers,
-            'authentication_token' => $token,
-            'request_body' => $basic_details,
-            'order_ids' => $unsentOrderIds,
-        ]);
+
 
         // Make a POST request with Bearer token and $basic_details array as JSON
         $response = Http::withToken($token)  // Set Bearer token
@@ -1285,11 +1288,7 @@ class OrderController extends Controller
             
             // Check if response body is valid and contains the expected structure
             if (!$body || !isset($body->created) || !isset($body->created->id)) {
-                \Log::error('Invalid POS API response structure', [
-                    'response_body' => $response->body(),
-                    'status_code' => $response->status(),
-                    'order_ids' => $unsentOrderIds
-                ]);
+
                 return redirect()->route('manager.orders')->with('error', 'Invalid response from POS system. Please try again or contact support.');
             }
             
@@ -1303,12 +1302,6 @@ class OrderController extends Controller
             // Return a success message if all orders were sent successfully
             return redirect()->route('manager.orders')->with('success', 'Orders successfully sent to POS');
         } else {
-            // Handle errors from the API
-            \Log::error('POS API request failed', [
-                'status_code' => $response->status(),
-                'response_body' => $response->body(),
-                'order_ids' => $unsentOrderIds
-            ]);
             return redirect()->route('manager.orders')->with('error', 'Failed to create order in POS system. Status: ' . $response->status());
         }
     }
