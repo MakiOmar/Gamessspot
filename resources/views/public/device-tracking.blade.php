@@ -200,6 +200,9 @@
         div.iti {
             width: 100%;
         }
+        .iti__selected-dial-code {
+            color: #ffffff !important;
+        }
         
         .alert {
             border-radius: 4px;

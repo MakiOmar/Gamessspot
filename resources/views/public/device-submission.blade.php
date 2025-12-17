@@ -90,6 +90,9 @@
         div.iti {
             width: 100%;
         }
+        .iti__selected-dial-code {
+            color: #ffffff !important;
+        }
         
         .btn-primary {
             background: linear-gradient(45deg, #db890a, #f4b74b);
