@@ -371,12 +371,10 @@
                 </div>
                 
                 <div class="text-center">
-                    {{--
                     <button type="submit" class="btn btn-primary me-3">
                         <i class="fas fa-paper-plane"></i>
                         Submit Device
                     </button>
-                    --}}
                     <a href="{{ route('device.tracking') }}" class="btn btn-secondary">
                         <i class="fas fa-search"></i>
                         Track Service

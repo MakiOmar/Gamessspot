@@ -593,10 +593,12 @@
                         <i class="fas fa-search"></i>
                         <h4>No Active Services Found</h4>
                         <p>No active service orders found for this phone number.</p>
+                        {{--
                         <a href="{{ route('device.submit') }}" class="btn btn-primary">
                             <i class="fas fa-plus"></i>
                             Submit New Device
                         </a>
+                        --}}
                     </div>
                 </div>
             @endif
