@@ -155,7 +155,7 @@
             <!-- Settings Content -->
             <div class="col-md-9">
                 <div class="settings-content">
-                    <form action="{{ route('settings.update') }}" method="POST" id="settings-form">
+                    <form action="{{ route('settings.update') }}" method="POST" id="settings-form" enctype="multipart/form-data">
                         @csrf
                         <!-- Application Settings Tab -->
                         <div id="application" class="settings-tab active">
@@ -199,6 +199,32 @@
                                         @error('app.locale')
                                             <div class="invalid-feedback">{{ $message }}</div>
                                         @enderror
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="app_logo" class="form-label">Application Logo</label>
+                                        @if(!empty($settings['app']['logo']))
+                                            <div class="mb-2">
+                                                <div class="small text-muted mb-1">Current logo:</div>
+                                                <img src="{{ asset('storage/' . $settings['app']['logo']) }}" alt="Current Logo" style="max-height: 60px;" class="border rounded p-1 bg-white">
+                                            </div>
+                                        @endif
+                                        <input
+                                            type="file"
+                                            class="form-control @error('app_logo') is-invalid @enderror"
+                                            id="app_logo"
+                                            name="app_logo"
+                                            accept="image/*"
+                                        >
+                                        @error('app_logo')
+                                            <div class="invalid-feedback">{{ $message }}</div>
+                                        @enderror
+                                        <small class="form-text text-muted">
+                                            Recommended: PNG or SVG, max size 2MB.
+                                        </small>
                                     </div>
                                 </div>
                             </div>

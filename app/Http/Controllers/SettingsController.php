@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 use Rawilk\Settings\Facades\Settings;
 
@@ -23,6 +24,7 @@ class SettingsController extends Controller
                 'name' => Settings::get('app.name', config('app.name')),
                 'timezone' => Settings::get('app.timezone', config('app.timezone')),
                 'locale' => Settings::get('app.locale', config('app.locale')),
+                'logo' => Settings::get('app.logo'),
             ],
             'business' => [
                 'company_name' => Settings::get('business.company_name', config('app.company_name')),
@@ -100,6 +102,7 @@ class SettingsController extends Controller
             'app.name' => 'required|string|max:255',
             'app.timezone' => 'required|string',
             'app.locale' => 'required|string',
+            'app_logo' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg,webp|max:2048',
             'business.company_name' => 'required|string|max:255',
             'business.phone' => 'nullable|string|max:20',
             'business.email' => 'nullable|email|max:255',
@@ -129,6 +132,20 @@ class SettingsController extends Controller
             return redirect()->back()
                 ->withErrors($validator)
                 ->withInput();
+        }
+
+        // Handle logo upload if provided
+        if ($request->hasFile('app_logo')) {
+            $file = $request->file('app_logo');
+            $path = $file->store('logos', 'public');
+
+            // Delete old logo file if it exists
+            $oldLogo = Settings::get('app.logo');
+            if ($oldLogo && Storage::disk('public')->exists($oldLogo)) {
+                Storage::disk('public')->delete($oldLogo);
+            }
+
+            Settings::set('app.logo', $path);
         }
 
         // Update app settings
