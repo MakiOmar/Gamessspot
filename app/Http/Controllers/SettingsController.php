@@ -8,7 +8,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Illuminate\View\View;
 use Rawilk\Settings\Facades\Settings;
 
@@ -134,18 +134,32 @@ class SettingsController extends Controller
                 ->withInput();
         }
 
-        // Handle logo upload if provided
+        // Handle logo upload if provided (store directly in public/logos, no symlink needed)
         if ($request->hasFile('app_logo')) {
             $file = $request->file('app_logo');
-            $path = $file->store('logos', 'public');
+
+            // Ensure logos directory exists in public path
+            $logosPath = public_path('logos');
+            if (! is_dir($logosPath)) {
+                mkdir($logosPath, 0755, true);
+            }
+
+            $extension = $file->getClientOriginalExtension();
+            $filename = Str::uuid()->toString() . '.' . $extension;
+
+            $file->move($logosPath, $filename);
 
             // Delete old logo file if it exists
             $oldLogo = Settings::get('app.logo');
-            if ($oldLogo && Storage::disk('public')->exists($oldLogo)) {
-                Storage::disk('public')->delete($oldLogo);
+            if ($oldLogo) {
+                $oldLogoPath = public_path($oldLogo);
+                if (is_file($oldLogoPath)) {
+                    @unlink($oldLogoPath);
+                }
             }
 
-            Settings::set('app.logo', $path);
+            // Store relative path from public root, e.g. logos/xxxx.webp
+            Settings::set('app.logo', 'logos/' . $filename);
         }
 
         // Update app settings

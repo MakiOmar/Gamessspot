@@ -209,7 +209,7 @@
                                         @if(!empty($settings['app']['logo']))
                                             <div class="mb-2">
                                                 <div class="small text-muted mb-1">Current logo:</div>
-                                                <img src="{{ asset('storage/' . $settings['app']['logo']) }}" alt="Current Logo" style="max-height: 60px;" class="border rounded p-1 bg-white">
+                                                <img src="{{ asset($settings['app']['logo']) }}" alt="Current Logo" style="max-height: 60px;" class="border rounded p-1 bg-white">
                                             </div>
                                         @endif
                                         <input
