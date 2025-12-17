@@ -741,8 +741,13 @@ Route::prefix('manager')->group(function () {
 
 // Public Device Repair Routes
 Route::prefix('device')->group(function () {
-    Route::get('/submit', [PublicDeviceController::class, 'showSubmissionForm'])->name('device.submit');
-    Route::post('/submit', [PublicDeviceController::class, 'submitDevice'])->name('device.submit.store');
+    // Device submission routes - require authentication (for admins to create for customers)
+    Route::middleware('auth')->group(function () {
+        Route::get('/submit', [PublicDeviceController::class, 'showSubmissionForm'])->name('device.submit');
+        Route::post('/submit', [PublicDeviceController::class, 'submitDevice'])->name('device.submit.store');
+    });
+    
+    // Public tracking routes
     Route::get('/track', [PublicDeviceController::class, 'trackDevice'])->name('device.tracking');
     Route::post('/search', [PublicDeviceController::class, 'searchByPhone'])->name('device.search');
     Route::get('/api/country-codes', [PublicDeviceController::class, 'getCountryCodes'])->name('device.country-codes');
