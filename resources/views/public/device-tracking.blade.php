@@ -430,7 +430,7 @@
             
             <!-- Search Form -->
             <div class="tracking-card">
-                <h4 class="text-center mb-4" style="color: #00d4ff;">
+                <h4 class="text-center mb-4" style="color: #db890a;">
                     <i class="fas fa-search gaming-icon"></i>
                     Search Your Device
                 </h4>
@@ -447,7 +447,7 @@
                                    value="{{ old('phone_number') }}" placeholder="Enter your phone number" required>
                         </div>
                         
-                        <div class="text-center">
+                        <div class="text-center mt-3">
                             <button type="submit" class="btn btn-primary">
                                 <i class="fas fa-search"></i>
                                 Search
