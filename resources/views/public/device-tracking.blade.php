@@ -609,8 +609,8 @@
                     Your service information is secure and updated in real-time.
                 </p>
                 <p class="small">
-                    <a href="{{ route('device.submit') }}" class="submission-link">Submit New Device</a>
-                    | 
+                    {{-- <a href="{{ route('device.submit') }}" class="submission-link">Submit New Device</a> --}}  
+                    {{-- |  --}}
                     <a href="#" class="submission-link">Contact Support</a>
                 </p>
             </div>
