@@ -9,7 +9,7 @@
     <link rel="stylesheet" href="{{ asset('assets/css/intlTelInput.min.css') }}">
     <style>
         body {
-            background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+            background: linear-gradient(135deg, #000000 0%, #111111 100%);
             min-height: 100vh;
             font-family: 'Source Sans Pro', sans-serif;
             overflow-x: hidden;
@@ -17,21 +17,21 @@
         }
         
         .login-container {
-            background: rgba(45, 45, 45, 0.95);
-            border: 1px solid #ff6b35;
+            background: rgba(0, 0, 0, 0.9);
+            border: 1px solid #db890a;
             border-radius: 12px;
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3), 0 0 20px rgba(255, 107, 53, 0.2);
-            padding: 2rem;
-            margin: 2rem auto;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.7), 0 0 40px rgba(219, 137, 10, 0.35);
+            padding: 2.5rem 2.25rem;
+            margin: 3rem auto;
             max-width: 1000px;
             backdrop-filter: blur(10px);
         }
         
         .login-header {
             text-align: center;
-            margin-bottom: 2rem;
+            margin-bottom: 2.25rem;
             padding-bottom: 1rem;
-            border-bottom: 1px solid #ff6b35;
+            border-bottom: 1px solid rgba(219, 137, 10, 0.45);
         }
         
         .login-title {
@@ -39,7 +39,7 @@
             font-size: 2rem;
             font-weight: 600;
             margin-bottom: 0.5rem;
-            text-shadow: 0 0 10px rgba(255, 107, 53, 0.5);
+            text-shadow: 0 0 18px rgba(219, 137, 10, 0.8);
         }
         
         .login-subtitle {
@@ -48,17 +48,17 @@
         }
         
         .tracking-card {
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid #ff6b35;
+            background: rgba(17, 17, 17, 0.94);
+            border: 1px solid rgba(219, 137, 10, 0.6);
             border-radius: 12px;
-            padding: 1.5rem;
-            margin-bottom: 1.5rem;
+            padding: 1.75rem;
+            margin-bottom: 1.75rem;
             transition: all 0.3s ease;
             backdrop-filter: blur(10px);
         }
         
         .tracking-card:hover {
-            box-shadow: 0 8px 25px rgba(255, 107, 53, 0.2);
+            box-shadow: 0 12px 35px rgba(219, 137, 10, 0.45);
             transform: translateY(-5px);
         }
         
@@ -73,28 +73,13 @@
             margin-bottom: 1rem;
         }
         
-        .status-received {
-            background: linear-gradient(45deg, #ff6b35, #ff8c42);
-            color: white;
-            box-shadow: 0 4px 15px rgba(255, 107, 53, 0.3);
-        }
-        
-        .status-processing {
-            background: linear-gradient(45deg, #ffc107, #ffeb3b);
-            color: #212529;
-            box-shadow: 0 4px 15px rgba(255, 193, 7, 0.3);
-        }
-        
-        .status-ready {
-            background: linear-gradient(45deg, #17a2b8, #20c997);
-            color: white;
-            box-shadow: 0 4px 15px rgba(23, 162, 184, 0.3);
-        }
-        
+        .status-received,
+        .status-processing,
+        .status-ready,
         .status-delivered {
-            background: linear-gradient(45deg, #28a745, #20c997);
-            color: white;
-            box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
+            background: linear-gradient(45deg, #db890a, #f4b74b);
+            color: #000;
+            box-shadow: 0 4px 18px rgba(219, 137, 10, 0.6);
         }
         
         .device-info {
@@ -103,7 +88,7 @@
         }
         
         .info-label {
-            color: #ff6b35;
+            color: #db890a;
             font-weight: 600;
             font-size: 0.9rem;
             text-transform: uppercase;
@@ -117,8 +102,8 @@
         }
         
         .tracking-code {
-            background: rgba(255, 107, 53, 0.1);
-            border: 1px solid #ff6b35;
+            background: rgba(219, 137, 10, 0.06);
+            border: 1px solid rgba(219, 137, 10, 0.8);
             border-radius: 12px;
             padding: 1rem;
             text-align: center;
@@ -130,34 +115,34 @@
             font-family: 'Courier New', monospace;
             font-size: 1.5rem;
             font-weight: bold;
-            color: #ff6b35;
-            text-shadow: 0 0 10px rgba(255, 107, 53, 0.5);
+            color: #db890a;
+            text-shadow: 0 0 16px rgba(219, 137, 10, 0.9);
         }
         
         .form-control, .form-select {
-            background: rgba(255, 255, 255, 0.9);
-            border: 1px solid #ff6b35;
+            background: rgba(15, 15, 15, 0.95);
+            border: 1px solid rgba(219, 137, 10, 0.7);
             border-radius: 8px;
             padding: 12px 15px;
             font-size: 14px;
             transition: all 0.3s ease;
-            color: #333;
+            color: #f2f2f2;
         }
         
         .form-control:focus, .form-select:focus {
-            background: rgba(255, 255, 255, 1);
-            border-color: #ff6b35;
-            box-shadow: 0 0 15px rgba(255, 107, 53, 0.3);
+            background: rgba(8, 8, 8, 1);
+            border-color: #db890a;
+            box-shadow: 0 0 18px rgba(219, 137, 10, 0.5);
             outline: 0;
             transform: translateY(-2px);
         }
         
         .form-control::placeholder {
-            color: #666;
+            color: #999;
         }
         
         .btn-primary {
-            background: linear-gradient(45deg, #ff6b35, #ff8c42);
+            background: linear-gradient(45deg, #db890a, #f4b74b);
             border: none;
             padding: 12px 30px;
             font-weight: 600;
@@ -165,19 +150,19 @@
             transition: all 0.3s ease;
             text-transform: uppercase;
             letter-spacing: 1px;
-            box-shadow: 0 4px 15px rgba(255, 107, 53, 0.3);
+            box-shadow: 0 4px 18px rgba(219, 137, 10, 0.7);
         }
         
         .btn-primary:hover {
-            background: linear-gradient(45deg, #ff8c42, #ff6b35);
+            background: linear-gradient(45deg, #f4b74b, #db890a);
             transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(255, 107, 53, 0.4);
+            box-shadow: 0 6px 24px rgba(219, 137, 10, 0.9);
         }
         
         .btn-secondary {
-            background: rgba(255, 255, 255, 0.1);
-            border: 1px solid #ff6b35;
-            color: #ff6b35;
+            background: transparent;
+            border: 1px solid rgba(219, 137, 10, 0.7);
+            color: #db890a;
             padding: 12px 30px;
             font-weight: 600;
             border-radius: 8px;
@@ -187,9 +172,9 @@
         }
         
         .btn-secondary:hover {
-            background: rgba(255, 107, 53, 0.1);
-            border-color: #ff8c42;
-            color: #ff8c42;
+            background: rgba(219, 137, 10, 0.12);
+            border-color: #f4b74b;
+            color: #f4b74b;
             transform: translateY(-2px);
         }
         
@@ -203,7 +188,7 @@
         }
         
         .icon {
-            color: #ff6b35;
+            color: #db890a;
             margin-right: 8px;
         }
         
@@ -218,47 +203,47 @@
         
         .alert {
             border-radius: 4px;
-            border: none;
+            border: 1px solid rgba(219, 137, 10, 0.4);
             margin-bottom: 1.5rem;
         }
         
         .alert-success {
-            background-color: #d4edda;
-            color: #155724;
-            border-left: 4px solid #28a745;
+            background-color: rgba(18, 40, 18, 0.95);
+            color: #e5ffe5;
+            border-left: 4px solid #db890a;
         }
         
         .alert-danger {
-            background-color: #f8d7da;
-            color: #721c24;
-            border-left: 4px solid #dc3545;
+            background-color: rgba(50, 12, 12, 0.96);
+            color: #ffd4d4;
+            border-left: 4px solid #db890a;
         }
         
         .alert-info {
-            background-color: #d1ecf1;
-            color: #0c5460;
-            border-left: 4px solid #17a2b8;
+            background-color: rgba(15, 24, 32, 0.96);
+            color: #e0f4ff;
+            border-left: 4px solid #db890a;
         }
         
         .no-results {
             text-align: center;
             padding: 3rem;
-            color: #666;
+            color: #bbbbbb;
         }
         
         .no-results i {
             font-size: 4rem;
-            color: #3c8dbc;
+            color: #db890a;
             margin-bottom: 1rem;
             opacity: 0.5;
         }
         
         .progress-bar {
-            background-color: #3c8dbc;
+            background-color: #db890a;
         }
         
         .progress {
-            background-color: #f8f9fa;
+            background-color: #1b1b1b;
             border-radius: 4px;
             height: 8px;
             margin: 1rem 0;
@@ -276,7 +261,7 @@
             top: 0;
             bottom: 0;
             width: 2px;
-            background: #dee2e6;
+            background: #333333;
         }
         
         .timeline-item {
@@ -293,34 +278,34 @@
             width: 12px;
             height: 12px;
             border-radius: 50%;
-            background: #6c757d;
+            background: #444444;
         }
         
         .timeline-item.completed::before {
-            background: #28a745;
+            background: #db890a;
         }
         
         .timeline-item.current::before {
-            background: #3c8dbc;
+            background: #f4b74b;
         }
         
         .footer {
             text-align: center;
             margin-top: 2rem;
             padding-top: 1rem;
-            border-top: 1px solid #f4f4f4;
-            color: #666;
+            border-top: 1px solid #262626;
+            color: #999;
             font-size: 0.9rem;
         }
         
         .submission-link {
-            color: #3c8dbc;
+            color: #db890a;
             text-decoration: none;
             font-weight: 600;
         }
         
         .submission-link:hover {
-            color: #ff8c42;
+            color: #f4b74b;
             text-decoration: underline;
         }
         
@@ -339,7 +324,7 @@
             position: absolute;
             width: 2px;
             height: 2px;
-            background: #ff6b35;
+            background: #db890a;
             border-radius: 50%;
             animation: float 8s infinite linear;
             opacity: 0.6;
@@ -380,7 +365,7 @@
             left: 10%;
             width: 200px;
             height: 200px;
-            background: radial-gradient(circle, #ff6b35 0%, transparent 70%);
+            background: radial-gradient(circle, #db890a 0%, transparent 70%);
             border-radius: 50%;
             animation: pulse 4s ease-in-out infinite;
         }
@@ -392,7 +377,7 @@
             right: 15%;
             width: 150px;
             height: 150px;
-            background: radial-gradient(circle, #ff8c42 0%, transparent 70%);
+            background: radial-gradient(circle, #db890a 0%, transparent 70%);
             border-radius: 50%;
             animation: pulse 3s ease-in-out infinite reverse;
         }
@@ -402,6 +387,14 @@
             50% { transform: scale(1.2); opacity: 0.2; }
         }
         
+        .app-logo {
+            max-height: 250px;
+            width: auto;
+            object-fit: contain;
+            display: block;
+            margin: 0 auto 1.5rem;
+            filter: drop-shadow(0 0 18px rgba(219, 137, 10, 0.8));
+        }
     </style>
 </head>
 <body>
@@ -411,6 +404,9 @@
     <div class="container">
         <div class="login-container">
             <div class="login-header">
+                @if(!empty($appLogo))
+                    <img src="{{ asset($appLogo) }}" alt="GamesSpot Logo" class="app-logo">
+                @endif
                 <h1 class="login-title">
                     <i class="fas fa-search icon"></i>
                     Device Service Tracking

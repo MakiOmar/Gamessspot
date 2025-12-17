@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Notifications\DeviceServiceNotification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Rawilk\Settings\Facades\Settings;
 
 class PublicDeviceController extends Controller
 {
@@ -17,7 +18,9 @@ class PublicDeviceController extends Controller
     public function showSubmissionForm()
     {
         $deviceModels = DeviceModel::active()->orderBy('brand')->orderBy('name')->get();
-        return view('public.device-submission', compact('deviceModels'));
+        $appLogo = Settings::get('app.logo');
+
+        return view('public.device-submission', compact('deviceModels', 'appLogo'));
     }
 
     /**
@@ -114,6 +117,7 @@ class PublicDeviceController extends Controller
     {
         $trackingCode = $request->query('code');
         $deviceRepair = null;
+        $appLogo = Settings::get('app.logo');
 
         if ($trackingCode) {
             $deviceRepair = DeviceRepair::with(['user', 'deviceModel'])
@@ -121,7 +125,7 @@ class PublicDeviceController extends Controller
                 ->first();
         }
 
-        return view('public.device-tracking', compact('deviceRepair', 'trackingCode'));
+        return view('public.device-tracking', compact('deviceRepair', 'trackingCode', 'appLogo'));
     }
 
     /**
@@ -162,7 +166,8 @@ class PublicDeviceController extends Controller
             'searchPhone' => $phoneNumber,
             'searchCountryCode' => $countryCode,
             'trackingCode' => null,
-            'deviceRepair' => null
+            'deviceRepair' => null,
+            'appLogo' => Settings::get('app.logo'),
         ]);
     }
 
