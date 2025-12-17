@@ -446,7 +446,7 @@
                                 <i class="fas fa-phone icon"></i>
                                 Phone Number
                             </label>
-                            <input type="tel" class="form-control" id="phone_number" name="phone_number" 
+                            <input type="tel" class="form-control text-white" id="phone_number" name="phone_number" 
                                    value="{{ old('phone_number') }}" placeholder="Enter your phone number" required>
                         </div>
                         
