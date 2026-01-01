@@ -612,8 +612,9 @@ class OrderController extends Controller
             'price'            => 'required|numeric|min:0',
             'type'             => 'required|string|in:primary,secondary',
             'platform'         => 'required|string|max:255',
+            'wc_order_id'      => 'required|numeric',
         ]);
-        
+
         // Check if the user already exists by phone number
         $user = User::where('phone', $validatedData['buyer_phone'])->first();
 
@@ -673,14 +674,15 @@ class OrderController extends Controller
             
             // Create the order
             $order_data = [
-                'seller_id'        => null,
-                'store_profile_id' => $validatedData['store_profile_id'],
-                'account_id'       => $account->id,
-                'buyer_phone'      => $validatedData['buyer_phone'],
-                'buyer_name'       => $validatedData['buyer_name'],
-                'price'            => $validatedData['price'],
-                'notes'            => '',
-                'sold_item'        => $sold_item,
+                'seller_id'            => null,
+                'store_profile_id'     => $validatedData['store_profile_id'],
+                'account_id'           => $account->id,
+                'buyer_phone'          => $validatedData['buyer_phone'],
+                'buyer_name'           => $validatedData['buyer_name'],
+                'price'                => $validatedData['price'],
+                'notes'                => '',
+                'sold_item'            => $sold_item,
+                'woocommerce_order_id' => $validatedData['wc_order_id'],
             ];
 
             $order = Order::create($order_data);
