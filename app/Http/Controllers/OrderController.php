@@ -1071,6 +1071,7 @@ class OrderController extends Controller
         $referenceSellerId = null;
         foreach ($ordersWithSeller as $orderModel) {
             if (!$orderModel->seller) {
+                $pos_location = SettingsService::getDefaultPosLocationMap()['profile_17'];
                 continue;
             }
 
