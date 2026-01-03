@@ -34,7 +34,7 @@ class OrderController extends Controller
         $this->pos_base = SettingsService::getPosBaseUrl();
         $username = SettingsService::getPosUsername();
         $password = SettingsService::getPosPassword();
-        
+
         // Check if a valid token is already stored in the cache
         $token = Cache::get('api_token');
 
@@ -72,7 +72,7 @@ class OrderController extends Controller
 
     /**
      * Clear the cached POS API token
-     * 
+     *
      * @return bool
      */
     public function clearToken()
@@ -283,10 +283,10 @@ class OrderController extends Controller
         if ($storeProfileId != 0) {
             $orders->where('orders.store_profile_id', $storeProfileId)->orderBy('buyer_name', 'asc')->orderBy('created_at', 'desc');
         }
-        
+
         // Execute the query and paginate or get the results
         $orders = $orders->paginate(20)->appends($request->all());
-        
+
         $showing = "<div class=\"mb-2 mb-md-0 mobile-results-count\">Showing {$orders->firstItem()} to {$orders->lastItem()} of {$orders->total()} results</div>";
         // Return the updated rows for the table (assuming a partial view)
         return response()->json([
@@ -416,16 +416,16 @@ class OrderController extends Controller
                 $platform = null;
                 $type = null;
                 $newStock = null;
-                
+
                 if ($order->card_id) {
                     $this->updateCardStatus($order->card_id);
                 } else {
                     // Extract game details from the order before restocking
                     $account = Account::find($order->account_id);
-                    
+
                     if ($account) {
                         $gameId = $account->game_id;
-                        
+
                         // Parse platform and type from sold_item field
                         // Example: "ps4_primary_stock" -> platform: 4, type: primary
                         if (preg_match('/ps(\d+)_(\w+)_stock/', $order->sold_item, $matches)) {
@@ -433,10 +433,10 @@ class OrderController extends Controller
                             $type = $matches[2];      // e.g., "primary", "secondary", "offline"
                         }
                     }
-                    
+
                     // Increment the stock
                     $this->incrementAccountStock($order);
-                    
+
                     // Get the new stock count after increment
                     if ($account) {
                         $account->refresh(); // Reload from database
@@ -451,12 +451,12 @@ class OrderController extends Controller
                 $this->deleteOrderAndReports($order);
 
                 DB::commit();
-                
+
                 // Flush accounts and orders cache after undo (stock restored)
                 CacheManager::invalidateAccounts();
                 CacheManager::invalidateOrders();
                 CacheManager::invalidateGames(); // Games listings show aggregated account stock
-                
+
                 // ✅ NEW: Send webhook to WordPress when order is undone (stock restored)
                 if ($gameId && $platform && $type) {
                     try {
@@ -467,12 +467,11 @@ class OrderController extends Controller
                             $newStock,
                             'stock_updated'  // Different event type for restock
                         );
-                        
                     } catch (\Exception $e) {
                         // Don't fail the undo operation if webhook fails
                     }
                 }
-                
+
                 return response()->json(['success' => true]);
             }
 
@@ -502,7 +501,7 @@ class OrderController extends Controller
 
         if ($account) {
             $stockField = $this->getStockField($order->sold_item);
-            
+
             // If restoring a secondary stock, also restore the other platform's secondary stock
             // Check the state BEFORE incrementing to ensure we capture the current values
             $shouldRestoreBoth = false;
@@ -517,10 +516,10 @@ class OrderController extends Controller
                     $shouldRestoreBoth = true;
                 }
             }
-            
+
             // Increment the stock field that was decremented
             $account->$stockField += 1;
-            
+
             // If restoring a secondary stock and the other platform's secondary stock is 0,
             // restore it to 1 to maintain consistency (both should be 1 together)
             if ($shouldRestoreBoth) {
@@ -530,11 +529,11 @@ class OrderController extends Controller
                     $account->ps4_secondary_stock = 1;
                 }
             }
-            
+
             $account->save();
         }
     }
-    
+
     /**
      * Sync secondary stocks: When one platform's secondary stock reaches 0,
      * set the other platform's secondary stock to 0 as well
@@ -549,7 +548,7 @@ class OrderController extends Controller
         if ($soldItem === 'ps4_secondary_stock') {
             // Refresh to get the current value after decrement
             $account->refresh();
-            
+
             // If PS4 secondary stock is now 0, set PS5 secondary stock to 0
             if ($account->ps4_secondary_stock == 0) {
                 $account->ps5_secondary_stock = 0;
@@ -558,7 +557,7 @@ class OrderController extends Controller
         } elseif ($soldItem === 'ps5_secondary_stock') {
             // Refresh to get the current value after decrement
             $account->refresh();
-            
+
             // If PS5 secondary stock is now 0, set PS4 secondary stock to 0
             if ($account->ps5_secondary_stock == 0) {
                 $account->ps4_secondary_stock = 0;
@@ -635,7 +634,7 @@ class OrderController extends Controller
 
         // Update buyer name to match user record
         $validatedData['buyer_name'] = $user->name;
-        
+
         // Determine the sold item field dynamically
         $sold_item         = "ps{$validatedData['platform']}_{$validatedData['type']}_stock";
         $sold_item_status  = "ps{$validatedData['platform']}_{$validatedData['type']}_status";
@@ -668,10 +667,10 @@ class OrderController extends Controller
 
             // Reduce the stock by 1
             $account->decrement($sold_item, 1);
-            
+
             // Sync secondary stocks: If secondary stock reaches 0, set the other platform's secondary stock to 0
             $this->syncSecondaryStocks($account, $sold_item);
-            
+
             // Create the order
             $order_data = [
                 'seller_id'            => null,
@@ -802,7 +801,7 @@ class OrderController extends Controller
 
             // Reduce the corresponding stock by 1 for the account
             $account->decrement($sold_item, 1);
-            
+
             // Sync secondary stocks: If secondary stock reaches 0, set the other platform's secondary stock to 0
             $this->syncSecondaryStocks($account, $sold_item);
 
@@ -1290,13 +1289,12 @@ class OrderController extends Controller
         // Check if the request was successful
         if ($response->successful()) {
             $body = json_decode($response->body());
-            
+
             // Check if response body is valid and contains the expected structure
             if (!$body || !isset($body->created) || !isset($body->created->id)) {
-
                 return redirect()->route('manager.orders')->with('error', 'Invalid response from POS system. Please try again or contact support.');
             }
-            
+
             $transaction_id = $body->created->id;
             // Loop through the order IDs and update each one
             foreach ($unsentOrderIds as $orderId) {
@@ -1311,6 +1309,67 @@ class OrderController extends Controller
         }
     }
 
+    public function receiveFromPos(Request $request)
+    {
+        try {
+            // Validate the incoming request
+            $validated = $request->validate([
+            'woocommerce_order_id' => 'required|integer',
+            'created' => 'required'
+            ]);
+
+            $woocommerceOrderId = $validated['woocommerce_order_id'];
+            $posOrderId = $validated['created'];
+
+            // Find the order(s) by WooCommerce order ID
+            $orders = Order::where('woocommerce_order_id', $woocommerceOrderId)
+                ->whereNull('pos_order_id') // Only update orders that haven't been synced yet
+                ->get();
+
+            if ($orders->isEmpty()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No matching orders found or orders already synced with POS.'
+                ], 404);
+            }
+
+            // Update all matching orders with the POS order ID
+            $updatedCount = Order::where('woocommerce_order_id', $woocommerceOrderId)
+            ->whereNull('pos_order_id')
+            ->update([
+                'pos_order_id' => $posOrderId,
+                'updated_at' => now()
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => "Successfully updated {$updatedCount} order(s) with POS order ID.",
+                'data' => [
+                'woocommerce_order_id' => $woocommerceOrderId,
+                'pos_order_id' => $posOrderId,
+                'orders_updated' => $updatedCount
+                ]
+            ], 200);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+            'success' => false,
+            'message' => 'Validation failed.',
+            'errors' => $e->errors()
+            ], 422);
+        } catch (\Exception $e) {
+            // Log the error for debugging
+            \Log::error('POS receive error: ' . $e->getMessage(), [
+            'request_data' => $request->all(),
+            'trace' => $e->getTraceAsString()
+            ]);
+
+            return response()->json([
+            'success' => false,
+            'message' => 'An error occurred while processing the POS data.',
+            'error' => $e->getMessage()
+            ], 500);
+        }
+    }
     public function unsendFromPos(Request $request)
     {
         // Validate that the order_ids are provided and are an array of valid IDs

@@ -50,6 +50,7 @@ Route::middleware('auth:sanctum')->get('orders/latest', [OrderController::class,
 Route::middleware('auth:sanctum')->post('/orders/receive', [OrderController::class, 'storeApi']);
 Route::middleware('auth:sanctum')->post('/orders/check_stock', [OrderController::class, 'checkStockApi']);
 Route::middleware('auth:sanctum')->post('/orders/check_card_stock', [OrderController::class, 'checkCardStockApi']);
+Route::middleware('auth:sanctum')->post('/pos/receive-order', [OrderController::class, 'receiveFromPos']);
 Route::get('/games/platform/{platform}', [ManagerController::class, 'getGamesByPlatformApi']);
 Route::get('/games/{id}', [ManagerController::class, 'getGameById']);
 Route::get('/card-ctegories/list', [CardCategoryController::class, 'sellApi']);
