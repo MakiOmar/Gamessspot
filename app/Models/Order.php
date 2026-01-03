@@ -23,6 +23,7 @@ class Order extends Model
         'sold_item',
         'card_id',
         'pos_order_id',
+        'woocommerce_order_id',
     );
 
     /**
