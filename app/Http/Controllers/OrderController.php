@@ -1115,9 +1115,10 @@ class OrderController extends Controller
                 if ($buyer_phone && $order->buyer_phone !== $buyer_phone) {
                     return redirect()->route('manager.orders')->with('error', 'Selected orders are not for the same client.');
                 }
-                $buyer_phone        = $order->buyer_phone;
-                $sold_item          = $order->sold_item;
-                $platform           = explode('_', $sold_item);
+                $buyer_phone          = $order->buyer_phone;
+                $woocommerce_order_id = $order->woocommerce_order_id;
+                $sold_item            = $order->sold_item;
+                $platform             = explode('_', $sold_item);
                 $user = User::where('phone', $order->buyer_phone)->first();
                 if (isset($platform[1])) {
                     $key = $platform[1];
@@ -1153,6 +1154,7 @@ class OrderController extends Controller
                 if (! $basic_details) {
                     $basic_details = array(
                         "id" => $order->id,
+                        "woocommerce_order_id" => $order->woocommerce_order_id,
                         "parent_id" => 0,
                         "status" => "on-hold",
                         "currency" => "EGP",
