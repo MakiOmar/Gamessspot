@@ -58,6 +58,16 @@
                         </div>
                     @endif
 
+                    <!-- Show All Checkbox -->
+                    <div class="col-12 col-md-2 d-flex align-items-center">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="showAllCheckbox" name="show_all">
+                            <label class="form-check-label" for="showAllCheckbox">
+                                Show All (No Pagination)
+                            </label>
+                        </div>
+                    </div>
+
                     <!-- Custom Search Button -->
                     <div class="col-12 col-md-2">
                         <button type="button" id="customSearchBtn" class="btn btn-primary w-100">Search</button>
@@ -316,6 +326,7 @@
                 let endDate = $('#endDate').val();
                 let storeProfileId = $('#storeId').val();
                 let status = $('#currentReportStatus').length > 0 ? $('#currentReportStatus').val() : 'all';
+                let showAll = $('#showAllCheckbox').is(':checked') ? 1 : 0;
 
                 $.ajax({
                     url: "{{ route('manager.orders.search') }}",
@@ -326,6 +337,7 @@
                         end_date: endDate,
                         status: status,
                         store_profile_id: storeProfileId,
+                        show_all: showAll,
                     },
                     success: function(response) {
                         if (!response.rows || response.rows.trim() === '') {
@@ -366,12 +378,14 @@
                 let endDate    = $('#endDate').val();
                 let storeId    = $('#storeId').val();
                 let status     = $('#currentReportStatus').length > 0 ? $('#currentReportStatus').val() : 'all';
+                let showAll    = $('#showAllCheckbox').is(':checked') ? 1 : 0;
                 // Add any manually selected filters
                 queryParams.set('search', search);
                 queryParams.set('start_date', startDate);
                 queryParams.set('end_date', endDate);
                 queryParams.set('store_profile_id', storeId);
                 queryParams.set('status', status);
+                queryParams.set('show_all', showAll);
 
                 $.ajax({
                     url: url.split('?')[0] + '?' + queryParams.toString(),

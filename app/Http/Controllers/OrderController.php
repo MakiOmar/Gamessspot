@@ -215,6 +215,7 @@ class OrderController extends Controller
         $endDate        = $request->input('end_date');
         $storeProfileId = $request->input('store_profile_id');
         $status         = $request->input('status', 'all'); // Default to 'all' if not provided
+        $showAll        = $request->input('show_all', 0); // Check if show all is selected
 
         // Build the query to filter orders
         $orders = Order::with(array( 'seller', 'account.game' ));
@@ -282,17 +283,34 @@ class OrderController extends Controller
         }
         if ($storeProfileId != 0) {
             $orders->where('orders.store_profile_id', $storeProfileId)->orderBy('buyer_name', 'asc')->orderBy('created_at', 'desc');
+        } else {
+            // Default ordering when no store profile filter is applied
+            $orders->orderBy('created_at', 'desc');
         }
 
-        // Execute the query and paginate or get the results
-        $orders = $orders->paginate(20)->appends($request->all());
-
-        $showing = "<div class=\"mb-2 mb-md-0 mobile-results-count\">Showing {$orders->firstItem()} to {$orders->lastItem()} of {$orders->total()} results</div>";
-        // Return the updated rows for the table (assuming a partial view)
-        return response()->json([
-            'rows' => view('manager.partials.order_rows', compact('orders', 'status'))->render(),
-            'pagination' => '<div id="search-pagination">' . $showing . $orders->links('vendor.pagination.bootstrap-5')->render() . '</div>',
-        ]);
+        // Execute the query - paginate or get all results based on show_all checkbox
+        if ($showAll) {
+            // Get all results without pagination
+            $orders = $orders->get();
+            $total = $orders->count();
+            $showing = "<div class=\"mb-2 mb-md-0 mobile-results-count\">Showing all {$total} results</div>";
+            
+            // Return the updated rows for the table without pagination
+            return response()->json([
+                'rows' => view('manager.partials.order_rows', ['orders' => $orders, 'status' => $status])->render(),
+                'pagination' => '<div id="search-pagination">' . $showing . '</div>',
+            ]);
+        } else {
+            // Paginate the results
+            $orders = $orders->paginate(20)->appends($request->all());
+            $showing = "<div class=\"mb-2 mb-md-0 mobile-results-count\">Showing {$orders->firstItem()} to {$orders->lastItem()} of {$orders->total()} results</div>";
+            
+            // Return the updated rows for the table (assuming a partial view)
+            return response()->json([
+                'rows' => view('manager.partials.order_rows', compact('orders', 'status'))->render(),
+                'pagination' => '<div id="search-pagination">' . $showing . $orders->links('vendor.pagination.bootstrap-5')->render() . '</div>',
+            ]);
+        }
     }
 
     public function searchCustomersHelper(Request $request)
