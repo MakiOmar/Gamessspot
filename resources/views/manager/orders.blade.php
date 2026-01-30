@@ -344,9 +344,7 @@
                             success: function(response) {
                                 if (response.success) {
                                     $row.remove();
-                                    if ($prevRow && $prevRow.hasClass('mobile-detail-row')) {
-                                        $prevRow.remove();
-                                    }
+                                    $prevRow.remove();
                                     Swal.fire({
                                         title: 'Archived',
                                         text: 'Report has been archived.',

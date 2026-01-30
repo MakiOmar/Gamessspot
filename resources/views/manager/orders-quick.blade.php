@@ -336,6 +336,7 @@
                     e.preventDefault();
                     let reportId = $(this).data('report-id');
                     let $row = $(this).closest('tr');
+                    let $prevRow = $row.prev('tr');
                     Swal.fire({
                         title: 'Archive report?',
                         text: 'This report will be moved to Archived.',
@@ -356,6 +357,7 @@
                                 success: function(response) {
                                     if (response.success) {
                                         $row.remove();
+                                        $prevRow.remove();
                                         Swal.fire({
                                             title: 'Archived',
                                             text: 'Report has been archived.',
