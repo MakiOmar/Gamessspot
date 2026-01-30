@@ -268,6 +268,7 @@
                     e.preventDefault();
 
                     let reportId = $(this).data('report-id');
+                    let $row = $(this).closest('tr');
 
                     // Use SweetAlert2 for confirmation dialog
                     Swal.fire({
@@ -282,7 +283,7 @@
                         if (result.isConfirmed) {
                             // Make the AJAX request if confirmed
                             $.ajax({
-                                url: "{{ route('reports.solve_problem') }}", // Route to handle the status change
+                                url: "{{ route('reports.solve_problem') }}",
                                 method: 'POST',
                                 data: {
                                     _token: "{{ csrf_token() }}",
@@ -290,18 +291,14 @@
                                 },
                                 success: function(response) {
                                     if (response.success) {
-                                        // Use SweetAlert2 for success notification
+                                        $row.remove();
                                         Swal.fire({
                                             title: 'Success!',
                                             text: 'Report status successfully updated to solved!',
                                             icon: 'success',
                                             confirmButtonText: 'OK'
-                                        }).then(() => {
-                                            location
-                                                .reload(); // Reload the page to reflect the changes
                                         });
                                     } else {
-                                        // Use SweetAlert2 for failure notification
                                         Swal.fire({
                                             title: 'Failed',
                                             text: 'Failed to update report status. Please try again.',
@@ -311,7 +308,6 @@
                                     }
                                 },
                                 error: function(xhr) {
-                                    // Use SweetAlert2 for error notification
                                     Swal.fire({
                                         title: 'Error',
                                         text: 'An error occurred while processing your request.',
