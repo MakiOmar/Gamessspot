@@ -262,7 +262,8 @@
                 e.preventDefault();
 
                 let reportId = $(this).data('report-id');
-
+                let $row = $(this).closest('tr');
+                let $prevRow = $row.prev('tr');
                 // Use SweetAlert2 for confirmation dialog
                 Swal.fire({
                     title: 'Are you sure?',
@@ -283,17 +284,15 @@
                                 report_id: reportId
                             },
                             success: function(response) {
-                                console.log(response);
                                 if (response.success) {
+                                    $row.remove();
+                                    $prevRow.remove();
                                     // Use SweetAlert2 for success notification
                                     Swal.fire({
                                         title: 'Success!',
                                         text: 'Report status successfully updated to solved!',
                                         icon: 'success',
                                         confirmButtonText: 'OK'
-                                    }).then(() => {
-                                        location
-                                    .reload(); // Reload the page to reflect the changes
                                     });
                                 } else {
                                     // Use SweetAlert2 for failure notification
