@@ -115,6 +115,10 @@
                                 <a href="{{ route( 'manager.orders.solved' ) }}" class="nav-link"> <i class="nav-icon bi bi-circle"></i>
                                     <p>Solved</p>
                                 </a> </li>
+                            <li class="nav-item">
+                                <a href="{{ route( 'manager.orders.archived' ) }}" class="nav-link"> <i class="nav-icon bi bi-circle"></i>
+                                    <p>Archived</p>
+                                </a> </li>
                         </ul>
                     </li>
                     

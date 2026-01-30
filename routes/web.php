@@ -632,6 +632,7 @@ Route::prefix('manager')->group(function () {
                 Route::get('/has-problem', [OrderController::class, 'ordersHasProblem'])->name('manager.orders.has_problem');
                 Route::get('/needs-return', [OrderController::class, 'ordersWithNeedsReturn'])->name('manager.orders.needs_return');
                 Route::get('/solved', [OrderController::class, 'solvedOrders'])->name('manager.orders.solved');
+                Route::get('/archived', [OrderController::class, 'archivedOrders'])->name('manager.orders.archived');
             });
         });
 
@@ -651,6 +652,7 @@ Route::prefix('manager')->group(function () {
         // Routes with 'can:view-reports' middleware
         Route::middleware('can:view-reports')->group(function () {
             Route::post('/reports/solve-problem', [ReportsController::class, 'solveProblem'])->name('reports.solve_problem');
+            Route::post('/reports/archive', [ReportsController::class, 'archiveReport'])->name('reports.archive');
             Route::get('/reports/{order_id}', [ReportsController::class, 'getReportsForOrder']);
             
             Route::prefix('special-prices')->group(function () {

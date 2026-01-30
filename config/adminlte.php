@@ -415,6 +415,11 @@ return [
                     'route' => 'manager.orders.solved',
                     'icon' => 'bi bi-circle',
                 ],
+                [
+                    'text' => 'Archived',
+                    'route' => 'manager.orders.archived',
+                    'icon' => 'bi bi-circle',
+                ],
             ],
         ],
 

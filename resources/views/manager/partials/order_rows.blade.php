@@ -54,6 +54,9 @@
                 <button class="btn btn-success btn-sm solve-problem" data-report-id="{{ $order->reports->id }}">
                     Mark as Solved
                 </button>
+                <button class="btn btn-secondary btn-sm archive-report" data-report-id="{{ $order->reports->id }}">
+                    Archive
+                </button>
             @elseif(isset($status) && 'solved' === $status)
                 @if ( Auth::user()->roles->contains('name', 'admin') )
                 <!-- Regular undo button -->
@@ -61,6 +64,11 @@
                     Undo
                 </button>
                 @endif
+                <button class="btn btn-secondary btn-sm archive-report" data-report-id="{{ $order->reports->id }}">
+                    Archive
+                </button>
+            @elseif(isset($status) && 'archived' === $status)
+                <span class="badge bg-secondary">Archived</span>
             @else
                 @if(Auth::user()->roles->contains('name', 'admin')  || Auth::user()->roles->contains('name', 'sales'))
                     @if ( Auth::user()->roles->contains('name', 'admin') )

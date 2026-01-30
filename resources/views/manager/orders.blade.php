@@ -318,6 +318,63 @@
                 });
             });
 
+            // Archive report: set status to archived and remove row
+            $(document).on('click', '.archive-report', function(e) {
+                e.preventDefault();
+                let reportId = $(this).data('report-id');
+                let $row = $(this).closest('tr');
+                let $prevRow = $row.prev('tr');
+                Swal.fire({
+                    title: 'Archive report?',
+                    text: 'This report will be moved to Archived.',
+                    icon: 'question',
+                    showCancelButton: true,
+                    confirmButtonText: 'Yes, archive',
+                    cancelButtonText: 'Cancel',
+                    reverseButtons: true
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        $.ajax({
+                            url: "{{ route('reports.archive') }}",
+                            method: 'POST',
+                            data: {
+                                _token: "{{ csrf_token() }}",
+                                report_id: reportId
+                            },
+                            success: function(response) {
+                                if (response.success) {
+                                    $row.remove();
+                                    if ($prevRow && $prevRow.hasClass('mobile-detail-row')) {
+                                        $prevRow.remove();
+                                    }
+                                    Swal.fire({
+                                        title: 'Archived',
+                                        text: 'Report has been archived.',
+                                        icon: 'success',
+                                        confirmButtonText: 'OK'
+                                    });
+                                } else {
+                                    Swal.fire({
+                                        title: 'Failed',
+                                        text: 'Could not archive report.',
+                                        icon: 'error',
+                                        confirmButtonText: 'OK'
+                                    });
+                                }
+                            },
+                            error: function() {
+                                Swal.fire({
+                                    title: 'Error',
+                                    text: 'An error occurred.',
+                                    icon: 'error',
+                                    confirmButtonText: 'OK'
+                                });
+                            }
+                        });
+                    }
+                });
+            });
+
             // Define the search button click handler FIRST
             $('#customSearchBtn').on('click', function() {
                 let query = $('#searchOrder').val();

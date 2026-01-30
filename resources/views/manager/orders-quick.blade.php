@@ -123,6 +123,10 @@
                                                     data-report-id="{{ $order->reports->first()->id }}">
                                                     Mark as Solved
                                                 </button>
+                                                <button class="btn btn-secondary btn-sm archive-report"
+                                                    data-report-id="{{ $order->reports->first()->id }}">
+                                                    Archive
+                                                </button>
                                             @elseif(isset($status) && 'solved' === $status)
                                                 @if (Auth::user()->roles->contains('name', 'admin'))
                                                     <!-- Regular undo button -->
@@ -132,6 +136,12 @@
                                                         Undo
                                                     </button>
                                                 @endif
+                                                <button class="btn btn-secondary btn-sm archive-report"
+                                                    data-report-id="{{ $order->reports->first()->id }}">
+                                                    Archive
+                                                </button>
+                                            @elseif(isset($status) && 'archived' === $status)
+                                                <span class="badge bg-secondary">Archived</span>
                                             @else
                                                 @if (!Auth::user()->roles->contains('name', 'accountant'))
                                                     @if (Auth::user()->roles->contains('name', 'admin'))
@@ -320,6 +330,60 @@
                         }
                     });
                 });
+
+                // Archive report: set status to archived and remove row
+                $(document).on('click', '.archive-report', function(e) {
+                    e.preventDefault();
+                    let reportId = $(this).data('report-id');
+                    let $row = $(this).closest('tr');
+                    Swal.fire({
+                        title: 'Archive report?',
+                        text: 'This report will be moved to Archived.',
+                        icon: 'question',
+                        showCancelButton: true,
+                        confirmButtonText: 'Yes, archive',
+                        cancelButtonText: 'Cancel',
+                        reverseButtons: true
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            $.ajax({
+                                url: "{{ route('reports.archive') }}",
+                                method: 'POST',
+                                data: {
+                                    _token: "{{ csrf_token() }}",
+                                    report_id: reportId
+                                },
+                                success: function(response) {
+                                    if (response.success) {
+                                        $row.remove();
+                                        Swal.fire({
+                                            title: 'Archived',
+                                            text: 'Report has been archived.',
+                                            icon: 'success',
+                                            confirmButtonText: 'OK'
+                                        });
+                                    } else {
+                                        Swal.fire({
+                                            title: 'Failed',
+                                            text: 'Could not archive report.',
+                                            icon: 'error',
+                                            confirmButtonText: 'OK'
+                                        });
+                                    }
+                                },
+                                error: function() {
+                                    Swal.fire({
+                                        title: 'Error',
+                                        text: 'An error occurred.',
+                                        icon: 'error',
+                                        confirmButtonText: 'OK'
+                                    });
+                                }
+                            });
+                        }
+                    });
+                });
+
                 // Handle search input and date range filter
                 $('#searchOrder, #startDate, #endDate').on('input change', function() {
                     let query = $('#searchOrder').val();

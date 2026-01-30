@@ -87,4 +87,27 @@ class ReportsController extends Controller
 
         return response()->json(array( 'success' => false ));
     }
+
+    /**
+     * Archive a report (set status to 'archived').
+     * Allowed from 'has_problem' or 'solved' status.
+     *
+     * @param  \Illuminate\Http\Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function archiveReport(Request $request)
+    {
+        $request->validate([
+            'report_id' => 'required|exists:reports,id',
+        ]);
+
+        $report = Report::find($request->report_id);
+
+        if ($report && in_array($report->status, ['has_problem', 'solved'], true)) {
+            $report->update(['status' => 'archived']);
+            return response()->json(['success' => true]);
+        }
+
+        return response()->json(['success' => false]);
+    }
 }

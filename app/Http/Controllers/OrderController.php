@@ -1038,6 +1038,16 @@ class OrderController extends Controller
     {
         return $this->ordersWithStatus('solved');
     }
+
+    /**
+     * List orders with archived reports.
+     *
+     * @return \Illuminate\View\View
+     */
+    public function archivedOrders()
+    {
+        return $this->ordersWithStatus('archived');
+    }
     public function sendToPos(Request $request)
     {
         // Check if order_ids are provided
