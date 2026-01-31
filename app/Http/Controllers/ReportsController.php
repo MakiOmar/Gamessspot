@@ -103,7 +103,6 @@ class ReportsController extends Controller
         ]);
 
         $report = Report::find($request->report_id);
-        Log::info('Archiving report', ['report_id' => $request->report_id, 'current_status' => $report->status]);
         if ($report && in_array($report->status, ['has_problem', 'archived'], true)) {
             $report->update(['status' => 'archived']);
             return response()->json(['success' => true]);

@@ -123,12 +123,10 @@
                                                     data-report-id="{{ $order->reports->first()->id }}">
                                                     Mark as Solved
                                                 </button>
-                                                @if( $order->reports->first()->status !== 'archived' )
                                                 <button class="btn btn-secondary btn-sm archive-report"
                                                     data-report-id="{{ $order->reports->first()->id }}">
                                                     Archive
                                                 </button>
-                                                @endif
                                             @elseif(isset($status) && 'solved' === $status)
                                                 @if (Auth::user()->roles->contains('name', 'admin'))
                                                     <!-- Regular undo button -->
@@ -138,12 +136,10 @@
                                                         Undo
                                                     </button>
                                                 @endif
-                                                @if( $order->reports->first()->status !== 'archived' )
                                                 <button class="btn btn-secondary btn-sm archive-report"
                                                     data-report-id="{{ $order->reports->first()->id }}">
                                                     Archive
                                                 </button>
-                                                @endif
                                             @elseif(isset($status) && 'archived' === $status)
                                                 <span class="badge bg-secondary">Archived</span>
                                             @else

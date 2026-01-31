@@ -22,6 +22,7 @@ use App\Services\SettingsService;
 use Rawilk\Settings\Facades\Settings;
 use App\Jobs\SendInventoryWebhookJob;
 use App\Services\CacheManager;
+use Illuminate\Support\Facades\Log;
 
 class OrderController extends Controller
 {
@@ -216,7 +217,7 @@ class OrderController extends Controller
         $storeProfileId = $request->input('store_profile_id');
         $status         = $request->input('status', 'all'); // Default to 'all' if not provided
         $showAll        = $request->input('show_all', 0); // Check if show all is selected
-
+        Log::info("Search Parameters - Query: $query, Start Date: $startDate, End Date: $endDate, Store Profile ID: $storeProfileId, Status: $status, Show All: $showAll");
         // Build the query to filter orders
         $orders = Order::with(array( 'seller', 'account.game' ));
         // Check if the user is an admin

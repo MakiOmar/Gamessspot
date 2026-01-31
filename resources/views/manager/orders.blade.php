@@ -43,6 +43,9 @@
                     <div class="col-12 col-md-4">
                         <input type="text" class="form-control" name="searchOrder" id="searchOrder" placeholder="Search orders by buyer phone">
                         <input type="hidden" id="storeId" value="@if( ! empty( $_GET['id'] ) ){{ $_GET['id'] }}@else{{0}}@endif">
+                        @if ( isset($status) )
+                            <input type="hidden" name="status" value="{{ $status }}">
+                        @endif
                     </div>
 
                     <!-- Date Range -->
