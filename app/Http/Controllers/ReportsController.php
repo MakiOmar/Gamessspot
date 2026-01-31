@@ -41,13 +41,17 @@ class ReportsController extends Controller
             ], 409);
         }
 
-        // Create a new report
-        $report = Report::create([
-        'order_id'  => $validatedData['order_id'],
-        'seller_id' => Auth::id(), // Current authenticated seller
-        'status'    => $validatedData['status'],
-        'note'      => $validatedData['note'],
-        ]);
+        $report = Report::updateOrCreate(
+            // Search condition (unique per order)
+            ['order_id' => $validatedData['order_id']],
+            // Data to update or insert
+            [
+                'seller_id' => Auth::id(), // Current authenticated seller
+                'status'    => $validatedData['status'],
+                'note'      => $validatedData['note'],
+            ]
+        );
+
 
         // Return a success response
         return response()->json([
@@ -103,8 +107,10 @@ class ReportsController extends Controller
         ]);
 
         $report = Report::find($request->report_id);
-        if ($report && in_array($report->status, ['has_problem', 'archived'], true)) {
+        if ($report && in_array($report->status, ['has_problem', 'solved'], true)) {
             $report->update(['status' => 'archived']);
+            return response()->json(['success' => true]);
+        } elseif ($report && in_array($report->status, ['archived'], true)) {
             return response()->json(['success' => true]);
         }
 
