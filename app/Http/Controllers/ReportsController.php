@@ -103,7 +103,7 @@ class ReportsController extends Controller
 
         $report = Report::find($request->report_id);
 
-        if ($report && in_array($report->status, ['has_problem', 'solved'], true)) {
+        if ($report && in_array($report->status, ['has_problem', 'archived'], true)) {
             $report->update(['status' => 'archived']);
             return response()->json(['success' => true]);
         }
