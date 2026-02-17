@@ -116,4 +116,48 @@ class ReportsController extends Controller
 
         return response()->json(['success' => false]);
     }
+
+    /**
+     * Unarchive a report (set status from 'archived' back to 'solved').
+     * Removes the report from the archived list.
+     *
+     * @param  \Illuminate\Http\Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function unarchiveReport(Request $request)
+    {
+        $request->validate([
+            'report_id' => 'required|exists:reports,id',
+        ]);
+
+        $report = Report::find($request->report_id);
+        if ($report && $report->status === 'archived') {
+            $report->update(['status' => 'solved']);
+            return response()->json(['success' => true]);
+        }
+
+        return response()->json(['success' => false]);
+    }
+
+    /**
+     * Unreport: delete the report so the order is no longer reported.
+     * Allowed for any report status.
+     *
+     * @param  \Illuminate\Http\Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function unreport(Request $request)
+    {
+        $request->validate([
+            'report_id' => 'required|exists:reports,id',
+        ]);
+
+        $report = Report::find($request->report_id);
+        if ($report) {
+            $report->delete();
+            return response()->json(['success' => true]);
+        }
+
+        return response()->json(['success' => false]);
+    }
 }

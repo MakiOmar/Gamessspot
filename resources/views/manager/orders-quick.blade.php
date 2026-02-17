@@ -118,6 +118,10 @@
                                                     data-report-id="{{ $order->reports->first()->id }}">
                                                     Undo
                                                 </button>
+                                                <button class="btn btn-outline-secondary btn-sm unreport-report"
+                                                    data-report-id="{{ $order->reports->first()->id }}">
+                                                    Unreport
+                                                </button>
                                             @elseif(isset($status) && 'has_problem' === $status)
                                                 <button class="btn btn-success btn-sm solve-problem"
                                                     data-report-id="{{ $order->reports->first()->id }}">
@@ -126,6 +130,10 @@
                                                 <button class="btn btn-secondary btn-sm archive-report"
                                                     data-report-id="{{ $order->reports->first()->id }}">
                                                     Archive
+                                                </button>
+                                                <button class="btn btn-outline-secondary btn-sm unreport-report"
+                                                    data-report-id="{{ $order->reports->first()->id }}">
+                                                    Unreport
                                                 </button>
                                             @elseif(isset($status) && 'solved' === $status)
                                                 @if (Auth::user()->roles->contains('name', 'admin'))
@@ -140,8 +148,19 @@
                                                     data-report-id="{{ $order->reports->first()->id }}">
                                                     Archive
                                                 </button>
+                                                <button class="btn btn-outline-secondary btn-sm unreport-report"
+                                                    data-report-id="{{ $order->reports->first()->id }}">
+                                                    Unreport
+                                                </button>
                                             @elseif(isset($status) && 'archived' === $status)
-                                                <span class="badge bg-secondary">Archived</span>
+                                                <button class="btn btn-primary btn-sm unarchive-report"
+                                                    data-report-id="{{ $order->reports->first()->id }}">
+                                                    Undo
+                                                </button>
+                                                <button class="btn btn-outline-secondary btn-sm unreport-report"
+                                                    data-report-id="{{ $order->reports->first()->id }}">
+                                                    Unreport
+                                                </button>
                                             @else
                                                 @if (!Auth::user()->roles->contains('name', 'accountant'))
                                                     @if (Auth::user()->roles->contains('name', 'admin'))
@@ -368,6 +387,112 @@
                                         Swal.fire({
                                             title: 'Failed',
                                             text: 'Could not archive report.',
+                                            icon: 'error',
+                                            confirmButtonText: 'OK'
+                                        });
+                                    }
+                                },
+                                error: function() {
+                                    Swal.fire({
+                                        title: 'Error',
+                                        text: 'An error occurred.',
+                                        icon: 'error',
+                                        confirmButtonText: 'OK'
+                                    });
+                                }
+                            });
+                        }
+                    });
+                });
+
+                // Unarchive report: move from archived back to solved, remove row from list
+                $(document).on('click', '.unarchive-report', function(e) {
+                    e.preventDefault();
+                    let reportId = $(this).data('report-id');
+                    let $row = $(this).closest('tr');
+                    Swal.fire({
+                        title: 'Undo archive?',
+                        text: 'This report will be moved back to Solved.',
+                        icon: 'question',
+                        showCancelButton: true,
+                        confirmButtonText: 'Yes, undo',
+                        cancelButtonText: 'Cancel',
+                        reverseButtons: true
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            $.ajax({
+                                url: "{{ route('reports.unarchive') }}",
+                                method: 'POST',
+                                data: {
+                                    _token: "{{ csrf_token() }}",
+                                    report_id: reportId
+                                },
+                                success: function(response) {
+                                    if (response.success) {
+                                        $row.remove();
+                                        Swal.fire({
+                                            title: 'Undone',
+                                            text: 'Report has been moved back to Solved.',
+                                            icon: 'success',
+                                            confirmButtonText: 'OK'
+                                        });
+                                    } else {
+                                        Swal.fire({
+                                            title: 'Failed',
+                                            text: 'Could not undo archive.',
+                                            icon: 'error',
+                                            confirmButtonText: 'OK'
+                                        });
+                                    }
+                                },
+                                error: function() {
+                                    Swal.fire({
+                                        title: 'Error',
+                                        text: 'An error occurred.',
+                                        icon: 'error',
+                                        confirmButtonText: 'OK'
+                                    });
+                                }
+                            });
+                        }
+                    });
+                });
+
+                // Unreport: remove report entirely, remove row from list
+                $(document).on('click', '.unreport-report', function(e) {
+                    e.preventDefault();
+                    let reportId = $(this).data('report-id');
+                    let $row = $(this).closest('tr');
+                    Swal.fire({
+                        title: 'Unreport?',
+                        text: 'This report will be removed. The order will no longer appear in reports.',
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonText: 'Yes, unreport',
+                        cancelButtonText: 'Cancel',
+                        reverseButtons: true
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            $.ajax({
+                                url: "{{ route('reports.unreport') }}",
+                                method: 'POST',
+                                data: {
+                                    _token: "{{ csrf_token() }}",
+                                    report_id: reportId
+                                },
+                                success: function(response) {
+                                    if (response.success) {
+                                        $row.remove();
+                                        Swal.fire({
+                                            title: 'Unreported',
+                                            text: 'Report has been removed.',
+                                            icon: 'success',
+                                            confirmButtonText: 'OK'
+                                        });
+                                    } else {
+                                        Swal.fire({
+                                            title: 'Failed',
+                                            text: 'Could not unreport.',
                                             icon: 'error',
                                             confirmButtonText: 'OK'
                                         });

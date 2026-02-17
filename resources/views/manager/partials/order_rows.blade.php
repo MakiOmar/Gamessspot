@@ -50,12 +50,18 @@
                     data-sold-item="{{ $order->sold_item }}" data-report-id="{{ $order->reports->id }}">
                     Undo
                 </button>
+                <button class="btn btn-outline-secondary btn-sm unreport-report" data-report-id="{{ $order->reports->id }}">
+                    Unreport
+                </button>
             @elseif(isset($status) && 'has_problem' === $status)
                 <button class="btn btn-success btn-sm solve-problem" data-report-id="{{ $order->reports->id }}">
                     Mark as Solved
                 </button>
                 <button class="btn btn-secondary btn-sm archive-report" data-report-id="{{ $order->reports->id }}">
                     Archive
+                </button>
+                <button class="btn btn-outline-secondary btn-sm unreport-report" data-report-id="{{ $order->reports->id }}">
+                    Unreport
                 </button>
             @elseif(isset($status) && 'solved' === $status)
                 @if ( Auth::user()->roles->contains('name', 'admin') )
@@ -67,8 +73,17 @@
                 <button class="btn btn-secondary btn-sm archive-report" data-report-id="{{ $order->reports->id }}">
                     Archive
                 </button>
+                <button class="btn btn-outline-secondary btn-sm unreport-report" data-report-id="{{ $order->reports->id }}">
+                    Unreport
+                </button>
             @elseif(isset($status) && 'archived' === $status)
-                <span class="badge bg-secondary">Archived</span>
+                <!-- Undo archive: move report back to solved; Unreport: remove report entirely -->
+                <button class="btn btn-primary btn-sm unarchive-report" data-report-id="{{ $order->reports->id }}">
+                    Undo
+                </button>
+                <button class="btn btn-outline-secondary btn-sm unreport-report" data-report-id="{{ $order->reports->id }}">
+                    Unreport
+                </button>
             @else
                 @if(Auth::user()->roles->contains('name', 'admin')  || Auth::user()->roles->contains('name', 'sales'))
                     @if ( Auth::user()->roles->contains('name', 'admin') )

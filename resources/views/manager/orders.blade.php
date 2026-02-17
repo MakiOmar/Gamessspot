@@ -376,6 +376,112 @@
                 });
             });
 
+            // Unarchive report: move from archived back to solved, remove row from list
+            $(document).on('click', '.unarchive-report', function(e) {
+                e.preventDefault();
+                let reportId = $(this).data('report-id');
+                let $row = $(this).closest('tr');
+                Swal.fire({
+                    title: 'Undo archive?',
+                    text: 'This report will be moved back to Solved.',
+                    icon: 'question',
+                    showCancelButton: true,
+                    confirmButtonText: 'Yes, undo',
+                    cancelButtonText: 'Cancel',
+                    reverseButtons: true
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        $.ajax({
+                            url: "{{ route('reports.unarchive') }}",
+                            method: 'POST',
+                            data: {
+                                _token: "{{ csrf_token() }}",
+                                report_id: reportId
+                            },
+                            success: function(response) {
+                                if (response.success) {
+                                    $row.remove();
+                                    Swal.fire({
+                                        title: 'Undone',
+                                        text: 'Report has been moved back to Solved.',
+                                        icon: 'success',
+                                        confirmButtonText: 'OK'
+                                    });
+                                } else {
+                                    Swal.fire({
+                                        title: 'Failed',
+                                        text: 'Could not undo archive.',
+                                        icon: 'error',
+                                        confirmButtonText: 'OK'
+                                    });
+                                }
+                            },
+                            error: function() {
+                                Swal.fire({
+                                    title: 'Error',
+                                    text: 'An error occurred.',
+                                    icon: 'error',
+                                    confirmButtonText: 'OK'
+                                });
+                            }
+                        });
+                    }
+                });
+            });
+
+            // Unreport: remove report entirely, remove row from list
+            $(document).on('click', '.unreport-report', function(e) {
+                e.preventDefault();
+                let reportId = $(this).data('report-id');
+                let $row = $(this).closest('tr');
+                Swal.fire({
+                    title: 'Unreport?',
+                    text: 'This report will be removed. The order will no longer appear in reports.',
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonText: 'Yes, unreport',
+                    cancelButtonText: 'Cancel',
+                    reverseButtons: true
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        $.ajax({
+                            url: "{{ route('reports.unreport') }}",
+                            method: 'POST',
+                            data: {
+                                _token: "{{ csrf_token() }}",
+                                report_id: reportId
+                            },
+                            success: function(response) {
+                                if (response.success) {
+                                    $row.remove();
+                                    Swal.fire({
+                                        title: 'Unreported',
+                                        text: 'Report has been removed.',
+                                        icon: 'success',
+                                        confirmButtonText: 'OK'
+                                    });
+                                } else {
+                                    Swal.fire({
+                                        title: 'Failed',
+                                        text: 'Could not unreport.',
+                                        icon: 'error',
+                                        confirmButtonText: 'OK'
+                                    });
+                                }
+                            },
+                            error: function() {
+                                Swal.fire({
+                                    title: 'Error',
+                                    text: 'An error occurred.',
+                                    icon: 'error',
+                                    confirmButtonText: 'OK'
+                                });
+                            }
+                        });
+                    }
+                });
+            });
+
             // Define the search button click handler FIRST
             $('#customSearchBtn').on('click', function() {
                 let query = $('#searchOrder').val();

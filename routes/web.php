@@ -653,6 +653,8 @@ Route::prefix('manager')->group(function () {
         Route::middleware('can:view-reports')->group(function () {
             Route::post('/reports/solve-problem', [ReportsController::class, 'solveProblem'])->name('reports.solve_problem');
             Route::post('/reports/archive', [ReportsController::class, 'archiveReport'])->name('reports.archive');
+            Route::post('/reports/unarchive', [ReportsController::class, 'unarchiveReport'])->name('reports.unarchive');
+            Route::post('/reports/unreport', [ReportsController::class, 'unreport'])->name('reports.unreport');
             Route::get('/reports/{order_id}', [ReportsController::class, 'getReportsForOrder']);
             
             Route::prefix('special-prices')->group(function () {
