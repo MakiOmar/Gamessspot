@@ -164,22 +164,6 @@
                 }
             });
             window.iti = iti;
-
-            function isValidPhoneNumberForOrder(itiInstance) {
-                const phoneNumber = itiInstance.getNumber();
-                const countryData = typeof itiInstance.getSelectedCountryData === 'function'
-                    ? itiInstance.getSelectedCountryData()
-                    : null;
-
-                if (countryData && countryData.iso2 === 'sa') {
-                    const digits = phoneNumber.replace(/\D/g, '');
-                    if (/^9665\d{8}$/.test(digits)) {
-                        return true;
-                    }
-                }
-
-                return itiInstance.isValidNumber();
-            }
             let buyPhoneRequest = false;
             $('#buyer_phone').on('focusout', function () {
                 if (buyPhoneRequest) return;
@@ -210,6 +194,23 @@
             });
 
         });
+
+        function isValidPhoneNumberForOrder(itiInstance) {
+            const phoneNumber = itiInstance.getNumber();
+            const countryData = typeof itiInstance.getSelectedCountryData === 'function'
+                ? itiInstance.getSelectedCountryData()
+                : null;
+
+            if (countryData && countryData.iso2 === 'sa') {
+                const digits = phoneNumber.replace(/\D/g, '');
+                if (/^9665\d{8}$/.test(digits)) {
+                    return true;
+                }
+            }
+
+            return itiInstance.isValidNumber();
+        }
+
         function openOrderForm(categoryId, categoryName) {
             document.getElementById('card_category_id').value = categoryId;
             document.getElementById('categoryName').textContent = categoryName;
