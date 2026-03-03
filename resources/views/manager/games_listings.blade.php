@@ -307,6 +307,22 @@
                 }
             });
             window.iti = iti;
+
+            function isValidPhoneNumberForOrder(itiInstance) {
+                const phoneNumber = itiInstance.getNumber();
+                const countryData = typeof itiInstance.getSelectedCountryData === 'function'
+                    ? itiInstance.getSelectedCountryData()
+                    : null;
+
+                if (countryData && countryData.iso2 === 'sa') {
+                    const digits = phoneNumber.replace(/\D/g, '');
+                    if (/^9665\d{8}$/.test(digits)) {
+                        return true;
+                    }
+                }
+
+                return itiInstance.isValidNumber();
+            }
             var gameModal = new bootstrap.Modal(document.getElementById('gameModal'));
             let reportFormSubmitting = false;
             // Monitor changes in the report status radio buttons
@@ -382,7 +398,7 @@
                 if (orderFormSubmitting) return; // Prevent multiple submissions
                 orderFormSubmitting = true; // Set flag before sending request
                 // Get the formatted phone number from intl-tel-input
-                if (iti.isValidNumber()) {
+                if (isValidPhoneNumberForOrder(iti)) {
                     var phoneNumber = iti.getNumber();  // Get the full international number
                     // Manually set the phone number value in the form data
                     var formData = $(this).serializeArray();  // Use serializeArray to manipulate the data

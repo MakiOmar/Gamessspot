@@ -164,6 +164,22 @@
                 }
             });
             window.iti = iti;
+
+            function isValidPhoneNumberForOrder(itiInstance) {
+                const phoneNumber = itiInstance.getNumber();
+                const countryData = typeof itiInstance.getSelectedCountryData === 'function'
+                    ? itiInstance.getSelectedCountryData()
+                    : null;
+
+                if (countryData && countryData.iso2 === 'sa') {
+                    const digits = phoneNumber.replace(/\D/g, '');
+                    if (/^9665\d{8}$/.test(digits)) {
+                        return true;
+                    }
+                }
+
+                return itiInstance.isValidNumber();
+            }
             let buyPhoneRequest = false;
             $('#buyer_phone').on('focusout', function () {
                 if (buyPhoneRequest) return;
@@ -235,7 +251,7 @@
             let phoneNumber = iti.getNumber();
             // Manually replace the `buyer_phone` in the FormData
             formData.set('buyer_phone', phoneNumber);
-            if (iti.isValidNumber()) {
+            if (isValidPhoneNumberForOrder(iti)) {
                 
                 jQuery.ajax({
                     url: "{{ route('manager.orders.sell.card') }}",
