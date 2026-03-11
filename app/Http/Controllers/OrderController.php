@@ -1079,6 +1079,9 @@ class OrderController extends Controller
         $order_key        = '';
         $line_items       = [];
         $buyer_phone      = false;
+        $groupedLineItems = [];
+        $groupGameTitles  = [];
+        $failedOrders     = [];
         // Filter orders that haven't been sent to POS (pos_order_id is null)
         $unsentOrderIds = Order::whereIn('id', $orderIds)
         ->whereNull('pos_order_id')
@@ -1214,66 +1217,98 @@ class OrderController extends Controller
                         "shipping_lines" => array(),
                     );
                 }
-                $line_items[] = array(
-                    "name" => $order->sold_item,
-                    "product_id" => $order->sold_item === 'card' ? $order->card_id : $order->account_id,
-                    "variation_id" => 0,
-                    "quantity" => 1,
-                    "tax_class" => "",
-                    "subtotal" => "$order->price",
-                    "subtotal_tax" => "0.00",
-                    "total" => "$order->price",
-                    "total_tax" => "0.00",
-                    "taxes" => array(),
-                    "meta_data" => array(
-                        array(
-                            "id" => 1207,
-                            "key" => "platform",
-                            "value" => "$platform[0]"
+
+                $groupKey = $type;
+
+                if (! isset($groupedLineItems[$groupKey])) {
+                    $groupedLineItems[$groupKey] = array(
+                        "name" => $order->sold_item,
+                        "product_id" => $order->sold_item === 'card' ? $order->card_id : $order->account_id,
+                        "variation_id" => 0,
+                        "quantity" => 1,
+                        "tax_class" => "",
+                        "subtotal" => (string) $order->price,
+                        "subtotal_tax" => "0.00",
+                        "total" => (string) $order->price,
+                        "total_tax" => "0.00",
+                        "taxes" => array(),
+                        "meta_data" => array(
+                            array(
+                                "id" => 1207,
+                                "key" => "platform",
+                                "value" => "$platform[0]"
+                            ),
+                            array(
+                                "id" => 1208,
+                                "key" => "game_title",
+                                "value" => "$game_title"
+                            ),
+                            array(
+                                "id" => 1217,
+                                "key" => "_account",
+                                "value" => $account_mail
+                            ),
+                            array(
+                                "id" => 1217,
+                                "key" => "type",
+                                "value" => $type
+                            ),
+                            array(
+                                "id" => 1218,
+                                "key" => "_password",
+                                "value" => $account_password
+                            ),
+                            array(
+                                "id" => 1219,
+                                "key" => "_pos_product_id",
+                                "value" => $pos_product_id
+                            ),
+                            array(
+                                "id" => 1220,
+                                "key" => "_card_code",
+                                "value" => $card_code
+                            ),
+                            array(
+                                "id" => 1221,
+                                "key" => "_card_category",
+                                "value" => $card_category
+                            )
                         ),
-                        array(
-                            "id" => 1208,
-                            "key" => "game_title",
-                            "value" => "$game_title"
+                        "sku" => "$sku",
+                        "price" => $order->price,
+                        "image" => array(
+                            "id" => "",
+                            "src" => ""
                         ),
-                        array(
-                            "id" => 1217,
-                            "key" => "_account",
-                            "value" => $account_mail
-                        ),array(
-                            "id" => 1217,
-                            "key" => "type",
-                            "value" => $type
-                        ),
-                        array(
-                            "id" => 1218,
-                            "key" => "_password",
-                            "value" => $account_password
-                        ),
-                        array(
-                            "id" => 1219,
-                            "key" => "_pos_product_id",
-                            "value" => $pos_product_id
-                        ),
-                        array(
-                            "id" => 1220,
-                            "key" => "_card_code",
-                            "value" => $card_code
-                        ),
-                        array(
-                            "id" => 1221,
-                            "key" => "_card_category",
-                            "value" => $card_category
-                        )
-                    ),
-                    "sku" => "$sku",
-                    "price" => $order->price,
-                    "image" => array(
-                        "id" => "",
-                        "src" => ""
-                    ),
-                    "parent_name" => null
-                );
+                        "parent_name" => null
+                    );
+
+                    $groupGameTitles[$groupKey] = array();
+                    if ($game_title) {
+                        $groupGameTitles[$groupKey][] = $game_title;
+                    }
+                } else {
+                    $groupedLineItems[$groupKey]['quantity'] += 1;
+                    $groupedLineItems[$groupKey]['subtotal'] = (string) ((float) $groupedLineItems[$groupKey]['subtotal'] + (float) $order->price);
+                    $groupedLineItems[$groupKey]['total'] = (string) ((float) $groupedLineItems[$groupKey]['total'] + (float) $order->price);
+
+                    if ($game_title) {
+                        if (! in_array($game_title, $groupGameTitles[$groupKey], true)) {
+                            $groupGameTitles[$groupKey][] = $game_title;
+                        }
+
+                        if (count($groupGameTitles[$groupKey]) > 1) {
+                            foreach ($groupedLineItems[$groupKey]['meta_data'] as &$metaItem) {
+                                if (isset($metaItem['key']) && $metaItem['key'] === 'game_title') {
+                                    $metaItem['value'] = 'Multiple games';
+                                    break;
+                                }
+                            }
+                            unset($metaItem);
+                        }
+                    }
+                }
+
                 $order_total += $order->price;
                 $order_key .= $orderId;
             } catch (\Exception $e) {
@@ -1286,6 +1321,7 @@ class OrderController extends Controller
             $basic_details['shipping'] = $billing_details;
         }
         if ($basic_details) {
+            $line_items = array_values($groupedLineItems);
             $basic_details['line_items'] = $line_items;
             $basic_details['total'] = $order_total;
             $basic_details['order_key'] = $order_key;
@@ -1296,6 +1332,23 @@ class OrderController extends Controller
         if (!empty($failedOrders)) {
             return redirect()->route('manager.orders')->with('error', 'Some orders failed to be sent to POS: ' . implode(', ', $failedOrders));
         }
+
+        $logLineItems = array_map(function ($item) {
+            return array(
+                'name' => $item['name'] ?? null,
+                'quantity' => $item['quantity'] ?? null,
+                'subtotal' => $item['subtotal'] ?? null,
+                'total' => $item['total'] ?? null,
+                'sku' => $item['sku'] ?? null,
+            );
+        }, $line_items);
+
+        Log::info('Sending grouped orders to POS', [
+            'order_ids' => $unsentOrderIds,
+            'line_items' => $logLineItems,
+            'total' => $order_total,
+        ]);
+
         $token = $this->login();
         if (! $token) {
             return redirect()->route('manager.orders')->with('error', 'Failed to authenticate');
