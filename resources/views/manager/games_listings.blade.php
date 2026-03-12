@@ -426,25 +426,6 @@
                 if (orderFormSubmitting) return; // Prevent multiple submissions
                 orderFormSubmitting = true; // Set flag before sending request
 
-                var $orderForm = $('#orderForm');
-                var $orderSubmitButton = $('button[form="orderForm"]');
-
-                if ($orderSubmitButton.length) {
-                    // Store original text once for later restoration
-                    if (!$orderSubmitButton.data('original-text')) {
-                        $orderSubmitButton.data('original-text', $orderSubmitButton.text());
-                    }
-                    // Disable submit button and show a loading state
-                    $orderSubmitButton
-                        .prop('disabled', true)
-                        .html('<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>Processing...');
-                }
-
-                if ($orderForm.length) {
-                    // Disable form fields to prevent any further interaction while submitting
-                    $orderForm.find('input, button, select, textarea').prop('disabled', true);
-                }
-
                 // Get the formatted phone number from intl-tel-input
                 if (isValidPhoneNumberForOrder(iti)) {
                     var phoneNumber = iti.getNumber();  // Get the full international number
@@ -455,6 +436,25 @@
                             item.value = phoneNumber;  // Replace buyer_phone value with the intl-tel-input number
                         }
                     });
+
+                    var $orderForm = $('#orderForm');
+                    var $orderSubmitButton = $('button[form="orderForm"]');
+
+                    if ($orderSubmitButton.length) {
+                        // Store original text once for later restoration
+                        if (!$orderSubmitButton.data('original-text')) {
+                            $orderSubmitButton.data('original-text', $orderSubmitButton.text());
+                        }
+                        // Disable submit button and show a loading state
+                        $orderSubmitButton
+                            .prop('disabled', true)
+                            .html('<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>Processing...');
+                    }
+
+                    if ($orderForm.length) {
+                        // Disable form fields to prevent any further interaction while submitting
+                        $orderForm.find('input, button, select, textarea').prop('disabled', true);
+                    }
 
                     $.ajax({
                         url: '/manager/orders/store',  
