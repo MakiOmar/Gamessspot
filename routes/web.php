@@ -624,7 +624,10 @@ Route::prefix('manager')->group(function () {
                 Route::get('/search', [OrderController::class, 'search'])->name('manager.orders.search');
                 Route::get('/quick-search', [OrderController::class, 'quickSearch'])->name('manager.orders.qsearch');
                 Route::get('/export', [OrderController::class, 'export'])->name('manager.orders.export');
-                Route::post('/store', [OrderController::class, 'store'])->name('orders.store');
+                // Store route for creating new orders from the manager panel (throttled to prevent bursts)
+                Route::post('/store', [OrderController::class, 'store'])
+                    ->middleware('throttle:5,1')
+                    ->name('orders.store');
                 Route::post('/sell-card', [OrderController::class, 'sellCard'])->name('manager.orders.sell.card');
                 Route::post('/send-to-pos', [OrderController::class, 'sendToPos'])->name('manager.orders.sendToPos');
                 Route::post('/unsend-from-pos', [OrderController::class, 'unsendFromPos'])->name('manager.orders.unsendFromPos');

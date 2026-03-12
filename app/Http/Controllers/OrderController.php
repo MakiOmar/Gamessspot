@@ -808,6 +808,24 @@ class OrderController extends Controller
         try {
             DB::beginTransaction();
 
+            // Prevent creating duplicate orders for the same seller, buyer, game and sold item within a short time window
+            $recentDuplicateExists = Order::where('seller_id', Auth::id())
+                ->where('buyer_phone', $validatedData['buyer_phone'])
+                ->where('store_profile_id', $validatedData['store_profile_id'])
+                ->where('sold_item', $sold_item)
+                ->where('price', $validatedData['price'])
+                ->where('created_at', '>=', now()->subSeconds(5))
+                ->exists();
+
+            if ($recentDuplicateExists) {
+                DB::rollBack();
+
+                return response()->json([
+                    'message'  => 'A similar order was just created. Please avoid submitting the same order multiple times.',
+                    'duplicate'=> true,
+                ], 422);
+            }
+
             // Fetch the first matching account or fail
             $account = $accountQuery->select('accounts.*')->first();
 

@@ -256,7 +256,7 @@
 
     <script>
         jQuery(document).ready(function($) {
-
+            // Helper function for copying text to clipboard
             function copyToClipboard(selector) {
                 // Get the element by selector
                 const element = document.querySelector(selector);
@@ -288,6 +288,7 @@
                 });
                 }
             }
+            // Phone input for the current order
             const input = document.querySelector("#buyer_phone");
             const iti = window.intlTelInput(input, {
                 initialCountry: "auto", // Automatically detect the user's country
@@ -306,8 +307,10 @@
                     .catch(() => failure());
                 }
             });
+            // Expose intl-tel-input instance globally for other handlers
             window.iti = iti;
 
+            // Validate phone number before creating an order
             function isValidPhoneNumberForOrder(itiInstance) {
                 const phoneNumber = itiInstance.getNumber();
                 const countryData = typeof itiInstance.getSelectedCountryData === 'function'
@@ -323,6 +326,7 @@
 
                 return itiInstance.isValidNumber();
             }
+            // Bootstrap instance for the game modal used to create orders
             var gameModal = new bootstrap.Modal(document.getElementById('gameModal'));
             let reportFormSubmitting = false;
             // Monitor changes in the report status radio buttons
@@ -382,6 +386,24 @@
                 var type = $(this).data('type');
                 var platform = $(this).data('platform'); 
 
+                // Reset the order form fields when opening the modal
+                var $orderForm = $('#orderForm');
+                var $orderSubmitButton = $('button[form="orderForm"]');
+                if ($orderForm.length) {
+                    // Reset form values
+                    $orderForm[0].reset();
+                    // Ensure fields and submit button are enabled
+                    $orderForm.find('input, button, select, textarea').prop('disabled', false);
+                }
+                if ($orderSubmitButton.length) {
+                    // Restore original text if it was changed previously
+                    var originalText = $orderSubmitButton.data('original-text') || 'Submit';
+                    $orderSubmitButton.prop('disabled', false).text(originalText);
+                }
+
+                // Reset the submission flag when the modal is opened
+                orderFormSubmitting = false;
+
                 // Set the modal title and hidden fields
                 $('#gameModalLabel').text(gameTitle + ' (' + type + ' PS' + platform + ')');
                 $('#game_id').val(gameId);
@@ -392,11 +414,37 @@
                 $('#gameModal').modal('show');
             });
             let orderFormSubmitting = false; // Flag to prevent duplicate submissions
+            // Prevent additional Enter key submissions once an order is already being processed
+            $(document).on('keydown', '#orderForm', function(e) {
+                if (orderFormSubmitting && e.key === 'Enter') {
+                    e.preventDefault();
+                }
+            });
             // Handle form submission with AJAX
             $(document).on('submit', '#orderForm',function(e) {
                 e.preventDefault();
                 if (orderFormSubmitting) return; // Prevent multiple submissions
                 orderFormSubmitting = true; // Set flag before sending request
+
+                var $orderForm = $('#orderForm');
+                var $orderSubmitButton = $('button[form="orderForm"]');
+
+                if ($orderSubmitButton.length) {
+                    // Store original text once for later restoration
+                    if (!$orderSubmitButton.data('original-text')) {
+                        $orderSubmitButton.data('original-text', $orderSubmitButton.text());
+                    }
+                    // Disable submit button and show a loading state
+                    $orderSubmitButton
+                        .prop('disabled', true)
+                        .html('<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>Processing...');
+                }
+
+                if ($orderForm.length) {
+                    // Disable form fields to prevent any further interaction while submitting
+                    $orderForm.find('input, button, select, textarea').prop('disabled', true);
+                }
+
                 // Get the formatted phone number from intl-tel-input
                 if (isValidPhoneNumberForOrder(iti)) {
                     var phoneNumber = iti.getNumber();  // Get the full international number
@@ -453,15 +501,28 @@
                                 errorMessage = xhr.responseJSON.message;
                             }
 
+                            const isDuplicateOrder = xhr.status === 422 && xhr.responseJSON && xhr.responseJSON.duplicate;
+
                             Swal.fire({
-                                title: 'Error',
+                                title: isDuplicateOrder ? 'Duplicate Order' : 'Error',
                                 text: errorMessage, // Display the specific error message
-                                icon: 'error',
+                                icon: isDuplicateOrder ? 'warning' : 'error',
                                 confirmButtonText: 'OK'
                             });
-                        },
-                        complete: function() {
-                            orderFormSubmitting = false; // Reset flag after request completes
+                            
+                            // Only allow retry for non-duplicate errors
+                            if (!isDuplicateOrder) {
+                                orderFormSubmitting = false;
+
+                                if ($orderForm.length) {
+                                    $orderForm.find('input, button, select, textarea').prop('disabled', false);
+                                }
+
+                                if ($orderSubmitButton.length) {
+                                    var originalText = $orderSubmitButton.data('original-text') || 'Submit';
+                                    $orderSubmitButton.prop('disabled', false).text(originalText);
+                                }
+                            }
                         }
                     });
                 } else {
@@ -471,7 +532,17 @@
                         icon: 'error',
                         confirmButtonText: 'OK'
                     });
+                    // Re-enable the form for correction when phone number is invalid
                     orderFormSubmitting = false; // Reset flag after request completes
+                    var $orderForm = $('#orderForm');
+                    var $orderSubmitButton = $('button[form="orderForm"]');
+                    if ($orderForm.length) {
+                        $orderForm.find('input, button, select, textarea').prop('disabled', false);
+                    }
+                    if ($orderSubmitButton.length) {
+                        var originalText = $orderSubmitButton.data('original-text') || 'Submit';
+                        $orderSubmitButton.prop('disabled', false).text(originalText);
+                    }
                 }
             });
 
