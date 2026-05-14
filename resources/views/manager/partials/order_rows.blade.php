@@ -11,7 +11,8 @@
             @endif
         </td>
         <td>{{ $order->id }}</td>
-        @if ( $order->store_profile_id === 17 )
+        {{-- Website label only when WooCommerce profile and no seller user; otherwise show seller name --}}
+        @if ( $order->store_profile_id === 17 && is_null($order->seller_id) )
         <td>Website</td>
         @else
         <td class="{{ $order->seller ? '' : 'text-danger' }}">{{ $order->seller?->name ?? 'Maybe deleted' }}</td>
