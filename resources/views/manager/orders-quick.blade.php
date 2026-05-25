@@ -295,10 +295,14 @@
 
                 refreshQuickSearchMobileTables();
 
-                let resizeTimer;
+                // Re-init only when crossing mobile/desktop breakpoint (not on scroll-induced resize)
+                let lastMobileLayout = $(window).width() <= 768;
                 $(window).on('resize', function() {
-                    clearTimeout(resizeTimer);
-                    resizeTimer = setTimeout(refreshQuickSearchMobileTables, 250);
+                    const isMobileLayout = $(window).width() <= 768;
+                    if (isMobileLayout !== lastMobileLayout) {
+                        lastMobileLayout = isMobileLayout;
+                        refreshQuickSearchMobileTables();
+                    }
                 });
 
                 // Initialize Flatpickr for startDate and endDate inputs

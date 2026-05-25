@@ -169,16 +169,38 @@
                             </button>
                         `);
 
-                        // تفادي تكرار الحدث
+                        let toggleTouchMoved = false;
+                        $toggleBtn.on('touchstart', function () {
+                            toggleTouchMoved = false;
+                        });
+                        $toggleBtn.on('touchmove', function () {
+                            toggleTouchMoved = true;
+                        });
                         $toggleBtn.on('click', function (e) {
                             e.preventDefault();
-                            const $detailRow = $(this).closest('tr').next('.mobile-detail-row');
-                            const isExpanded = $detailRow.is(':visible');
-                            $detailRow.toggle();
-                            $(this).find('.chevron').toggleClass('chevron-down chevron-up');
-                            $(this).attr('aria-expanded', !isExpanded);
-                            $(this).attr('title', isExpanded ? 'Show more details' : 'Hide details');
-                            $(this).attr('aria-label', isExpanded ? 'Show more details' : 'Hide details');
+                            e.stopPropagation();
+                            if (toggleTouchMoved) {
+                                toggleTouchMoved = false;
+                                return;
+                            }
+                            const $btn = $(this);
+                            const $detailRow = $btn.closest('tr').next('.mobile-detail-row');
+                            const isExpanded = $detailRow.hasClass('is-expanded');
+                            if (isExpanded) {
+                                $detailRow.removeClass('is-expanded');
+                                $btn.removeClass('is-expanded');
+                                $btn.find('.chevron').removeClass('chevron-up').addClass('chevron-down');
+                                $btn.attr('aria-expanded', 'false');
+                                $btn.attr('title', 'Show more details');
+                                $btn.attr('aria-label', 'Show more details');
+                            } else {
+                                $detailRow.addClass('is-expanded');
+                                $btn.addClass('is-expanded');
+                                $btn.find('.chevron').removeClass('chevron-down').addClass('chevron-up');
+                                $btn.attr('aria-expanded', 'true');
+                                $btn.attr('title', 'Hide details');
+                                $btn.attr('aria-label', 'Hide details');
+                            }
                         });
 
                         const $toggleCell = $cells.eq(maxVisible - 1);
@@ -195,8 +217,7 @@
                             detailHTML += '<div><strong>' + key + ':</strong> ' + val + '</div>';
                         });
                         detailHTML += '</td></tr>';
-                        const $detailRow = $(detailHTML).hide();
-                        $row.after($detailRow);
+                        $row.after(detailHTML);
                     });
                 });
             };
@@ -310,6 +331,9 @@
         .mobile-detail-row {
             display: none;
         }
+        .mobile-detail-row.is-expanded {
+            display: table-row;
+        }
         .mobile-detail-row td > div {
             word-wrap: break-word;   /* يُقسّم الكلمة الطويلة */
             white-space: normal;     /* يسمح بلف النص */
@@ -333,6 +357,7 @@
             border: none;
             cursor: pointer;
             padding: 5px;
+            touch-action: manipulation;
         }
 
         .chevron {
