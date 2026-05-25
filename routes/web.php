@@ -617,25 +617,29 @@ Route::prefix('manager')->group(function () {
             });
         });
 
-        // Routes with 'can:view-sell-log' middleware
+        // Sell log: read access (includes call center — search/view order details only)
         Route::middleware('can:view-sell-log')->group(function () {
             Route::prefix('orders')->group(function () {
                 Route::get('/', [OrderController::class, 'index'])->name('manager.orders');
                 Route::get('/search', [OrderController::class, 'search'])->name('manager.orders.search');
                 Route::get('/quick-search', [OrderController::class, 'quickSearch'])->name('manager.orders.qsearch');
-                Route::get('/export', [OrderController::class, 'export'])->name('manager.orders.export');
-                // Store route for creating new orders from the manager panel (throttled to prevent bursts)
-                Route::post('/store', [OrderController::class, 'store'])
-                    ->middleware('throttle:5,1')
-                    ->name('orders.store');
-                Route::post('/sell-card', [OrderController::class, 'sellCard'])->name('manager.orders.sell.card');
-                Route::post('/send-to-pos', [OrderController::class, 'sendToPos'])->name('manager.orders.sendToPos');
-                Route::post('/unsend-from-pos', [OrderController::class, 'unsendFromPos'])->name('manager.orders.unsendFromPos');
-                
-                Route::get('/has-problem', [OrderController::class, 'ordersHasProblem'])->name('manager.orders.has_problem');
-                Route::get('/needs-return', [OrderController::class, 'ordersWithNeedsReturn'])->name('manager.orders.needs_return');
-                Route::get('/solved', [OrderController::class, 'solvedOrders'])->name('manager.orders.solved');
-                Route::get('/archived', [OrderController::class, 'archivedOrders'])->name('manager.orders.archived');
+
+                Route::middleware('can:manage-sell-log')->group(function () {
+                    Route::get('/export', [OrderController::class, 'export'])->name('manager.orders.export');
+                    Route::post('/store', [OrderController::class, 'store'])
+                        ->middleware('throttle:5,1')
+                        ->name('orders.store');
+                    Route::post('/sell-card', [OrderController::class, 'sellCard'])->name('manager.orders.sell.card');
+                    Route::post('/send-to-pos', [OrderController::class, 'sendToPos'])->name('manager.orders.sendToPos');
+                    Route::post('/unsend-from-pos', [OrderController::class, 'unsendFromPos'])->name('manager.orders.unsendFromPos');
+                });
+
+                Route::middleware('can:view-reports')->group(function () {
+                    Route::get('/has-problem', [OrderController::class, 'ordersHasProblem'])->name('manager.orders.has_problem');
+                    Route::get('/needs-return', [OrderController::class, 'ordersWithNeedsReturn'])->name('manager.orders.needs_return');
+                    Route::get('/solved', [OrderController::class, 'solvedOrders'])->name('manager.orders.solved');
+                    Route::get('/archived', [OrderController::class, 'archivedOrders'])->name('manager.orders.archived');
+                });
             });
         });
 
@@ -651,7 +655,9 @@ Route::prefix('manager')->group(function () {
         Route::middleware(['checkRole:admin', 'can:manage-options'])->group(function () {
             Route::post('/orders/undo', [OrderController::class, 'undo'])->name('manager.orders.undo');
         });
-        Route::post('/reports/store', [ReportsController::class, 'store'])->name('manager.reports.store');
+        Route::post('/reports/store', [ReportsController::class, 'store'])
+            ->middleware('can:create-order-reports')
+            ->name('manager.reports.store');
         // Routes with 'can:view-reports' middleware
         Route::middleware('can:view-reports')->group(function () {
             Route::post('/reports/solve-problem', [ReportsController::class, 'solveProblem'])->name('reports.solve_problem');
@@ -677,6 +683,7 @@ Route::prefix('manager')->group(function () {
                 Route::get('/accountants', [UserController::class, 'accountants'])->name('manager.users.accountants');
                 Route::get('/admins', [UserController::class, 'admins'])->name('manager.users.admins');
                 Route::get('/account-managers', [UserController::class, 'accountManagers'])->name('manager.users.acc.managers');
+                Route::get('/call-center', [UserController::class, 'callCenters'])->name('manager.users.call_center');
                 Route::get('/customers', [UserController::class, 'customers'])->name('manager.users.customers');
                 Route::get('/search/{role?}', [UserController::class, 'search'])->name('manager.users.search');
                 Route::get('/{id}/edit', [UserController::class, 'edit'])->name('manager.users.edit');

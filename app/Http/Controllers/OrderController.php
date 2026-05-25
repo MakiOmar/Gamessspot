@@ -91,6 +91,13 @@ class OrderController extends Controller
         $user = Auth::guard('admin')->user(); // Assuming 'admin' guard is used
         $roles = $user->roles->pluck('name');
 
+        // Call center: sell log is search-only (no default order listing)
+        if ($roles->contains('call center')) {
+            $orders = Order::query()->whereRaw('1 = 0')->paginate($this->pagination);
+
+            return $this->renderOrders($orders, $user, true);
+        }
+
         // Get only today's orders
         $ordersQuery = Order::with([
             'seller',
@@ -195,10 +202,11 @@ class OrderController extends Controller
      * @param \App\Models\User $user
      * @return \Illuminate\Contracts\View\View
      */
-    protected function renderOrders($orders, $user)
+    protected function renderOrders($orders, $user, bool $searchOnly = false)
     {
         $status = request()->get('status', 'all');
-        return view('manager.orders', compact('orders', 'user', 'status'));
+
+        return view('manager.orders', compact('orders', 'user', 'status', 'searchOnly'));
     }
 
 
@@ -218,15 +226,24 @@ class OrderController extends Controller
         $status         = $request->input('status', 'all'); // Default to 'all' if not provided
         $showAll        = $request->input('show_all', 0); // Check if show all is selected
         Log::info("Search Parameters - Query: $query, Start Date: $startDate, End Date: $endDate, Store Profile ID: $storeProfileId, Status: $status, Show All: $showAll");
+
+        $user = Auth::user();
+        $isCallCenter = $user->hasRole('call center');
+
+        if ($isCallCenter && empty(trim((string) $query))) {
+            return response()->json([
+                'rows' => '<tr><td colspan="13" class="text-center text-muted">Enter a customer phone number or account email to search orders.</td></tr>',
+                'pagination' => '<div id="search-pagination"></div>',
+            ], 422);
+        }
+
         // Build the query to filter orders
         $orders = Order::with(array( 'seller', 'account.game' ));
-        // Check if the user is an admin
-        $user = Auth::user();
         $isAdmin = $user->roles->contains('name', 'admin');
         $isAccountant = $user->roles->contains('name', 'accountant');
 
-        // If the user is not an admin, filter by seller_id
-        if (!$isAdmin && !$isAccountant) {
+        // Restrict to own sales unless admin, accountant, or call center (lookup by phone/account)
+        if (!$isAdmin && !$isAccountant && !$isCallCenter) {
             $orders->where('seller_id', $user->id);
         }
 
@@ -353,18 +370,24 @@ class OrderController extends Controller
         // Get the search query input
         $query = $request->input('search');
         if (empty($query)) {
-            $query = $_GET['search'];
+            $query = $_GET['search'] ?? '';
         }
+
+        $user = Auth::user();
+
+        if ($user->hasRole('call center') && empty(trim((string) $query))) {
+            abort(422, 'Search query is required.');
+        }
+
         // Build the query to filter orders
         $orders = Order::with(['seller', 'account.game']);
 
-        // Check if the user is an admin
-        $user = Auth::user();
         $isAdmin = $user->roles->contains('name', 'admin');
+        $isCallCenter = $user->hasRole('call center');
 
-        // If the user is not an admin, filter by seller_id
-        if (!$isAdmin) {
-            //$orders->where('seller_id', $user->id);
+        // Call center and admin can search all orders; others see their own sales only
+        if (!$isAdmin && !$isCallCenter) {
+            $orders->where('seller_id', $user->id);
         }
         $buyer   = false;
         $account = false;

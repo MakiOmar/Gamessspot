@@ -455,6 +455,11 @@ return [
                     'icon' => 'bi bi-circle',
                 ],
                 [
+                    'text' => 'Call Center',
+                    'route' => 'manager.users.call_center',
+                    'icon' => 'bi bi-circle',
+                ],
+                [
                     'text' => 'Customers',
                     'route' => 'manager.users.customers',
                     'icon' => 'bi bi-circle',

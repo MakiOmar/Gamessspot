@@ -14,15 +14,29 @@
     $status = $status ?? 'all';
 @endphp
 
+@php
+    $isCallCenter = Auth::user()->hasRole('call center');
+    $searchOnly = $searchOnly ?? false;
+@endphp
+
 @section('content')
     <div class="container mt-5">
         <h1 class="text-center mb-4">
             @if (! isset($status))
+            @if($isCallCenter || $searchOnly)
+            Sell Log — Order Lookup
+            @else
             Orders Management
+            @endif
             @else
             Reports Management
             @endif
         </h1>
+        @if($isCallCenter || $searchOnly)
+        <div class="alert alert-info text-center">
+            Search by customer phone number or account email to view order details.
+        </div>
+        @endif
         <!-- Display Success Message -->
         @if(session('success'))
         <div class="alert alert-success">
@@ -37,11 +51,11 @@
         </div>
         @endif
         <div class="container-fluid">
-            <form action="{{ route('manager.orders.export') }}" method="GET">
+            <form @unless($isCallCenter) action="{{ route('manager.orders.export') }}" @endunless method="GET">
                 <div class="row g-2">
                     <!-- Search Input -->
                     <div class="col-12 col-md-4">
-                        <input type="text" class="form-control" name="searchOrder" id="searchOrder" placeholder="Search orders by buyer phone">
+                        <input type="text" class="form-control" name="searchOrder" id="searchOrder" placeholder="{{ $isCallCenter ? 'Customer phone or account email' : 'Search orders by buyer phone' }}">
                         <input type="hidden" id="storeId" value="@if( ! empty( $_GET['id'] ) ){{ $_GET['id'] }}@else{{0}}@endif">
                         @if ( isset($status) )
                             <input type="hidden" name="status" value="{{ $status }}">
@@ -49,7 +63,7 @@
                     </div>
 
                     <!-- Date Range -->
-                    @if( ! Auth::user()->roles->contains('name', 'sales') )
+                    @if( ! Auth::user()->roles->contains('name', 'sales') && ! $isCallCenter )
                         <div class="col-12 col-md-6 d-flex flex-column flex-md-row align-items-md-center">
                             <input type="date" class="form-control mb-2 mb-md-0 me-md-2"
                                 id="startDate" name="start_date"
@@ -62,6 +76,7 @@
                     @endif
 
                     <!-- Show All Checkbox -->
+                    @unless($isCallCenter)
                     <div class="col-12 col-md-2 d-flex align-items-center">
                         <div class="form-check">
                             <input class="form-check-input" type="checkbox" id="showAllCheckbox" name="show_all">
@@ -70,6 +85,7 @@
                             </label>
                         </div>
                     </div>
+                    @endunless
 
                     <!-- Custom Search Button -->
                     <div class="col-12 col-md-2">
@@ -78,7 +94,7 @@
 
                 </div>
         
-                @if(Auth::user()->roles->contains('name', 'admin') || Auth::user()->roles->contains('name', 'accountant'))
+                @if(!$isCallCenter && (Auth::user()->roles->contains('name', 'admin') || Auth::user()->roles->contains('name', 'accountant')))
                 <div class="row mt-3">
                     <div class="col-12 d-flex justify-content-end">
                         @if(!empty($_GET['id']))
@@ -108,7 +124,9 @@
                 <table class="table table-striped table-bordered orders-responsive-table">
                     <thead>
                         <tr role="row">
+                            @unless($isCallCenter)
                             <th><input type="checkbox" id="select_all" /></th>
+                            @endunless
                             <th>ID</th>
                             <th>Seller</th>
                             <th>Product</th>
@@ -122,11 +140,21 @@
                             <th>Sold Item</th>
                             <th>Notes</th>
                             <th>Date</th>
+                            @unless($isCallCenter)
                             <th>Action</th>
+                            @endunless
                         </tr>
                     </thead>
                     <tbody id="orderTableBody">
-                        @include('manager.partials.order_rows', ['orders' => $orders, 'status' => $status])
+                        @if(($isCallCenter || $searchOnly) && $orders->isEmpty())
+                        <tr>
+                            <td colspan="12" class="text-center text-muted py-4">
+                                Enter a customer phone number or account email above, then click Search.
+                            </td>
+                        </tr>
+                        @else
+                        @include('manager.partials.order_rows', ['orders' => $orders, 'status' => $status, 'readOnly' => $isCallCenter])
+                        @endif
                     </tbody>
                     <tfoot>
                         <tr>
@@ -142,15 +170,15 @@
                         </tr>
                     </tfoot>
                 </table>
-                @unless(Auth::user()->hasRole('accountant'))
+                @if(!$isCallCenter && !Auth::user()->hasRole('accountant'))
                     <p>
                         <input type="submit" name="bulk_send_odoo" class="btn btn-primary" value="{{ __('Send to POS') }}" id="sendToPosBtn" />
                     </p>
-                @endunless
+                @endif
 
             </form>
             
-            @unless(Auth::user()->hasRole('accountant'))
+            @if(!$isCallCenter && !Auth::user()->hasRole('accountant'))
             <!-- Form for unsending orders from POS -->
             <form method="post" action="{{ route('manager.orders.unsendFromPos') }}" id="unsendPosForm" style="display: none;">
                 @csrf
@@ -159,12 +187,13 @@
                     <input type="submit" name="bulk_unsend_pos" class="btn btn-warning" value="{{ __('Unsend from POS') }}" />
                 </p>
             </form>
-            @endunless
+            @endif
         </div>
         @if (isset($status))
         <input type="hidden" id="currentReportStatus" value="{{$status}}"/>
         @endif
     </div>
+    @can('create-order-reports')
     <!-- Report Order Modal -->
     <div class="modal fade" id="reportOrderModal" tabindex="-1" aria-labelledby="reportOrderModalLabel" aria-hidden="true">
         <div class="modal-dialog">
@@ -201,6 +230,7 @@
             </div>
         </div>
     </div>
+    @endcan
 
 @endsection
 

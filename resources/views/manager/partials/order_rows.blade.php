@@ -1,5 +1,9 @@
+@php
+    $readOnly = $readOnly ?? false;
+@endphp
 @foreach ($orders as $order)
     <tr id="orderRow-{{ $order->id }}">
+        @unless($readOnly)
         <td>
             @if ($order->pos_order_id)
                 <div class="d-flex align-items-center gap-2">
@@ -10,6 +14,7 @@
                 <input type="checkbox" name="order_ids[]" value="{{ $order->id }}" />
             @endif
         </td>
+        @endunless
         <td>{{ $order->id }}</td>
         {{-- Website label only when WooCommerce profile and no seller user; otherwise show seller name --}}
         @if ( $order->store_profile_id === 17 && is_null($order->seller_id) )
@@ -44,6 +49,7 @@
             @endif
         </td>
         <td>{{ $order->created_at }}</td>
+        @unless($readOnly)
         <td>
             @if (isset($status) && 'needs_return' === $status)
                 <!-- Button for orders with 'needs_return' -->
@@ -65,7 +71,7 @@
                     Unreport
                 </button>
             @elseif(isset($status) && 'solved' === $status)
-                @if ( Auth::user()->roles->contains('name', 'admin') )
+                @if ( Auth::user()->roles->contains('name', 'admin') || Auth::user()->roles->contains('name', 'account manager') )
                 <!-- Regular undo button -->
                 <button class="btn btn-danger btn-sm undo-order" data-order-id="{{ $order->id }}" data-sold-item="{{ $order->sold_item }}">
                     Undo
@@ -99,6 +105,7 @@
                     </button>
                 @endif
             @endif
-        </td> 
+        </td>
+        @endunless
     </tr>
 @endforeach

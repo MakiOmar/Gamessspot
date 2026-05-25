@@ -25,7 +25,7 @@ class AuthServiceProvider extends ServiceProvider
             // Ensure roles are loaded
             $user->loadMissing('roles');
             // Get allowed roles dynamically from database - all staff roles can access dashboard
-            $allowedRoleNames = ['admin', 'sales', 'account manager', 'accountant'];
+            $allowedRoleNames = ['admin', 'sales', 'account manager', 'accountant', 'call center'];
             $allowedRoles = array_filter($allowedRoleNames, function($roleName) {
                 return Role::roleExists($roleName);
             });
@@ -52,10 +52,20 @@ class AuthServiceProvider extends ServiceProvider
 
         Gate::define('view-sell-log', function ($user) {
             $user->loadMissing('roles');
-            $allowedRoleNames = ['admin', 'sales', 'account manager', 'accountant'];
+            $allowedRoleNames = ['admin', 'sales', 'account manager', 'accountant', 'call center'];
             $allowedRoles = array_filter($allowedRoleNames, function($roleName) {
                 return Role::roleExists($roleName);
             });
+            return $user->hasRole($allowedRoles);
+        });
+
+        Gate::define('manage-sell-log', function ($user) {
+            $user->loadMissing('roles');
+            $allowedRoleNames = ['admin', 'sales', 'account manager', 'accountant'];
+            $allowedRoles = array_filter($allowedRoleNames, function ($roleName) {
+                return Role::roleExists($roleName);
+            });
+
             return $user->hasRole($allowedRoles);
         });
 
@@ -77,10 +87,20 @@ class AuthServiceProvider extends ServiceProvider
         });
         Gate::define('view-reports', function ($user) {
             $user->loadMissing('roles');
-            $allowedRoleNames = ['admin', 'accountant'];
+            $allowedRoleNames = ['admin', 'accountant', 'account manager'];
             $allowedRoles = array_filter($allowedRoleNames, function($roleName) {
                 return Role::roleExists($roleName);
             });
+            return $user->hasRole($allowedRoles);
+        });
+
+        Gate::define('create-order-reports', function ($user) {
+            $user->loadMissing('roles');
+            $allowedRoleNames = ['admin', 'sales', 'account manager', 'accountant'];
+            $allowedRoles = array_filter($allowedRoleNames, function ($roleName) {
+                return Role::roleExists($roleName);
+            });
+
             return $user->hasRole($allowedRoles);
         });
 

@@ -3,12 +3,27 @@
     <div class="sidebar-wrapper">
         <nav class="mt-2"> <!--begin::Sidebar Menu-->
             <ul class="nav sidebar-menu flex-column" data-lte-toggle="treeview" role="menu" data-accordion="false">
+                @php
+                    $userRoles = Auth::user()->roles->pluck('name')->toArray();
+                    $isCallCenter = in_array('call center', $userRoles);
+                    $userHasReportRole = in_array('admin', $userRoles)
+                        || in_array('accountant', $userRoles)
+                        || in_array('account manager', $userRoles);
+                @endphp
                 <li class="nav-item">
                     <a href="{{ route('manager.dashboard') }}" class="nav-link bg-light">
                         Dashboard <span class="float-end"><i class="nav-icon bi bi-palette"></i></span>
                     </a>
                 </li>
-                @if(Auth::guard('admin')->user()->roles->contains(function ($role) {
+                @if($isCallCenter)
+                    <li class="nav-item">
+                        <a href="{{ route('manager.orders') }}" class="nav-link">
+                            <i class="nav-icon bi bi-table"></i>
+                            <p>Sell log</p>
+                        </a>
+                    </li>
+                @endif
+                @if(!$isCallCenter && Auth::guard('admin')->user()->roles->contains(function ($role) {
                     return in_array($role->name, ['admin', 'sales', 'account manager']);
                 }))
                 <li class="nav-item"> <a href="#" class="nav-link"> <i class="nav-icon bi bi-speedometer"></i>
@@ -44,7 +59,7 @@
                     </ul>
                 </li>
                 @endif
-                @if(Auth::guard('admin')->user()->roles->contains(function ($role) {
+                @if(!$isCallCenter && Auth::guard('admin')->user()->roles->contains(function ($role) {
                     return in_array($role->name, ['admin', 'sales', 'account manager']);
                 }))
                     @if(Auth::guard('admin')->user()->roles->contains(function ($role) {
@@ -81,7 +96,7 @@
                         </a>
                     </li>
                 @endif
-                @if(Auth::guard('admin')->user()->roles->contains(function ($role) {
+                @if(!$isCallCenter && Auth::guard('admin')->user()->roles->contains(function ($role) {
                     return in_array($role->name, ['admin','account manager']);
                 }))
                 <li class="nav-item">
@@ -91,11 +106,6 @@
                     </a>
                 </li>
                 @endif
-                @php
-                    // Check if user has report access role (admin or accountant)
-                    $userRoles = Auth::user()->roles->pluck('name')->toArray();
-                    $userHasReportRole = in_array('admin', $userRoles) || in_array('accountant', $userRoles);
-                @endphp
                 @if($userHasReportRole)
                     <li class="nav-item"> <a href="#" class="nav-link"> <i class="nav-icon bi bi-clipboard-fill"></i>
                             <p>
@@ -121,7 +131,8 @@
                                 </a> </li>
                         </ul>
                     </li>
-                    
+                @endif
+                @can('manage-users')
                     <li class="nav-item"> <a href="#" class="nav-link"> <i class="nav-icon bi bi-clipboard-fill"></i>
                             <p>
                                 Users <i class="nav-arrow bi bi-chevron-right"></i>
@@ -153,6 +164,11 @@
                                     <p>Admins</p>
                                 </a>
                             </li>
+                            <li class="nav-item">
+                                <a href="{{ route( 'manager.users.call_center' ) }}" class="nav-link"> <i class="nav-icon bi bi-circle"></i>
+                                    <p>Call Center</p>
+                                </a>
+                            </li>
                         </ul>
                     </li>
                     <li class="nav-item">
@@ -161,7 +177,7 @@
                             <p>Customers</p>
                         </a>
                     </li>
-                @endif
+                @endcan
                 @if ( !Auth::user()->roles->contains('name', 'account manager') && !Auth::user()->roles->contains('name', 'sales') )
                 <li class="nav-item">
                     <a href="{{ route( 'manager.storeProfiles.index' ) }}" class="nav-link">

@@ -21,7 +21,7 @@
     {{-- Cache Indicator --}}
     @include('components.cache-indicator')
     
-    @if ( Auth::user()->roles->contains('name', 'admin') )
+    @can('manage-accounts')
         <!-- Search and Action Buttons -->
         <div class="mb-4">
             <!-- Search Row -->
@@ -51,7 +51,7 @@
                             </svg>
                             Add Account
                         </a>
-                        @if( Auth::user()->roles->contains('name', 'admin') )
+                        @can('manage-accounts')
                             <!-- Import Button -->
                             <button type="button" class="btn btn-info" data-bs-toggle="modal" data-bs-target="#importModal" title="Import Accounts">
                                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20px" height="20px" fill="white" class="me-1">
@@ -73,7 +73,7 @@
                                 </svg>
                                 Template
                             </a>
-                        @endif
+                        @endcan
                     </div>
                 </div>
             </div>
@@ -110,9 +110,7 @@
         <div id="paginationWrapper" class="d-flex justify-content-center mt-4">
             {{ $accounts->links('vendor.pagination.bootstrap-5') }}
         </div>
-    @else
-    <a type="button" class="btn btn-success" id="addAccountButton" data-bs-toggle="modal" data-bs-target="#accountModal">Add account</a>
-    @endif
+    @endcan
 </div>
 <!-- Bootstrap 5 Modal for Adding New Account -->
 <div class="modal fade" id="accountModal" tabindex="-1" aria-labelledby="accountModalLabel" aria-hidden="true">

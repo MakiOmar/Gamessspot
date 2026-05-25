@@ -91,6 +91,13 @@ class UserController extends Controller
         return $this->users(4);
     }
 
+    public function callCenters()
+    {
+        $role = Role::where('name', 'call center')->first();
+
+        return $this->users($role ? $role->id : 'any');
+    }
+
     public function customers()
     {
         return $this->users(5);
