@@ -283,7 +283,7 @@
                         const $table = $(this);
                         $table.find('.mobile-detail-row').remove();
                         $table.find('.toggle-details-btn').remove();
-                        $table.find('thead th, tbody td').removeClass('mobile-hidden');
+                        $table.find('thead th, tbody td').removeClass('mobile-hidden mobile-toggle-cell');
                         $table.removeClass('mobile-responsive-table');
                     });
                     $('.orders-responsive-table').mobileTableToggle({

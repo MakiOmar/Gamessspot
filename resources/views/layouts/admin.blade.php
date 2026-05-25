@@ -146,6 +146,8 @@
                     $table.addClass('mobile-responsive-table');
 
                     const hiddenIndexes = [];
+                    const $toggleHeader = $headers.eq(maxVisible - 1);
+                    $toggleHeader.addClass('mobile-toggle-cell');
                     $headers.each(function (i) {
                         if (i >= maxVisible) {
                             $(this).addClass('mobile-hidden');
@@ -179,9 +181,10 @@
                             $(this).attr('aria-label', isExpanded ? 'Show more details' : 'Hide details');
                         });
 
-                        // داخل each row loop:
-                        if ($cells.eq(maxVisible - 1).find('.toggle-details-btn').length === 0) {
-                            $cells.eq(maxVisible - 1).append($toggleBtn);
+                        const $toggleCell = $cells.eq(maxVisible - 1);
+                        $toggleCell.addClass('mobile-toggle-cell');
+                        if ($toggleCell.find('.toggle-details-btn').length === 0) {
+                            $toggleCell.append($toggleBtn);
                         }
 
 
@@ -350,6 +353,12 @@
         .chevron-up {
             transform: rotate(-135deg);
         }
+
+    @media screen and (max-width: 768px) {
+        .mobile-responsive-table .mobile-toggle-cell {
+            padding-right: 20px !important;
+        }
+    }
 
     /*
     .card-header {
