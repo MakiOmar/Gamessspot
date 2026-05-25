@@ -237,11 +237,20 @@
 @push('js')
     <script>
         jQuery(document).ready(function($) {
-            $('.orders-responsive-table').mobileTableToggle({
-                maxVisibleCols: 3,
-                maxVisibleColsDesktop: 5,
-                enableOnDesktop: true
-            });
+            function refreshOrdersMobileTable() {
+                const $table = $('.orders-responsive-table');
+                $table.find('.mobile-detail-row').remove();
+                $table.find('.toggle-details-btn').remove();
+                $table.find('thead th, tbody td').removeClass('mobile-hidden');
+                $table.removeClass('mobile-responsive-table');
+                $table.mobileTableToggle({
+                    maxVisibleCols: 3,
+                    maxVisibleColsDesktop: 5,
+                    enableOnDesktop: true
+                });
+            }
+
+            refreshOrdersMobileTable();
             // Initialize Flatpickr for startDate and endDate inputs
             flatpickr("#startDate", {
                 altInput: true,
@@ -543,11 +552,7 @@
                         } else {
                             $('#orderTableBody').html(response.rows);
                             $('#orderPagination').html(response.pagination);
-                            $('.orders-responsive-table').mobileTableToggle({
-                                maxVisibleCols: 3,
-                                maxVisibleColsDesktop: 5,
-                                enableOnDesktop: true
-                            });
+                            refreshOrdersMobileTable();
                         }
                     },
                     error: function(xhr) {
@@ -586,11 +591,7 @@
                     success: function(response) {
                         $('#orderTableBody').html(response.rows);
                         $('#orderPagination').html(response.pagination);
-                        $('.orders-responsive-table').mobileTableToggle({
-                            maxVisibleCols: 3,
-                            maxVisibleColsDesktop: 5,
-                            enableOnDesktop: true
-                        });
+                        refreshOrdersMobileTable();
                     },
                     error: function() {
                         Swal.fire('Error', 'Could not load page', 'error');

@@ -209,6 +209,20 @@ class OrderController extends Controller
         return view('manager.orders', compact('orders', 'user', 'status', 'searchOnly'));
     }
 
+    /**
+     * Render order table rows with column layout matching the current user's role.
+     */
+    protected function renderOrderRows($orders, string $status = 'all'): string
+    {
+        $user = Auth::user();
+        $readOnly = $user && $user->hasRole('call center');
+
+        return view('manager.partials.order_rows', [
+            'orders'   => $orders,
+            'status'   => $status,
+            'readOnly' => $readOnly,
+        ])->render();
+    }
 
     /**
      * Search for orders by buyer phone.
@@ -315,7 +329,7 @@ class OrderController extends Controller
             
             // Return the updated rows for the table without pagination
             return response()->json([
-                'rows' => view('manager.partials.order_rows', ['orders' => $orders, 'status' => $status])->render(),
+                'rows'       => $this->renderOrderRows($orders, $status),
                 'pagination' => '<div id="search-pagination">' . $showing . '</div>',
             ]);
         } else {
@@ -325,7 +339,7 @@ class OrderController extends Controller
             
             // Return the updated rows for the table (assuming a partial view)
             return response()->json([
-                'rows' => view('manager.partials.order_rows', compact('orders', 'status'))->render(),
+                'rows'       => $this->renderOrderRows($orders, $status),
                 'pagination' => '<div id="search-pagination">' . $showing . $orders->links('vendor.pagination.bootstrap-5')->render() . '</div>',
             ]);
         }
