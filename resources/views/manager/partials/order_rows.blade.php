@@ -71,12 +71,11 @@
                     Unreport
                 </button>
             @elseif(isset($status) && 'solved' === $status)
-                @if ( Auth::user()->roles->contains('name', 'admin') || Auth::user()->roles->contains('name', 'account manager') )
-                <!-- Regular undo button -->
+                @can('undo-orders')
                 <button class="btn btn-danger btn-sm undo-order" data-order-id="{{ $order->id }}" data-sold-item="{{ $order->sold_item }}">
                     Undo
                 </button>
-                @endif
+                @endcan
                 <button class="btn btn-secondary btn-sm archive-report" data-report-id="{{ $order->reports->id }}">
                     Archive
                 </button>
@@ -92,17 +91,15 @@
                     Unreport
                 </button>
             @else
-                @if(Auth::user()->roles->contains('name', 'admin')  || Auth::user()->roles->contains('name', 'sales'))
-                    @if ( Auth::user()->roles->contains('name', 'admin') )
-                    <!-- Regular undo button -->
-                    <button class="btn btn-danger btn-sm undo-order" data-order-id="{{ $order->id }}" data-sold-item="{{ $order->sold_item }}">
-                        Undo
-                    </button>
-                    @endif
-                    <!-- Button to open report modal for sales -->
-                    <button class="btn btn-warning btn-sm report-order" data-order-id="{{ $order->id }}" data-toggle="modal" data-target="#reportOrderModal">
-                        Actions
-                    </button>
+                @can('undo-orders')
+                <button class="btn btn-danger btn-sm undo-order" data-order-id="{{ $order->id }}" data-sold-item="{{ $order->sold_item }}">
+                    Undo
+                </button>
+                @endcan
+                @if(Auth::user()->roles->contains('name', 'admin') || Auth::user()->roles->contains('name', 'sales'))
+                <button class="btn btn-warning btn-sm report-order" data-order-id="{{ $order->id }}" data-toggle="modal" data-target="#reportOrderModal">
+                    Actions
+                </button>
                 @endif
             @endif
         </td>

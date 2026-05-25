@@ -25,6 +25,7 @@ class RolePermissionsTest extends TestCase
         $this->assertTrue(Gate::forUser($user)->allows('manage-accounts'));
         $this->assertTrue(Gate::forUser($user)->allows('view-reports'));
         $this->assertTrue(Gate::forUser($user)->allows('manage-sell-log'));
+        $this->assertTrue(Gate::forUser($user)->allows('undo-orders'));
     }
 
     public function test_account_manager_can_access_accounts_export_route(): void

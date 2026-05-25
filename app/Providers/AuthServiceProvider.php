@@ -78,6 +78,16 @@ class AuthServiceProvider extends ServiceProvider
             return $user->hasRole($allowedRoles);
         });
 
+        Gate::define('undo-orders', function ($user) {
+            $user->loadMissing('roles');
+            $allowedRoleNames = ['admin', 'account manager'];
+            $allowedRoles = array_filter($allowedRoleNames, function ($roleName) {
+                return Role::roleExists($roleName);
+            });
+
+            return $user->hasRole($allowedRoles);
+        });
+
         Gate::define('manage-options', function ($user) {
             $user->loadMissing('roles');
             if (!Role::roleExists('admin')) {

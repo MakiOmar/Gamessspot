@@ -651,8 +651,7 @@ Route::prefix('manager')->group(function () {
             Route::get('/buyer-name', [UserController::class, 'searchUserHelper'])->name('manager.buyer.name');
         });
 
-        // Admin-only order routes
-        Route::middleware(['checkRole:admin', 'can:manage-options'])->group(function () {
+        Route::middleware('can:undo-orders')->group(function () {
             Route::post('/orders/undo', [OrderController::class, 'undo'])->name('manager.orders.undo');
         });
         Route::post('/reports/store', [ReportsController::class, 'store'])
