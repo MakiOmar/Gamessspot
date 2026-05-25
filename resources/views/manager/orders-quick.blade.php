@@ -2,6 +2,39 @@
 
 @section('title', 'Manager - Orders')
 
+@push('css')
+<style>
+    @media screen and (min-width: 1200px) {
+        .orders-quick-table-wrap .orders-responsive-table {
+            min-width: 1200px;
+        }
+    }
+    @media screen and (max-width: 768px) {
+        .orders-quick-table-wrap {
+            overflow-x: visible;
+            white-space: normal;
+        }
+        .orders-quick-table-wrap .orders-responsive-table {
+            min-width: 0 !important;
+        }
+        .orders-quick-table-wrap .toggle-details-btn {
+            min-width: 44px;
+            min-height: 44px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .orders-quick-table-wrap .mobile-detail-row td > div {
+            padding: 6px 0;
+            border-bottom: 1px solid #eee;
+        }
+        .orders-quick-table-wrap .mobile-detail-row td > div:last-child {
+            border-bottom: none;
+        }
+    }
+</style>
+@endpush
+
 @section('content')
     <div class="container mt-5">
         <h1 class="text-center mb-4">Search Management</h1>
@@ -18,8 +51,8 @@
                     </div>
                     <div class="card-body">
                         <!--begin: Datatable-->
-                        <div style="overflow-x:auto; max-width: 100%; white-space: nowrap;">
-                            <table class="table table-striped table-bordered" style="min-width: 1200px;">
+                        <div class="orders-quick-table-wrap" style="max-width: 100%;">
+                            <table class="table table-striped table-bordered orders-responsive-table">
                                 <thead>
                                     <tr role="row">
                                         <th>Buyer Phone</th>
@@ -54,8 +87,8 @@
                 <div class="card-body">
                     <!--begin: Datatable-->
                     <!-- Scrollable table container -->
-                    <div style="overflow-x:auto; max-width: 100%; white-space: nowrap;">
-                        <table class="table table-striped table-bordered" style="min-width: 1200px;">
+                    <div class="orders-quick-table-wrap" style="max-width: 100%;">
+                        <table class="table table-striped table-bordered orders-responsive-table">
                             <thead>
                                 <tr role="row">
                                     <th>ID</th>
@@ -245,6 +278,29 @@
     @push('js')
         <script>
             jQuery(document).ready(function($) {
+                function refreshQuickSearchMobileTables() {
+                    $('.orders-responsive-table').each(function() {
+                        const $table = $(this);
+                        $table.find('.mobile-detail-row').remove();
+                        $table.find('.toggle-details-btn').remove();
+                        $table.find('thead th, tbody td').removeClass('mobile-hidden');
+                        $table.removeClass('mobile-responsive-table');
+                    });
+                    $('.orders-responsive-table').mobileTableToggle({
+                        maxVisibleCols: 3,
+                        maxVisibleColsDesktop: 5,
+                        enableOnDesktop: true
+                    });
+                }
+
+                refreshQuickSearchMobileTables();
+
+                let resizeTimer;
+                $(window).on('resize', function() {
+                    clearTimeout(resizeTimer);
+                    resizeTimer = setTimeout(refreshQuickSearchMobileTables, 250);
+                });
+
                 // Initialize Flatpickr for startDate and endDate inputs
                 flatpickr("#startDate", {
                     altInput: true,

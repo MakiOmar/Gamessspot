@@ -162,7 +162,7 @@
                         });
 
                         const $toggleBtn = $(`
-                            <button class="toggle-details-btn">
+                            <button type="button" class="toggle-details-btn" title="Show more details" aria-label="Show more details">
                                 <span class="chevron chevron-down"></span>
                             </button>
                         `);
@@ -171,8 +171,12 @@
                         $toggleBtn.on('click', function (e) {
                             e.preventDefault();
                             const $detailRow = $(this).closest('tr').next('.mobile-detail-row');
+                            const isExpanded = $detailRow.is(':visible');
                             $detailRow.toggle();
                             $(this).find('.chevron').toggleClass('chevron-down chevron-up');
+                            $(this).attr('aria-expanded', !isExpanded);
+                            $(this).attr('title', isExpanded ? 'Show more details' : 'Hide details');
+                            $(this).attr('aria-label', isExpanded ? 'Show more details' : 'Hide details');
                         });
 
                         // داخل each row loop:
