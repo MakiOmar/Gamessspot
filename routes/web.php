@@ -17,6 +17,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DeviceRepairController;
 use App\Http\Controllers\PublicDeviceController;
 use App\Http\Controllers\SettingsController;
+use App\Http\Controllers\RolePermissionController;
 
 Route::get('/', function () {
     return view('welcome');
@@ -748,6 +749,16 @@ Route::prefix('manager')->group(function () {
             
             // System Health Check Route (Admin only)
             Route::get('/health-check', [ManagerController::class, 'healthCheck'])->name('manager.health-check');
+
+            // Roles & Permissions management (Admin only)
+            Route::prefix('roles-permissions')->group(function () {
+                Route::get('/', [RolePermissionController::class, 'index'])->name('manager.roles-permissions.index');
+                Route::get('/data', [RolePermissionController::class, 'data'])->name('manager.roles-permissions.data');
+                Route::post('/', [RolePermissionController::class, 'store'])->name('manager.roles-permissions.store');
+                Route::get('/{role}', [RolePermissionController::class, 'show'])->name('manager.roles-permissions.show');
+                Route::put('/{role}', [RolePermissionController::class, 'update'])->name('manager.roles-permissions.update');
+                Route::delete('/{role}', [RolePermissionController::class, 'destroy'])->name('manager.roles-permissions.destroy');
+            });
         });
     });
 });

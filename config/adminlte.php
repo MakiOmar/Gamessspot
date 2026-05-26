@@ -514,6 +514,14 @@ return [
             ],
         ],
 
+        // Roles & Permissions
+        [
+            'text' => 'Roles & Permissions',
+            'route' => 'manager.roles-permissions.index',
+            'icon' => 'bi bi-shield-lock',
+            'can' => 'manage-options',
+        ],
+
         // Settings
         [
             'text' => 'Settings',

@@ -4,18 +4,39 @@ namespace Tests\Feature;
 
 use App\Models\Role;
 use App\Models\User;
+use App\Services\RolePermissionService;
 use Illuminate\Support\Facades\Gate;
 use Tests\TestCase;
 
 class RolePermissionsTest extends TestCase
 {
+    protected RolePermissionService $rolePermissionService;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->rolePermissionService = app(RolePermissionService::class);
+    }
+
     protected function createUserWithRole(string $roleName): User
     {
-        $role = Role::firstOrCreate(['name' => $roleName]);
+        $role = Role::firstOrCreate(array('name' => $roleName));
+        $this->applyDefaultCapabilities($role);
+
         $user = User::factory()->create();
-        $user->roles()->sync([$role->id]);
+        $user->roles()->sync(array($role->id));
 
         return $user->fresh()->load('roles');
+    }
+
+    protected function applyDefaultCapabilities(Role $role): void
+    {
+        $matrix = $this->rolePermissionService->defaultMatrix();
+
+        if (isset($matrix[$role->name])) {
+            $role->capabilities = $matrix[$role->name];
+            $role->save();
+        }
     }
 
     public function test_account_manager_can_manage_accounts_and_view_reports(): void
@@ -32,7 +53,7 @@ class RolePermissionsTest extends TestCase
     {
         $user = $this->createUserWithRole('account manager');
 
-        $response = $this->actingAs($user, 'admin')->get('/manager/accounts/export');
+        $response = $this->actingAs($user, 'admin')->get(route('manager.accounts.export'));
 
         $response->assertStatus(200);
     }
@@ -42,7 +63,7 @@ class RolePermissionsTest extends TestCase
         $user = $this->createUserWithRole('account manager');
 
         $this->actingAs($user, 'admin')
-            ->get('/manager/orders/has-problem')
+            ->get(route('manager.orders.has_problem'))
             ->assertStatus(200);
     }
 
@@ -61,7 +82,7 @@ class RolePermissionsTest extends TestCase
         $user = $this->createUserWithRole('call center');
 
         $this->actingAs($user, 'admin')
-            ->get('/manager/orders')
+            ->get(route('manager.orders'))
             ->assertStatus(200);
     }
 
@@ -70,7 +91,7 @@ class RolePermissionsTest extends TestCase
         $user = $this->createUserWithRole('call center');
 
         $this->actingAs($user, 'admin')
-            ->get('/manager/orders/export')
+            ->get(route('manager.orders.export'))
             ->assertStatus(403);
     }
 
@@ -79,7 +100,7 @@ class RolePermissionsTest extends TestCase
         $user = $this->createUserWithRole('call center');
 
         $this->actingAs($user, 'admin')
-            ->get('/manager/accounts')
+            ->get(route('manager.accounts'))
             ->assertStatus(403);
     }
 
@@ -88,7 +109,123 @@ class RolePermissionsTest extends TestCase
         $user = $this->createUserWithRole('call center');
 
         $this->actingAs($user, 'admin')
-            ->get('/manager/orders/has-problem')
+            ->get(route('manager.orders.has_problem'))
             ->assertStatus(403);
+    }
+
+    public function test_admin_can_access_roles_permissions_page(): void
+    {
+        $user = $this->createUserWithRole('admin');
+
+        $this->actingAs($user, 'admin')
+            ->get(route('manager.roles-permissions.index'))
+            ->assertStatus(200)
+            ->assertSee('Roles &amp; Permissions', false);
+    }
+
+    public function test_sales_cannot_access_roles_permissions_page(): void
+    {
+        $user = $this->createUserWithRole('sales');
+
+        $this->actingAs($user, 'admin')
+            ->get(route('manager.roles-permissions.index'))
+            ->assertStatus(403);
+    }
+
+    public function test_show_returns_sales_permissions_checked_correctly(): void
+    {
+        $admin = $this->createUserWithRole('admin');
+        $sales = Role::where('name', 'sales')->first();
+        $this->assertNotNull($sales);
+
+        $response = $this->actingAs($admin, 'admin')
+            ->getJson(route('manager.roles-permissions.show', $sales));
+
+        $response->assertStatus(200);
+        $permissions = collect($response->json('permissions'));
+
+        $this->assertTrue(
+            $permissions->firstWhere('key', 'manage-games')['checked'] ?? false
+        );
+        $this->assertFalse(
+            $permissions->firstWhere('key', 'manage-options')['checked'] ?? true
+        );
+    }
+
+    public function test_update_capabilities_changes_gate_result(): void
+    {
+        $admin = $this->createUserWithRole('admin');
+        $salesRole = Role::where('name', 'sales')->first();
+        $salesUser = $this->createUserWithRole('sales');
+
+        $this->assertTrue(Gate::forUser($salesUser)->allows('manage-games'));
+
+        $capabilities = $salesRole->capabilities;
+        $capabilities = array_values(array_diff($capabilities, array('manage-games')));
+
+        $this->actingAs($admin, 'admin')
+            ->putJson(route('manager.roles-permissions.update', $salesRole), array(
+                'permissions' => $capabilities,
+            ))
+            ->assertStatus(200);
+
+        $salesUser = $salesUser->fresh()->load('roles');
+
+        $this->assertFalse(Gate::forUser($salesUser)->allows('manage-games'));
+
+        $capabilities[] = 'manage-games';
+        $this->actingAs($admin, 'admin')
+            ->putJson(route('manager.roles-permissions.update', $salesRole), array(
+                'permissions' => $capabilities,
+            ))
+            ->assertStatus(200);
+    }
+
+    public function test_store_duplicate_role_copies_capabilities(): void
+    {
+        $admin = $this->createUserWithRole('admin');
+        $sales = Role::where('name', 'sales')->first();
+
+        $response = $this->actingAs($admin, 'admin')
+            ->postJson(route('manager.roles-permissions.store'), array(
+                'name' => 'sales copy test',
+                'duplicate_from_role_id' => $sales->id,
+            ));
+
+        $response->assertStatus(201);
+
+        $newRole = Role::where('name', 'sales copy test')->first();
+        $this->assertNotNull($newRole);
+        $this->assertEquals($sales->capabilities, $newRole->capabilities);
+
+        $newRole->delete();
+    }
+
+    public function test_cannot_delete_admin_role(): void
+    {
+        $admin = $this->createUserWithRole('admin');
+        $adminRole = Role::where('name', 'admin')->first();
+
+        $this->actingAs($admin, 'admin')
+            ->deleteJson(route('manager.roles-permissions.destroy', $adminRole))
+            ->assertStatus(422);
+    }
+
+    public function test_cannot_delete_role_with_assigned_users(): void
+    {
+        $admin = $this->createUserWithRole('admin');
+        $salesRole = Role::where('name', 'sales')->first();
+        $this->createUserWithRole('sales');
+
+        $this->actingAs($admin, 'admin')
+            ->deleteJson(route('manager.roles-permissions.destroy', $salesRole))
+            ->assertStatus(422);
+    }
+
+    public function test_roles_permissions_routes_are_registered(): void
+    {
+        $this->assertTrue(\Illuminate\Support\Facades\Route::has('manager.roles-permissions.index'));
+        $this->assertTrue(\Illuminate\Support\Facades\Route::has('manager.roles-permissions.show'));
+        $this->assertTrue(\Illuminate\Support\Facades\Route::has('manager.roles-permissions.update'));
     }
 }
