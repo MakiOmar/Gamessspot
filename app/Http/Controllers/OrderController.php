@@ -652,6 +652,45 @@ class OrderController extends Controller
         $order->reports()->delete();
         $order->delete();
     }
+
+    /**
+     * Find an existing customer by phone or email, or create one for WooCommerce API orders.
+     */
+    private function resolveOrCreateApiCustomer(string $phone, string $email, string $name): User
+    {
+        $user = User::where('phone', $phone)->first()
+            ?? User::where('email', $email)->first();
+
+        if ($user) {
+            if ($user->phone !== $phone) {
+                $phoneTakenByOther = User::where('phone', $phone)
+                    ->where('id', '!=', $user->id)
+                    ->exists();
+
+                if (!$phoneTakenByOther) {
+                    $user->phone = $phone;
+                    $user->save();
+                }
+            }
+
+            return $user;
+        }
+
+        $user = User::create([
+            'name'     => $name,
+            'email'    => $email,
+            'phone'    => $phone,
+            'password' => bcrypt(Str::random(12)),
+        ]);
+
+        $defaultRole = Role::where('name', 'customer')->first();
+        if ($defaultRole) {
+            $user->roles()->attach($defaultRole->id);
+        }
+
+        return $user;
+    }
+
     public function storeApi(Request $request)
     {
         if ($request->has('card_category_id')) {
@@ -671,23 +710,11 @@ class OrderController extends Controller
             'wc_order_id'      => 'required|numeric',
         ]);
 
-        // Check if the user already exists by phone number
-        $user = User::where('phone', $validatedData['buyer_phone'])->first();
-
-        // If the user does not exist, create a new one
-        if (!$user) {
-            $user = User::create([
-                'name'     => $validatedData['buyer_name'],
-                'email'    => $validatedData['buyer_email'] ?? (Str::random(10) . '@' . Str::random(4) . '.com'),
-                'phone'    => $validatedData['buyer_phone'],
-                'password' => bcrypt(Str::random(12)),
-            ]);
-
-            $defaultRole = Role::where('name', 'customer')->first();
-            if ($defaultRole) {
-                $user->roles()->attach($defaultRole->id);
-            }
-        }
+        $user = $this->resolveOrCreateApiCustomer(
+            $validatedData['buyer_phone'],
+            $validatedData['buyer_email'],
+            $validatedData['buyer_name']
+        );
 
         // Update buyer name to match user record
         $validatedData['buyer_name'] = $user->name;
