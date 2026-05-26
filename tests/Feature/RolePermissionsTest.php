@@ -91,4 +91,16 @@ class RolePermissionsTest extends TestCase
             ->get('/manager/orders/has-problem')
             ->assertStatus(403);
     }
+
+    public function test_sales_user_can_access_sell_log(): void
+    {
+        $user = $this->createUserWithRole('sales');
+
+        $this->assertTrue(Gate::forUser($user)->allows('view-sell-log'));
+        $this->assertTrue(Gate::forUser($user)->allows('manage-sell-log'));
+
+        $this->actingAs($user, 'admin')
+            ->get('/manager/orders')
+            ->assertStatus(200);
+    }
 }
