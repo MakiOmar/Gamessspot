@@ -210,17 +210,6 @@ class OrderController extends Controller
     }
 
     /**
-     * Whether sell-log search may return orders from any seller (not only the current user).
-     */
-    protected function canSearchAllSellLogOrders($user): bool
-    {
-        return $user->roles->contains('name', 'admin')
-            || $user->hasRole('accountant')
-            || $user->hasRole('call center')
-            || $user->hasRole('sales');
-    }
-
-    /**
      * Render order table rows with column layout matching the current user's role.
      */
     protected function renderOrderRows($orders, string $status = 'all'): string
@@ -264,9 +253,11 @@ class OrderController extends Controller
 
         // Build the query to filter orders
         $orders = Order::with(array( 'seller', 'account.game' ));
+        $isAdmin = $user->roles->contains('name', 'admin');
+        $isAccountant = $user->roles->contains('name', 'accountant');
 
-        // Restrict to own sales unless role can search all sell-log orders
-        if (!$this->canSearchAllSellLogOrders($user)) {
+        // Restrict to own sales unless admin, accountant, or call center (lookup by phone/account)
+        if (!$isAdmin && !$isAccountant && !$isCallCenter) {
             $orders->where('seller_id', $user->id);
         }
 
@@ -405,8 +396,12 @@ class OrderController extends Controller
         // Build the query to filter orders
         $orders = Order::with(['seller', 'account.game']);
 
-        // Admin, call center, accountant, and sales can search all orders; others see their own sales only
-        if (!$this->canSearchAllSellLogOrders($user)) {
+        $isAdmin = $user->roles->contains('name', 'admin');
+        $isCallCenter = $user->hasRole('call center');
+        $isSales = $user->hasRole('sales');
+
+        // Navbar quick search: admin, call center, and sales can search all customer orders
+        if (!$isAdmin && !$isCallCenter && !$isSales) {
             $orders->where('seller_id', $user->id);
         }
         $buyer   = false;
