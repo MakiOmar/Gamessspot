@@ -46,6 +46,10 @@ return array(
             'label' => 'Create Order Reports',
             'group' => 'Orders / Sell Log',
         ),
+        'search-customer-orders' => array(
+            'label' => 'Search Customer Orders',
+            'group' => 'Orders / Sell Log',
+        ),
         'manage-accounts' => array(
             'label' => 'Manage Accounts',
             'group' => 'Accounts & Stores',

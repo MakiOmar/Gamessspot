@@ -307,7 +307,8 @@ return [
             'method' => 'get',          // 'get' or 'post' ('get' by default).
             'input_name' => 'search', // Name for the underlying input ('adminlteSearch' by default).
             'id' => 'search-query',       // ID attribute for the underlying input (optional).
-            'placeholder' => 'Enter email, phone, or name'       // ID attribute for the underlying input (optional).
+            'placeholder' => 'Enter email, phone, or name',       // ID attribute for the underlying input (optional).
+            'can' => 'search-customer-orders',
         ],
         [
             'type' => 'fullscreen-widget',

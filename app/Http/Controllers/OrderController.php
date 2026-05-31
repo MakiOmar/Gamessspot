@@ -253,11 +253,8 @@ class OrderController extends Controller
 
         // Build the query to filter orders
         $orders = Order::with(array( 'seller', 'account.game' ));
-        $isAdmin = $user->roles->contains('name', 'admin');
-        $isAccountant = $user->roles->contains('name', 'accountant');
-
-        // Restrict to own sales unless admin, accountant, or call center (lookup by phone/account)
-        if (!$isAdmin && !$isAccountant && !$isCallCenter) {
+        // Restrict to own sales unless the user can search all customer orders
+        if (! $user->can('search-customer-orders')) {
             $orders->where('seller_id', $user->id);
         }
 
@@ -396,12 +393,8 @@ class OrderController extends Controller
         // Build the query to filter orders
         $orders = Order::with(['seller', 'account.game']);
 
-        $isAdmin = $user->roles->contains('name', 'admin');
-        $isCallCenter = $user->hasRole('call center');
-        $isSales = $user->hasRole('sales');
-
-        // Navbar quick search: admin, call center, and sales can search all customer orders
-        if (!$isAdmin && !$isCallCenter && !$isSales) {
+        // Navbar quick search: users with search-customer-orders can search all customer orders
+        if (! $user->can('search-customer-orders')) {
             $orders->where('seller_id', $user->id);
         }
         $buyer   = false;

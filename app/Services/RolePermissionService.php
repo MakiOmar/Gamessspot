@@ -29,6 +29,7 @@ class RolePermissionService
                 'manage-options',
                 'view-reports',
                 'create-order-reports',
+                'search-customer-orders',
                 'manage-users',
                 'manage-store-profiles',
                 'manage-device-repairs',
@@ -43,6 +44,7 @@ class RolePermissionService
                 'view-sell-log',
                 'manage-sell-log',
                 'create-order-reports',
+                'search-customer-orders',
                 'manage-device-repairs',
                 'submit-device-request',
                 'track-device-status',
@@ -64,12 +66,14 @@ class RolePermissionService
                 'manage-sell-log',
                 'view-reports',
                 'create-order-reports',
+                'search-customer-orders',
                 'manage-store-profiles',
                 'manage-device-repairs',
             ),
             'call center' => array(
                 'access-dashboard',
                 'view-sell-log',
+                'search-customer-orders',
             ),
         );
     }

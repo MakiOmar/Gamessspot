@@ -228,4 +228,25 @@ class RolePermissionsTest extends TestCase
         $this->assertTrue(\Illuminate\Support\Facades\Route::has('manager.roles-permissions.show'));
         $this->assertTrue(\Illuminate\Support\Facades\Route::has('manager.roles-permissions.update'));
     }
+
+    public function test_sales_can_search_customer_orders_permission(): void
+    {
+        $user = $this->createUserWithRole('sales');
+
+        $this->assertTrue(Gate::forUser($user)->allows('search-customer-orders'));
+    }
+
+    public function test_account_manager_cannot_search_customer_orders_by_default(): void
+    {
+        $user = $this->createUserWithRole('account manager');
+
+        $this->assertFalse(Gate::forUser($user)->allows('search-customer-orders'));
+    }
+
+    public function test_accountant_can_search_customer_orders_permission(): void
+    {
+        $user = $this->createUserWithRole('accountant');
+
+        $this->assertTrue(Gate::forUser($user)->allows('search-customer-orders'));
+    }
 }
