@@ -301,13 +301,12 @@ return [
     'menu' => [
         [
             'type' => 'navbar-search',
-            'text' => 'search',          // Placeholder for the underlying input.
-            'topnav_right' => true,      // Or "topnav => true" to place on the left.
-            'url' => 'manager/orders/quick-search',    // The url used to submit the data ('#' by default).
-            'method' => 'get',          // 'get' or 'post' ('get' by default).
-            'input_name' => 'search', // Name for the underlying input ('adminlteSearch' by default).
-            'id' => 'search-query',       // ID attribute for the underlying input (optional).
-            'placeholder' => 'Enter email, phone, or name',       // ID attribute for the underlying input (optional).
+            'text' => 'Enter email, phone, or name',
+            'topnav_right' => true,
+            'route' => 'manager.orders.qsearch',
+            'method' => 'get',
+            'input_name' => 'search',
+            'id' => 'search-query',
             'can' => 'search-customer-orders',
         ],
         [

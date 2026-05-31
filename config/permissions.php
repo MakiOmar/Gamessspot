@@ -47,7 +47,7 @@ return array(
             'group' => 'Orders / Sell Log',
         ),
         'search-customer-orders' => array(
-            'label' => 'Search Customer Orders',
+            'label' => 'Search Customer Orders (Navbar & Sell Log)',
             'group' => 'Orders / Sell Log',
         ),
         'manage-accounts' => array(

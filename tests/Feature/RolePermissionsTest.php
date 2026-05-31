@@ -249,4 +249,22 @@ class RolePermissionsTest extends TestCase
 
         $this->assertTrue(Gate::forUser($user)->allows('search-customer-orders'));
     }
+
+    public function test_account_manager_cannot_access_navbar_quick_search(): void
+    {
+        $user = $this->createUserWithRole('account manager');
+
+        $this->actingAs($user, 'admin')
+            ->get(route('manager.orders.qsearch', array('search' => '+201234567890')))
+            ->assertStatus(403);
+    }
+
+    public function test_sales_can_access_navbar_quick_search(): void
+    {
+        $user = $this->createUserWithRole('sales');
+
+        $this->actingAs($user, 'admin')
+            ->get(route('manager.orders.qsearch', array('search' => '+201234567890')))
+            ->assertStatus(200);
+    }
 }

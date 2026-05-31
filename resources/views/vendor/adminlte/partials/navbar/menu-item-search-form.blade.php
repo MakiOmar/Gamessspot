@@ -1,6 +1,7 @@
+@can('search-customer-orders')
 <li class="nav-item">
 
-    {{-- Search toggle button --}}
+    {{-- Navbar customer order search (requires search-customer-orders permission) --}}
     <a class="nav-link" data-widget="navbar-search" href="#" role="button">
         <i class="fas fa-search"></i>
     </a>
@@ -34,3 +35,4 @@
     </div>
 
 </li>
+@endcan

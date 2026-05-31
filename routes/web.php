@@ -623,7 +623,9 @@ Route::prefix('manager')->group(function () {
             Route::prefix('orders')->group(function () {
                 Route::get('/', [OrderController::class, 'index'])->name('manager.orders');
                 Route::get('/search', [OrderController::class, 'search'])->name('manager.orders.search');
-                Route::get('/quick-search', [OrderController::class, 'quickSearch'])->name('manager.orders.qsearch');
+                Route::get('/quick-search', [OrderController::class, 'quickSearch'])
+                    ->middleware('can:search-customer-orders')
+                    ->name('manager.orders.qsearch');
 
                 Route::middleware('can:manage-sell-log')->group(function () {
                     Route::get('/export', [OrderController::class, 'export'])->name('manager.orders.export');
