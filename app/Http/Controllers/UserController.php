@@ -66,7 +66,9 @@ class UserController extends Controller
         $cacheMetadata = CacheManager::getCacheMetadata($cacheKey);
         $fromCache = CacheManager::wasCacheHit($cacheKey);
 
-        return view('manager.users', compact('users', 'storeProfiles', 'roles', 'cacheKey', 'cacheMetadata', 'fromCache'));
+        $currentRole = 'any' === $role ? null : intval($role);
+
+        return view('manager.users', compact('users', 'storeProfiles', 'roles', 'cacheKey', 'cacheMetadata', 'fromCache', 'currentRole'));
     }
     // Method to list users with role 1 or 2
     public function index()

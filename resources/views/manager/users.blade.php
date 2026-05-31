@@ -212,18 +212,11 @@
             });
         }
         let currentSearch = '';
-        let currentRole = null;
+        const currentRole = @json($currentRole);
 
         $('#searchUser').on('input', function () {
             const query = $(this).val();
             currentSearch = query;
-
-            const url = window.location.href;
-            if (url.includes('/users/sales')) currentRole = 2;
-            else if (url.includes('/users/accountants')) currentRole = 3;
-            else if (url.includes('/users/admins')) currentRole = 1;
-            else if (url.includes('/users/account-managers')) currentRole = 4;
-            else if (url.includes('/users/customers')) currentRole = 5;
 
             if (query.length >= 3) {
                 loadUsers(query, currentRole);
@@ -232,10 +225,15 @@
             }
         });
 
-        // Handle pagination links click
+        // Only intercept pagination during active search; otherwise follow the role-filtered page link
         $(document).on('click', '#search-pagination .pagination a', function (e) {
+            if (currentSearch.length < 3) {
+                return;
+            }
+
             e.preventDefault();
-            const page = $(this).attr('href').split('page=')[1];
+            const pageUrl = new URL($(this).attr('href'), window.location.origin);
+            const page = pageUrl.searchParams.get('page') || 1;
             loadUsers(currentSearch, currentRole, page);
         });
 
