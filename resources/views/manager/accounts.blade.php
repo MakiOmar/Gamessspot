@@ -21,7 +21,13 @@
     {{-- Cache Indicator --}}
     @include('components.cache-indicator')
     
-    @can('manage-accounts')
+    @can('view-game-accounts')
+        @cannot('manage-accounts')
+        <div class="alert alert-info text-center">
+            You have read-only access to game accounts.
+        </div>
+        @endcannot
+
         <!-- Search and Action Buttons -->
         <div class="mb-4">
             <!-- Search Row -->
@@ -40,6 +46,7 @@
                 </div>
             </div>
             
+            @can('manage-accounts')
             <!-- Action Buttons Row -->
             <div class="row">
                 <div class="col-12">
@@ -51,7 +58,6 @@
                             </svg>
                             Add Account
                         </a>
-                        @can('manage-accounts')
                             <!-- Import Button -->
                             <button type="button" class="btn btn-info" data-bs-toggle="modal" data-bs-target="#importModal" title="Import Accounts">
                                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20px" height="20px" fill="white" class="me-1">
@@ -73,10 +79,10 @@
                                 </svg>
                                 Template
                             </a>
-                        @endcan
                     </div>
                 </div>
             </div>
+            @endcan
         </div>
 
         <!-- Scrollable table container -->
@@ -96,7 +102,9 @@
                         <th>Secondary (PS5)</th>
                         <th>Cost</th>
                         <th>Password</th>
+                        @can('manage-accounts')
                         <th>Actions</th>
+                        @endcan
                     </tr>
                 </thead>
                 <tbody id="accountTableBody">

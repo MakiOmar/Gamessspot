@@ -602,12 +602,15 @@ Route::prefix('manager')->group(function () {
             });
         });
 
-        // Routes with 'can:manage-accounts' middleware for admin and account manager
-        Route::middleware(['checkRole:admin,account manager', 'can:manage-accounts'])->group(function () {
-            Route::prefix('accounts')->group(function () {
+        // Game accounts: view (read-only) vs full manage
+        Route::prefix('accounts')->group(function () {
+            Route::middleware('can:view-game-accounts')->group(function () {
                 Route::get('/', [AccountController::class, 'index'])->name('manager.accounts');
-                Route::post('/store', [AccountController::class, 'store'])->name('manager.accounts.store');
                 Route::get('/search', [AccountController::class, 'search'])->name('manager.accounts.search');
+            });
+
+            Route::middleware('can:manage-accounts')->group(function () {
+                Route::post('/store', [AccountController::class, 'store'])->name('manager.accounts.store');
                 Route::get('/export', [AccountController::class, 'export'])->name('manager.accounts.export');
                 Route::post('/import', [AccountController::class, 'import'])->name('manager.accounts.import');
                 Route::get('/template', [AccountController::class, 'template'])->name('manager.accounts.template');

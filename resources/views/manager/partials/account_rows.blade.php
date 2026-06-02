@@ -15,6 +15,7 @@
     <td>{{ $account->ps5_secondary_stock }}</td>
     <td>{{ $account->cost }}</td>
     <td>{{ $account->password }}</td>
+    @can('manage-accounts')
     <td>
         <div class="d-flex flex-wrap gap-2">
             <!-- Edit Button -->
@@ -61,5 +62,6 @@
             </button>
         </div>
     </td>
+    @endcan
 </tr>
 @endforeach

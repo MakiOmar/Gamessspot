@@ -391,7 +391,7 @@ return [
             'text' => 'Accounts',
             'route' => 'manager.accounts',
             'icon' => 'bi bi-ui-checks-grid',
-            'can' => 'manage-accounts',
+            'can' => ['view-game-accounts', 'manage-accounts'],
         ],
 
         // Reports

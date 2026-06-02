@@ -50,8 +50,12 @@ return array(
             'label' => 'Search Customer Orders (Navbar & Sell Log)',
             'group' => 'Orders / Sell Log',
         ),
+        'view-game-accounts' => array(
+            'label' => 'View Game Accounts',
+            'group' => 'Accounts & Stores',
+        ),
         'manage-accounts' => array(
-            'label' => 'Manage Accounts',
+            'label' => 'Manage Game Accounts',
             'group' => 'Accounts & Stores',
         ),
         'manage-store-profiles' => array(

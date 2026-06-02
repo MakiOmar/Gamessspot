@@ -20,6 +20,10 @@ class AuthServiceProvider extends ServiceProvider
     public function boot(): void
     {
         foreach (array_keys(config('permissions.abilities', array())) as $ability) {
+            if ($ability === 'view-game-accounts') {
+                continue;
+            }
+
             Gate::define($ability, function ($user) use ($ability) {
                 $user->loadMissing('roles');
 
@@ -28,5 +32,14 @@ class AuthServiceProvider extends ServiceProvider
                 );
             });
         }
+
+        Gate::define('view-game-accounts', function ($user) {
+            $user->loadMissing('roles');
+
+            return $user->roles->contains(
+                fn ($role) => $role->hasCapability('view-game-accounts')
+                    || $role->hasCapability('manage-accounts')
+            );
+        });
     }
 }

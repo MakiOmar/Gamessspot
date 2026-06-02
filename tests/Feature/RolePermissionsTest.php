@@ -267,4 +267,50 @@ class RolePermissionsTest extends TestCase
             ->get(route('manager.orders.qsearch', array('search' => '+201234567890')))
             ->assertStatus(200);
     }
+
+    public function test_account_manager_can_view_game_accounts(): void
+    {
+        $user = $this->createUserWithRole('account manager');
+
+        $this->assertTrue(Gate::forUser($user)->allows('view-game-accounts'));
+        $this->assertTrue(Gate::forUser($user)->allows('manage-accounts'));
+
+        $this->actingAs($user, 'admin')
+            ->get(route('manager.accounts'))
+            ->assertStatus(200);
+    }
+
+    public function test_sales_cannot_view_game_accounts_by_default(): void
+    {
+        $user = $this->createUserWithRole('sales');
+
+        $this->assertFalse(Gate::forUser($user)->allows('view-game-accounts'));
+
+        $this->actingAs($user, 'admin')
+            ->get(route('manager.accounts'))
+            ->assertStatus(403);
+    }
+
+    public function test_view_only_game_accounts_role_can_list_but_not_store(): void
+    {
+        $role = Role::firstOrCreate(array('name' => 'accounts viewer test'));
+        $role->capabilities = array('access-dashboard', 'view-game-accounts');
+        $role->save();
+
+        $user = User::factory()->create();
+        $user->roles()->sync(array($role->id));
+
+        $this->assertTrue(Gate::forUser($user)->allows('view-game-accounts'));
+        $this->assertFalse(Gate::forUser($user)->allows('manage-accounts'));
+
+        $this->actingAs($user, 'admin')
+            ->get(route('manager.accounts'))
+            ->assertStatus(200);
+
+        $this->actingAs($user, 'admin')
+            ->post(route('manager.accounts.store'), array())
+            ->assertStatus(403);
+
+        $role->delete();
+    }
 }
