@@ -46,6 +46,7 @@ class RolePermissionsTest extends TestCase
         $this->assertTrue(Gate::forUser($user)->allows('manage-accounts'));
         $this->assertTrue(Gate::forUser($user)->allows('view-reports'));
         $this->assertTrue(Gate::forUser($user)->allows('manage-sell-log'));
+        $this->assertTrue(Gate::forUser($user)->allows('create-order-reports'));
         $this->assertTrue(Gate::forUser($user)->allows('undo-orders'));
     }
 

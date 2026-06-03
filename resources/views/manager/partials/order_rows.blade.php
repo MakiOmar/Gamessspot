@@ -96,11 +96,11 @@
                     Undo
                 </button>
                 @endcan
-                @if(Auth::user()->roles->contains('name', 'admin') || Auth::user()->roles->contains('name', 'sales'))
+                @can('create-order-reports')
                 <button class="btn btn-warning btn-sm report-order" data-order-id="{{ $order->id }}" data-toggle="modal" data-target="#reportOrderModal">
                     Actions
                 </button>
-                @endif
+                @endcan
             @endif
         </td>
         @endunless

@@ -202,13 +202,13 @@
                                                         Undo
                                                     </button>
                                                     @endcan
-                                                    @if(Auth::user()->roles->contains('name', 'admin') || Auth::user()->roles->contains('name', 'sales'))
+                                                    @can('create-order-reports')
                                                     <button class="btn btn-warning btn-sm report-order"
                                                         data-order-id="{{ $order->id }}" data-toggle="modal"
                                                         data-target="#reportOrderModal">
                                                         Actions
                                                     </button>
-                                                    @endif
+                                                    @endcan
                                                 @endif
                                             @endif
                                         </td>
@@ -233,6 +233,7 @@
         @endif
     </div>
     @if ($orders && !empty($orders))
+        @can('create-order-reports')
         <!-- Report Order Modal -->
         <div class="modal fade" id="reportOrderModal" tabindex="-1" aria-labelledby="reportOrderModalLabel"
             aria-hidden="true">
@@ -270,6 +271,7 @@
                 </div>
             </div>
         </div>
+        @endcan
     @endif
 
 @endsection

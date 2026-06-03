@@ -17,6 +17,7 @@
 @php
     $isCallCenter = Auth::user()->hasRole('call center');
     $searchOnly = $searchOnly ?? false;
+    $canManageSellLog = Auth::user()->can('manage-sell-log');
 @endphp
 
 @section('content')
@@ -94,7 +95,7 @@
 
                 </div>
         
-                @if(!$isCallCenter && (Auth::user()->roles->contains('name', 'admin') || Auth::user()->roles->contains('name', 'accountant')))
+                @can('manage-sell-log')
                 <div class="row mt-3">
                     <div class="col-12 d-flex justify-content-end">
                         @if(!empty($_GET['id']))
@@ -112,7 +113,7 @@
                         </button>
                     </div>
                 </div>
-                @endif
+                @endcan
             </form>
         </div>
         
@@ -124,9 +125,9 @@
                 <table class="table table-striped table-bordered orders-responsive-table">
                     <thead>
                         <tr role="row">
-                            @unless($isCallCenter)
+                            @can('manage-sell-log')
                             <th><input type="checkbox" id="select_all" /></th>
-                            @endunless
+                            @endcan
                             <th>ID</th>
                             <th>Seller</th>
                             <th>Product</th>
@@ -140,9 +141,9 @@
                             <th>Sold Item</th>
                             <th>Notes</th>
                             <th>Date</th>
-                            @unless($isCallCenter)
+                            @can('manage-sell-log')
                             <th>Action</th>
-                            @endunless
+                            @endcan
                         </tr>
                     </thead>
                     <tbody id="orderTableBody">
@@ -153,7 +154,7 @@
                             </td>
                         </tr>
                         @else
-                        @include('manager.partials.order_rows', ['orders' => $orders, 'status' => $status, 'readOnly' => $isCallCenter])
+                        @include('manager.partials.order_rows', ['orders' => $orders, 'status' => $status, 'readOnly' => ! $canManageSellLog])
                         @endif
                     </tbody>
                     <tfoot>
@@ -170,15 +171,18 @@
                         </tr>
                     </tfoot>
                 </table>
-                @if(!$isCallCenter && !Auth::user()->hasRole('accountant'))
+                @can('manage-sell-log')
+                @unless(Auth::user()->hasRole('accountant'))
                     <p>
                         <input type="submit" name="bulk_send_odoo" class="btn btn-primary" value="{{ __('Send to POS') }}" id="sendToPosBtn" />
                     </p>
-                @endif
+                @endunless
+                @endcan
 
             </form>
             
-            @if(!$isCallCenter && !Auth::user()->hasRole('accountant'))
+            @can('manage-sell-log')
+            @unless(Auth::user()->hasRole('accountant'))
             <!-- Form for unsending orders from POS -->
             <form method="post" action="{{ route('manager.orders.unsendFromPos') }}" id="unsendPosForm" style="display: none;">
                 @csrf
@@ -187,7 +191,8 @@
                     <input type="submit" name="bulk_unsend_pos" class="btn btn-warning" value="{{ __('Unsend from POS') }}" />
                 </p>
             </form>
-            @endif
+            @endunless
+            @endcan
         </div>
         @if (isset($status))
         <input type="hidden" id="currentReportStatus" value="{{$status}}"/>

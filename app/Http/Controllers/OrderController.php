@@ -215,7 +215,7 @@ class OrderController extends Controller
     protected function renderOrderRows($orders, string $status = 'all'): string
     {
         $user = Auth::user();
-        $readOnly = $user && $user->hasRole('call center');
+        $readOnly = $user && ! $user->can('manage-sell-log');
 
         return view('manager.partials.order_rows', [
             'orders'   => $orders,
