@@ -166,7 +166,7 @@
                         </div>
                         
                         <div class="form-group">
-                            <button type="submit" class="btn btn-primary">
+                            <button type="submit" class="btn btn-primary" id="submit-device-repair">
                                 <i class="fas fa-save"></i>
                                 Create Device Repair
                             </button>
@@ -249,6 +249,17 @@ jQuery(document).ready(function($) {
         
         // Handle form submission
         $form.on('submit', function(e) {
+            const $submitButton = $('#submit-device-repair');
+
+            if ($submitButton.prop('disabled')) {
+                e.preventDefault();
+                return false;
+            }
+
+            $submitButton
+                .prop('disabled', true)
+                .html('<i class="fas fa-spinner fa-spin"></i> Creating...');
+
             let finalPhoneNumber = '';
             
             // Check if the phone number is valid

@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Models\Role;
 use App\Notifications\DeviceServiceNotification;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 
@@ -133,40 +134,33 @@ class DeviceRepairController extends Controller
         }
 
         $deviceRepair = null;
-        
+        $isDuplicateSubmission = false;
+        $normalizedSerial = DeviceRepair::normalizeSerial($validated['device_serial_number']);
+        $lockKey = 'device-repair:create:' . md5(implode('|', [
+            $validated['phone_number'],
+            $validated['device_model_id'],
+            $normalizedSerial,
+            $validated['store_profile_id'],
+        ]));
+
         try {
-            DB::transaction(function () use ($validated, &$deviceRepair) {
-            // Extract country code and phone number from the full international number
+            Cache::lock($lockKey, 10)->block(5, function () use ($validated, $normalizedSerial, &$deviceRepair, &$isDuplicateSubmission) {
+            DB::transaction(function () use ($validated, $normalizedSerial, &$deviceRepair, &$isDuplicateSubmission) {
             $phoneNumber = $validated['phone_number'];
-            $countryCode = '+20'; // Default to Egypt
-            $phoneNumberOnly = $phoneNumber;
-            
-            // Try to extract country code from phone number (intlTelInput format)
-            if (preg_match('/^\+(\d{1,4})/', $phoneNumber, $matches)) {
-                $countryCode = '+' . $matches[1];
-                $phoneNumberOnly = substr($phoneNumber, strlen($matches[0]));
-            }
-            
-            // Create or find user first
             $fullPhoneNumber = $phoneNumber;
-            
-            // Check if user exists by phone
+
             $existingUser = User::where('phone', $fullPhoneNumber)->first();
-            
+
             if ($existingUser) {
-                // User exists by phone
-                // Update email if it's null or empty, or if it matches the submitted email
                 if (empty($existingUser->email) || $existingUser->email === $validated['client_email']) {
                     $existingUser->email = $validated['client_email'];
-                    $existingUser->name = $validated['client_name']; // Update name as well
+                    $existingUser->name = $validated['client_name'];
                     $existingUser->save();
                 } elseif ($existingUser->email !== $validated['client_email']) {
-                    // Different email already exists for this phone
                     throw new \Exception('A user with this phone number already exists with a different email address.');
                 }
                 $user = $existingUser;
             } else {
-                // Create new user
                 $user = User::create([
                     'name' => $validated['client_name'],
                     'email' => $validated['client_email'],
@@ -175,7 +169,6 @@ class DeviceRepairController extends Controller
                 ]);
             }
 
-            // Assign customer role if user is newly created
             if ($user->wasRecentlyCreated && $user->roles()->count() === 0) {
                 $customerRole = Role::where('name', 'customer')->first();
                 if ($customerRole) {
@@ -183,10 +176,35 @@ class DeviceRepairController extends Controller
                 }
             }
 
-            // Create device repair and link to user
+            $recentDuplicate = DeviceRepair::findRecentDuplicate(
+                $user->id,
+                $validated['device_model_id'],
+                $normalizedSerial,
+                $validated['store_profile_id']
+            );
+
+            if ($recentDuplicate) {
+                $deviceRepair = $recentDuplicate;
+                $isDuplicateSubmission = true;
+                return;
+            }
+
+            $activeDuplicate = DeviceRepair::findActiveDuplicate(
+                $user->id,
+                $validated['device_model_id'],
+                $normalizedSerial,
+                $validated['store_profile_id']
+            );
+
+            if ($activeDuplicate) {
+                throw new \Exception(
+                    'An active repair already exists for this device (Tracking: ' . $activeDuplicate->tracking_code . ').'
+                );
+            }
+
             $deviceRepair = $user->deviceRepairs()->create([
                 'device_model_id' => $validated['device_model_id'],
-                'device_serial_number' => $validated['device_serial_number'],
+                'device_serial_number' => $normalizedSerial,
                 'notes' => $validated['notes'],
                 'status' => $validated['status'],
                 'tracking_code' => DeviceRepair::generateTrackingCode(),
@@ -196,20 +214,23 @@ class DeviceRepairController extends Controller
                 'status_updated_at' => now()
             ]);
             });
+            });
 
-            // Send email notification after transaction
-            if ($deviceRepair) {
+            if ($deviceRepair && !$isDuplicateSubmission) {
                 $deviceRepair->load(['user', 'deviceModel']);
                 try {
                     $deviceRepair->user->notify(new DeviceServiceNotification($deviceRepair, 'created'));
                 } catch (\Exception $e) {
-                    // Log email failure but don't fail the entire operation
                     \Log::warning('Failed to send device repair notification email: ' . $e->getMessage());
                 }
             }
 
+            $successMessage = $isDuplicateSubmission
+                ? 'Device repair record already exists (Tracking: ' . $deviceRepair->tracking_code . ').'
+                : 'Device repair record created successfully.';
+
             return redirect()->route('device-repairs.index')
-                ->with('success', 'Device repair record created successfully.');
+                ->with('success', $successMessage);
         } catch (\Exception $e) {
             return back()->withErrors(['client_email' => $e->getMessage()])->withInput();
         }

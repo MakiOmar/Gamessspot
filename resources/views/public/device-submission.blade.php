@@ -371,7 +371,7 @@
                 </div>
                 
                 <div class="text-center">
-                    <button type="submit" class="btn btn-primary me-3">
+                    <button type="submit" class="btn btn-primary me-3" id="submit-device">
                         <i class="fas fa-paper-plane"></i>
                         Submit Device
                     </button>
@@ -451,6 +451,21 @@
             // Convert to uppercase
             e.target.value = e.target.value.toUpperCase();
         });
+
+        const submissionForm = document.querySelector('form[action="{{ route('device.submit.store') }}"]');
+        const submitButton = document.getElementById('submit-device');
+
+        if (submissionForm && submitButton) {
+            submissionForm.addEventListener('submit', function(e) {
+                if (submitButton.disabled) {
+                    e.preventDefault();
+                    return;
+                }
+
+                submitButton.disabled = true;
+                submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Submitting...';
+            });
+        }
     </script>
 </body>
 </html>
