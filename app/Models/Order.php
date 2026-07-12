@@ -24,6 +24,8 @@ class Order extends Model
         'card_id',
         'pos_order_id',
         'woocommerce_order_id',
+        'storefront_order_id',
+        'storefront_line_key',
     );
 
     /**
