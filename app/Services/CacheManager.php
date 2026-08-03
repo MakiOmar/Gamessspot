@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Centralized Cache Manager
@@ -380,6 +381,91 @@ class CacheManager
             }
         );
     }
+
+    /**
+     * Top 5 games by order count (dashboard widget).
+     * Aggregates by game_id first to avoid scanning full game columns in GROUP BY.
+     *
+     * @return \Illuminate\Support\Collection
+     */
+    public static function getTopSellingGames()
+    {
+        return self::remember(
+            self::PREFIX_DASHBOARD . 'top_selling_games',
+            self::TTL_MEDIUM,
+            function () {
+                return collect(DB::select(
+                    'SELECT g.id, g.title, g.code, g.ps4_image_url, g.ps5_image_url, s.total_sales
+                     FROM (
+                         SELECT a.game_id, COUNT(*) AS total_sales
+                         FROM orders o
+                         INNER JOIN accounts a ON o.account_id = a.id
+                         WHERE o.account_id IS NOT NULL
+                         GROUP BY a.game_id
+                         ORDER BY total_sales DESC
+                         LIMIT 5
+                     ) s
+                     INNER JOIN games g ON g.id = s.game_id
+                     ORDER BY s.total_sales DESC'
+                ));
+            }
+        );
+    }
+
+    /**
+     * Top 5 buyers by order count (dashboard widget).
+     *
+     * @return \Illuminate\Support\Collection
+     */
+    public static function getTopBuyers()
+    {
+        return self::remember(
+            self::PREFIX_DASHBOARD . 'top_buyers',
+            self::TTL_MEDIUM,
+            function () {
+                return \App\Models\Order::query()
+                    ->select('buyer_phone', 'buyer_name', DB::raw('COUNT(*) as total_orders'))
+                    ->groupBy('buyer_phone', 'buyer_name')
+                    ->orderByDesc('total_orders')
+                    ->limit(5)
+                    ->get();
+            }
+        );
+    }
+
+    /**
+     * Top 3 stores by revenue (dashboard widget).
+     *
+     * @return \Illuminate\Support\Collection
+     */
+    public static function getTopSellingStores()
+    {
+        return self::remember(
+            self::PREFIX_DASHBOARD . 'top_selling_stores',
+            self::TTL_MEDIUM,
+            function () {
+                return \App\Models\StoresProfile::query()
+                    ->leftJoin('users', 'stores_profile.id', '=', 'users.store_profile_id')
+                    ->leftJoin('orders', 'users.id', '=', 'orders.seller_id')
+                    ->select(
+                        'stores_profile.*',
+                        DB::raw('COUNT(DISTINCT orders.id) as orders_count'),
+                        DB::raw('COALESCE(SUM(orders.price), 0) as orders_sum_price')
+                    )
+                    ->groupBy(
+                        'stores_profile.id',
+                        'stores_profile.name',
+                        'stores_profile.phone_number',
+                        'stores_profile.created_at',
+                        'stores_profile.updated_at'
+                    )
+                    ->having('orders_sum_price', '>', 0)
+                    ->orderByDesc('orders_sum_price')
+                    ->limit(3)
+                    ->get();
+            }
+        );
+    }
     
     // ====================================================================
     // USER LISTING CACHE METHODS
@@ -585,7 +671,11 @@ class CacheManager
         $count = 0;
         $count += self::forgetByPattern(self::PREFIX_ORDERS . '*');
         $count += self::forget(self::PREFIX_DASHBOARD . 'today_order_count') ? 1 : 0;
-        
+        // Dashboard widgets that aggregate orders
+        $count += self::forget(self::PREFIX_DASHBOARD . 'top_selling_games') ? 1 : 0;
+        $count += self::forget(self::PREFIX_DASHBOARD . 'top_buyers') ? 1 : 0;
+        $count += self::forget(self::PREFIX_DASHBOARD . 'top_selling_stores') ? 1 : 0;
+
         return $count;
     }
     

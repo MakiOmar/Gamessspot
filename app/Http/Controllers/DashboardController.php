@@ -30,10 +30,10 @@ class DashboardController extends Controller
         $deviceRepairStats = CacheManager::getDeviceRepairStats();
         $newUsersCount = CacheManager::getNewUsersCount();
 
-        $topSellingGames = $this->topSellingGames();
+        $topSellingGames = CacheManager::getTopSellingGames();
 
-        $topBuyers = $this->topBuyers();
-        $topSellingStores = $this->topSellingStores();
+        $topBuyers = CacheManager::getTopBuyers();
+        $topSellingStores = CacheManager::getTopSellingStores();
         $branchesWithOrders = $this->branchesWithOrdersThisMonth();
 
         $storeProfiles = StoresProfile::withCount('orders')->paginate(10);
@@ -113,31 +113,12 @@ class DashboardController extends Controller
 
     public function topSellingGames()
     {
-        // Get top 5 selling games - Optimized to use single query with join
-        return DB::table('orders')
-            ->join('accounts', 'orders.account_id', '=', 'accounts.id')
-            ->join('games', 'accounts.game_id', '=', 'games.id')
-            ->select(
-                'games.id',
-                'games.title',
-                'games.code',
-                'games.ps4_image_url',
-                'games.ps5_image_url',
-                DB::raw('COUNT(orders.id) as total_sales')
-            )
-            ->groupBy('games.id', 'games.title', 'games.code', 'games.ps4_image_url', 'games.ps5_image_url')
-            ->orderByDesc('total_sales')
-            ->take(5)
-            ->get();
+        // Delegates to CacheManager (optimized aggregate + 5-minute cache)
+        return CacheManager::getTopSellingGames();
     }
     public function topBuyers()
     {
-    // Get top buyers based on buyer_phone by counting the number of orders for each phone
-        return Order::select('buyer_phone', 'buyer_name', DB::raw('count(*) as total_orders'))
-        ->groupBy('buyer_phone', 'buyer_name')
-        ->orderByDesc('total_orders')
-        ->take(5)
-        ->get();
+        return CacheManager::getTopBuyers();
     }
     public function getStockLevels()
     {
@@ -205,19 +186,7 @@ class DashboardController extends Controller
     }
     public function topSellingStores()
     {
-        // Optimize: Use single query with joins instead of separate count/sum queries
-        return StoresProfile::leftJoin('users', 'stores_profile.id', '=', 'users.store_profile_id')
-            ->leftJoin('orders', 'users.id', '=', 'orders.seller_id')
-            ->select(
-                'stores_profile.*',
-                DB::raw('COUNT(DISTINCT orders.id) as orders_count'),
-                DB::raw('COALESCE(SUM(orders.price), 0) as orders_sum_price')
-            )
-            ->groupBy('stores_profile.id', 'stores_profile.name', 'stores_profile.phone_number', 'stores_profile.created_at', 'stores_profile.updated_at')
-            ->having('orders_sum_price', '>', 0)
-            ->orderBy('orders_sum_price', 'desc')
-            ->take(3)
-            ->get();
+        return CacheManager::getTopSellingStores();
     }
 
     /**
