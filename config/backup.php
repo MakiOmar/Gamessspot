@@ -56,7 +56,7 @@ return [
              * 'mysql' => [
              *       ...
              *      'dump' => [
-             *           'excludeTables' => [
+             *           'exclude_tables' => [
              *                'table_to_exclude_from_backup',
              *                'another_table_to_exclude'
              *            ]
@@ -77,7 +77,7 @@ return [
              * For a complete list of available customization options, see https://github.com/spatie/db-dumper
              */
             'databases' => [
-                'mysql',
+                env('DB_CONNECTION', 'mysql'),
             ],
         ],
 

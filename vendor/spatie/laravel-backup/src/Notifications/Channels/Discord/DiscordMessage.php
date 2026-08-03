@@ -3,6 +3,7 @@
 namespace Spatie\Backup\Notifications\Channels\Discord;
 
 use Carbon\Carbon;
+use Illuminate\Support\Str;
 
 class DiscordMessage
 {
@@ -20,6 +21,7 @@ class DiscordMessage
 
     protected string $description = '';
 
+    /** @var array<string> */
     protected array $fields = [];
 
     protected ?string $timestamp = null;
@@ -48,7 +50,7 @@ class DiscordMessage
         return $this;
     }
 
-    public function title($title): self
+    public function title(string $title): self
     {
         $this->title = $title;
 
@@ -97,12 +99,13 @@ class DiscordMessage
         return $this;
     }
 
+    /** @param array<string, string> $fields */
     public function fields(array $fields, bool $inline = true): self
     {
         foreach ($fields as $label => $value) {
             $this->fields[] = [
-                'name' => $label,
-                'value' => $value,
+                'name' => Str::limit($label, 250),
+                'value' => Str::limit($value, 1000),
                 'inline' => $inline,
             ];
         }
@@ -116,14 +119,14 @@ class DiscordMessage
             'avatar_url' => $this->avatarUrl,
             'embeds' => [
                 [
-                    'title' => $this->title,
+                    'title' => Str::limit($this->title, 250),
                     'url' => $this->url,
                     'type' => 'rich',
-                    'description' => $this->description,
-                    'fields' => $this->fields,
-                    'color' => hexdec($this->color),
+                    'description' => Str::limit($this->description, 4000),
+                    'fields' => array_slice($this->fields, 0, 25),
+                    'color' => hexdec((string) $this->color),
                     'footer' => [
-                        'text' => $this->footer ?? '',
+                        'text' => $this->footer ? Str::limit($this->footer, 2000) : '',
                     ],
                     'timestamp' => $this->timestamp ?? now(),
                 ],

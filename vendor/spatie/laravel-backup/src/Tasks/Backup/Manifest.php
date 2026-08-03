@@ -8,18 +8,14 @@ use SplFileObject;
 
 class Manifest implements Countable
 {
-    protected string $manifestPath;
-
     public static function create(string $manifestPath): self
     {
         return new static($manifestPath);
     }
 
-    public function __construct(string $manifestPath)
+    public function __construct(protected string $manifestPath)
     {
-        $this->manifestPath = $manifestPath;
-
-        touch($manifestPath);
+        touch($this->manifestPath);
     }
 
     public function path(): string
@@ -27,6 +23,9 @@ class Manifest implements Countable
         return $this->manifestPath;
     }
 
+    /**
+     * @param  Generator|string|array<string>  $filePaths
+     */
     public function addFiles(array|string|Generator $filePaths): self
     {
         if (is_string($filePaths)) {

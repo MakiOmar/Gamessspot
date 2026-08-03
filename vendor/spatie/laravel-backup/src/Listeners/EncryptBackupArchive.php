@@ -3,6 +3,7 @@
 namespace Spatie\Backup\Listeners;
 
 use Spatie\Backup\Events\BackupZipWasCreated;
+use Spatie\Backup\Exceptions\BackupFailed;
 use ZipArchive;
 
 class EncryptBackupArchive
@@ -15,7 +16,11 @@ class EncryptBackupArchive
 
         $zip = new ZipArchive;
 
-        $zip->open($event->pathToZip);
+        $result = $zip->open($event->pathToZip);
+
+        if ($result !== true) {
+            throw BackupFailed::from(new \Exception("Failed to open zip file for encryption at '{$event->pathToZip}'. ZipArchive error code: {$result}"));
+        }
 
         $this->encrypt($zip);
 
@@ -57,7 +62,7 @@ class EncryptBackupArchive
         $encryption = config('backup.backup.encryption');
 
         if ($encryption === 'default') {
-            $encryption = defined("\ZipArchive::EM_AES_256")
+            $encryption = defined(\ZipArchive::class.'::EM_AES_256')
                 ? ZipArchive::EM_AES_256
                 : null;
         }

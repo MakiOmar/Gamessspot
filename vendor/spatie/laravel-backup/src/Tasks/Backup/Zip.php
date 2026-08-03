@@ -3,6 +3,8 @@
 namespace Spatie\Backup\Tasks\Backup;
 
 use Illuminate\Support\Str;
+use Spatie\Backup\Config\Config;
+use Spatie\Backup\Exceptions\BackupFailed;
 use Spatie\Backup\Helpers\Format;
 use ZipArchive;
 
@@ -12,12 +14,23 @@ class Zip
 
     protected int $fileCount = 0;
 
-    protected string $pathToZip;
+    protected Config $config;
+
+    public function __construct(protected string $pathToZip)
+    {
+        $this->zipFile = new ZipArchive;
+        $this->config = app(Config::class);
+
+        $this->open();
+    }
 
     public static function createForManifest(Manifest $manifest, string $pathToZip): self
     {
-        $relativePath = config('backup.backup.source.files.relative_path') ?
-            rtrim(config('backup.backup.source.files.relative_path'), DIRECTORY_SEPARATOR).DIRECTORY_SEPARATOR : false;
+        $config = app(Config::class);
+
+        $relativePath = $config->backup->source->files->relativePath
+            ? rtrim($config->backup->source->files->relativePath, DIRECTORY_SEPARATOR).DIRECTORY_SEPARATOR
+            : false;
 
         $zip = new static($pathToZip);
 
@@ -32,7 +45,7 @@ class Zip
         return $zip;
     }
 
-    protected static function determineNameOfFileInZip(string $pathToFile, string $pathToZip, string $relativePath)
+    protected static function determineNameOfFileInZip(string $pathToFile, string $pathToZip, string $relativePath): string
     {
         $fileDirectory = pathinfo($pathToFile, PATHINFO_DIRNAME).DIRECTORY_SEPARATOR;
 
@@ -47,15 +60,6 @@ class Zip
         }
 
         return $pathToFile;
-    }
-
-    public function __construct(string $pathToZip)
-    {
-        $this->zipFile = new ZipArchive;
-
-        $this->pathToZip = $pathToZip;
-
-        $this->open();
     }
 
     public function path(): string
@@ -79,7 +83,11 @@ class Zip
 
     public function open(): void
     {
-        $this->zipFile->open($this->pathToZip, ZipArchive::CREATE);
+        $result = $this->zipFile->open($this->pathToZip, ZipArchive::CREATE);
+
+        if ($result !== true) {
+            throw BackupFailed::from(new \Exception("Failed to open zip file at '{$this->pathToZip}'. ZipArchive error code: {$result}"));
+        }
     }
 
     public function close(): void
@@ -97,8 +105,8 @@ class Zip
             $files = [$files];
         }
 
-        $compressionMethod = config('backup.backup.destination.compression_method', null);
-        $compressionLevel = config('backup.backup.destination.compression_level', 9);
+        $compressionMethod = $this->config->backup->destination->compressionMethod;
+        $compressionLevel = $this->config->backup->destination->compressionLevel;
 
         foreach ($files as $file) {
             if (is_dir($file)) {
@@ -106,16 +114,15 @@ class Zip
             }
 
             if (is_file($file)) {
-                $this->zipFile->addFile($file, ltrim($nameInZip, DIRECTORY_SEPARATOR));
+                $this->zipFile->addFile($file, ltrim((string) $nameInZip, DIRECTORY_SEPARATOR));
 
-                if (is_int($compressionMethod)) {
-                    $this->zipFile->setCompressionName(
-                        ltrim($nameInZip ?: $file, DIRECTORY_SEPARATOR),
-                        $compressionMethod,
-                        $compressionLevel
-                    );
-                }
+                $this->zipFile->setCompressionName(
+                    ltrim($nameInZip ?: $file, DIRECTORY_SEPARATOR),
+                    $compressionMethod,
+                    $compressionLevel
+                );
             }
+
             $this->fileCount++;
         }
 

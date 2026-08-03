@@ -9,6 +9,7 @@ use Spatie\Backup\Commands\BackupCommand;
 use Spatie\Backup\Commands\CleanupCommand;
 use Spatie\Backup\Commands\ListCommand;
 use Spatie\Backup\Commands\MonitorCommand;
+use Spatie\Backup\Config\Config;
 use Spatie\Backup\Events\BackupZipWasCreated;
 use Spatie\Backup\Helpers\ConsoleOutput;
 use Spatie\Backup\Listeners\EncryptBackupArchive;
@@ -17,6 +18,7 @@ use Spatie\Backup\Notifications\EventHandler;
 use Spatie\Backup\Tasks\Cleanup\CleanupStrategy;
 use Spatie\LaravelPackageTools\Package;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
+use Spatie\TemporaryDirectory\TemporaryDirectory;
 
 class BackupServiceProvider extends PackageServiceProvider
 {
@@ -34,7 +36,7 @@ class BackupServiceProvider extends PackageServiceProvider
             ]);
     }
 
-    public function packageBooted()
+    public function packageBooted(): void
     {
         $this->app['events']->subscribe(EventHandler::class);
 
@@ -43,19 +45,24 @@ class BackupServiceProvider extends PackageServiceProvider
         }
     }
 
-    public function packageRegistered()
+    public function packageRegistered(): void
     {
         $this->app->singleton(ConsoleOutput::class);
 
         $this->app->bind(CleanupStrategy::class, config('backup.cleanup.strategy'));
+        $this->app->bind('backup-temporary-project', fn () => new TemporaryDirectory(config('backup.backup.temporary_directory') ?? storage_path('app/backup-temp')));
 
         $this->registerDiscordChannel();
+
+        $this->app->scoped(Config::class, function (): Config {
+            return Config::fromArray(config('backup'));
+        });
     }
 
-    protected function registerDiscordChannel()
+    protected function registerDiscordChannel(): void
     {
         Notification::resolved(function (ChannelManager $service) {
-            $service->extend('discord', function ($app) {
+            $service->extend('discord', function ($app): DiscordChannel {
                 return new DiscordChannel;
             });
         });

@@ -7,6 +7,7 @@ use Illuminate\Database\ConfigurationUrlParser;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
 use Spatie\Backup\Exceptions\CannotCreateDbDumper;
+use Spatie\DbDumper\Databases\MariaDb;
 use Spatie\DbDumper\Databases\MongoDb;
 use Spatie\DbDumper\Databases\MySql;
 use Spatie\DbDumper\Databases\PostgreSql;
@@ -15,6 +16,7 @@ use Spatie\DbDumper\DbDumper;
 
 class DbDumperFactory
 {
+    /** @var array<DbDumper> */
     protected static array $custom = [];
 
     public static function createFromConnection(string $dbConnectionName): DbDumper
@@ -46,6 +48,7 @@ class DbDumperFactory
 
         if ($dbDumper instanceof MySql) {
             $dbDumper
+                ->setSkipSsl($dbConfig['dump']['skip_ssl'] ?? false)
                 ->setDefaultCharacterSet($dbConfig['charset'] ?? '')
                 ->setGtidPurged($dbConfig['dump']['mysql_gtid_purged'] ?? 'AUTO');
         }
@@ -55,7 +58,14 @@ class DbDumperFactory
         }
 
         if (isset($dbConfig['port'])) {
-            $dbDumper = $dbDumper->setPort($dbConfig['port']);
+            if (filter_var($dbConfig['port'], FILTER_VALIDATE_INT, [
+                'options' => [
+                    'min_range' => 1,
+                    'max_range' => 65535,
+                ],
+            ]) !== false) {
+                $dbDumper = $dbDumper->setPort((int) $dbConfig['port']);
+            }
         }
 
         if (isset($dbConfig['dump'])) {
@@ -69,12 +79,12 @@ class DbDumperFactory
         return $dbDumper;
     }
 
-    public static function extend(string $driver, callable $callback)
+    public static function extend(string $driver, callable $callback): void
     {
         static::$custom[$driver] = $callback;
     }
 
-    protected static function forDriver($dbDriver): DbDumper
+    protected static function forDriver(string $dbDriver): DbDumper
     {
         $driver = strtolower($dbDriver);
 
@@ -83,7 +93,8 @@ class DbDumperFactory
         }
 
         return match ($driver) {
-            'mysql', 'mariadb' => new MySql,
+            'mysql' => new MySql,
+            'mariadb' => new MariaDb,
             'pgsql' => new PostgreSql,
             'sqlite' => new Sqlite,
             'mongodb' => new MongoDb,
@@ -91,6 +102,7 @@ class DbDumperFactory
         };
     }
 
+    /** @param array<string, string|array<string>> $dumpConfiguration */
     protected static function processExtraDumpParameters(array $dumpConfiguration, DbDumper $dbDumper): DbDumper
     {
         collect($dumpConfiguration)->each(function ($configValue, $configName) use ($dbDumper) {
@@ -107,7 +119,7 @@ class DbDumperFactory
         return $dbDumper;
     }
 
-    protected static function callMethodOnDumper(DbDumper $dbDumper, string $methodName, $methodValue): DbDumper
+    protected static function callMethodOnDumper(DbDumper $dbDumper, string $methodName, mixed $methodValue): DbDumper
     {
         if (! $methodValue) {
             $dbDumper->$methodName();

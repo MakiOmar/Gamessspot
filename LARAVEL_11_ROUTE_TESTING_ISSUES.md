@@ -1,47 +1,21 @@
-# Laravel 11 Route Testing Issues
+# Route Testing Notes (Laravel 12)
 
-## Routes Returning 404 in Tests
+## Status after Laravel 10 → 12 upgrade
 
-### Affected Routes
+Application routing works in the real HTTP kernel:
 
-The following routes are returning **404** in tests, even though they exist and work in the application:
+- `GET /` → 200
+- `GET /up` → 200 (health via `bootstrap/app.php`)
+- `GET /manager/login` → 200
+- `GET /manager` → 302 (auth redirect)
+- Schedule: `queue:work` every minute; `accounts:sync-secondary-stock` hourly
 
-1. **`/up`** - Health check route (defined in `bootstrap/app.php` with `health: '/up'`)
-2. **`/test-session`** - Session test route (defined in `routes/web.php`)
-3. **`/check-redis`** - Redis check route (defined in `routes/web.php`)
-4. **`/cache-stats`** - Cache statistics route (defined in `routes/web.php`)
-5. **`/check-cache`** - Cache check route (defined in `routes/web.php`)
-6. **`/debug-phone`** - Phone debug route (defined in `routes/web.php`)
+## PHPUnit quirk
 
-### Verification
+Some Feature tests historically accepted 404 for public routes even when `php artisan route:list` shows them and the browser/kernel returns 200. This is a **test-environment** issue (often related to subdirectory `APP_URL` like `http://localhost/gamessspot`), not a production routing failure.
 
-- ✅ Routes are registered (confirmed via `php artisan route:list`)
-- ✅ Routes work in the browser/application
-- ❌ Routes return 404 in tests
+`phpunit.xml` now forces `APP_URL=http://localhost` for tests. Prefer kernel/browser smoke checks over relying solely on Feature route existence assertions when diagnosing routing.
 
-### Likely Causes
+## Bootstrap
 
-1. **Laravel 11 Route Loading**: Routes might not be properly loaded in the test environment
-2. **Bootstrap Configuration**: The `bootstrap/app.php` configuration might not be applied correctly in tests
-3. **Health Check Route**: The `/up` health check route configured via `health: '/up'` in `withRouting()` might not be registered in tests
-
-### Solution Options
-
-1. **Accept 404 in tests** - These routes may not be critical for testing
-2. **Update test expectations** - Modify tests to accept 404 or skip these routes
-3. **Manual route registration in tests** - Register routes manually in test setup (not recommended)
-4. **Wait for Laravel update** - This might be a Laravel 11 bug that will be fixed in a future release
-
-### Status
-
-- Routes exist and work in production/development
-- Routes return 404 in tests
-- Framework functionality is not affected
-- This is a testing issue only
-
-### Notes
-
-- The application itself works correctly
-- Routes are accessible when running the application normally
-- This appears to be a test environment issue with Laravel 11's new routing structure
-
+Routing, middleware aliases (`admin`, `checkRole`), and health `/up` are configured in [`bootstrap/app.php`](bootstrap/app.php). Providers live in [`bootstrap/providers.php`](bootstrap/providers.php).

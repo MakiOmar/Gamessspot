@@ -6,15 +6,16 @@ use Carbon\Carbon;
 use Exception;
 use Generator;
 use Illuminate\Console\Command;
+use Illuminate\Contracts\Container\BindingResolutionException;
 use Illuminate\Support\Collection;
 use Spatie\Backup\BackupDestination\BackupDestination;
+use Spatie\Backup\Config\Config;
 use Spatie\Backup\Events\BackupManifestWasCreated;
 use Spatie\Backup\Events\BackupWasSuccessful;
 use Spatie\Backup\Events\BackupZipWasCreated;
 use Spatie\Backup\Events\DumpingDatabase;
 use Spatie\Backup\Exceptions\BackupFailed;
 use Spatie\Backup\Exceptions\InvalidBackupJob;
-use Spatie\DbDumper\Compressors\GzipCompressor;
 use Spatie\DbDumper\Databases\MongoDb;
 use Spatie\DbDumper\Databases\Sqlite;
 use Spatie\DbDumper\DbDumper;
@@ -27,8 +28,10 @@ class BackupJob
 
     protected FileSelection $fileSelection;
 
+    /** @var Collection<string, DbDumper> */
     protected Collection $dbDumpers;
 
+    /** @var Collection<int, BackupDestination> */
     protected Collection $backupDestinations;
 
     protected string $filename;
@@ -39,7 +42,10 @@ class BackupJob
 
     protected bool $signals = true;
 
-    public function __construct()
+    /**
+     * @throws BindingResolutionException
+     */
+    public function __construct(protected Config $config)
     {
         $this
             ->dontBackupFilesystem()
@@ -47,6 +53,7 @@ class BackupJob
             ->setDefaultFilename();
 
         $this->backupDestinations = new Collection;
+        $this->temporaryDirectory = app()->make('backup-temporary-project');
     }
 
     public function dontBackupFilesystem(): self
@@ -56,6 +63,7 @@ class BackupJob
         return $this;
     }
 
+    /** @param array<string> $allowedDbNames */
     public function onlyDbName(array $allowedDbNames): self
     {
         $this->dbDumpers = $this->dbDumpers->filter(
@@ -100,6 +108,10 @@ class BackupJob
         return $this;
     }
 
+    /**
+     * @param  Collection<string, DbDumper>  $dbDumpers
+     * @return $this
+     */
     public function setDbDumpers(Collection $dbDumpers): self
     {
         $this->dbDumpers = $dbDumpers;
@@ -127,6 +139,7 @@ class BackupJob
         return $this;
     }
 
+    /** @param Collection<int, BackupDestination> $backupDestinations */
     public function setBackupDestinations(Collection $backupDestinations): self
     {
         $this->backupDestinations = $backupDestinations;
@@ -134,14 +147,10 @@ class BackupJob
         return $this;
     }
 
-    /**
-     * @throws Exception
-     */
+    /** @throws Exception */
     public function run(): void
     {
-        $temporaryDirectoryPath = config('backup.backup.temporary_directory') ?? storage_path('app/backup-temp');
-
-        $this->temporaryDirectory = (new TemporaryDirectory($temporaryDirectoryPath))
+        $this->temporaryDirectory
             ->name('temp')
             ->force()
             ->create()
@@ -206,6 +215,7 @@ class BackupJob
         return $this->fileSelection->selectedFiles();
     }
 
+    /** @return array<string> */
     protected function directoriesUsedByBackupJob(): array
     {
         return $this->backupDestinations
@@ -222,7 +232,7 @@ class BackupJob
     {
         consoleOutput()->info("Zipping {$manifest->count()} files and directories...");
 
-        $pathToZip = $this->temporaryDirectory->path(config('backup.backup.destination.filename_prefix').$this->filename);
+        $pathToZip = $this->temporaryDirectory->path($this->config->backup->destination->filenamePrefix.$this->filename);
 
         $zip = Zip::createForManifest($manifest, $pathToZip);
 
@@ -240,16 +250,18 @@ class BackupJob
     /**
      * Dumps the databases to the given directory.
      * Returns an array with paths to the dump files.
+     *
+     * @return array<string, string>
      */
     protected function dumpDatabases(): array
     {
         return $this->dbDumpers
-            ->map(function (DbDumper $dbDumper, $key) {
+            ->map(function (DbDumper $dbDumper, string $key): string {
                 consoleOutput()->info("Dumping database {$dbDumper->getDbName()}...");
 
-                $dbType = mb_strtolower(basename(str_replace('\\', '/', get_class($dbDumper))));
+                $dbType = mb_strtolower(basename(str_replace('\\', '/', $dbDumper::class)));
 
-                if (config('backup.backup.database_dump_filename_base') === 'connection') {
+                if ($this->config->backup->databaseDumpFilenameBase === 'connection') {
                     $dbName = $key;
                 } elseif ($dbDumper instanceof Sqlite) {
                     $dbName = $key.'-database';
@@ -258,18 +270,14 @@ class BackupJob
                 }
 
                 $timeStamp = '';
-                if ($timeStampFormat = config('backup.backup.database_dump_file_timestamp_format')) {
+
+                if ($timeStampFormat = $this->config->backup->databaseDumpFileTimestampFormat) {
                     $timeStamp = '-'.Carbon::now()->format($timeStampFormat);
                 }
 
                 $fileName = "{$dbType}-{$dbName}{$timeStamp}.{$this->getExtension($dbDumper)}";
 
-                if (config('backup.backup.gzip_database_dump')) {
-                    $dbDumper->useCompressor(new GzipCompressor);
-                    $fileName .= '.'.$dbDumper->getCompressorExtension();
-                }
-
-                if ($compressor = config('backup.backup.database_dump_compressor')) {
+                if ($compressor = $this->config->backup->databaseDumpCompressor) {
                     $dbDumper->useCompressor(new $compressor);
                     $fileName .= '.'.$dbDumper->getCompressorExtension();
                 }
@@ -312,7 +320,7 @@ class BackupJob
             });
     }
 
-    protected function sendNotification($notification): void
+    protected function sendNotification(object|string $notification): void
     {
         if ($this->sendNotifications) {
             rescue(
@@ -324,7 +332,7 @@ class BackupJob
 
     protected function getExtension(DbDumper $dbDumper): string
     {
-        if ($extension = config('backup.backup.database_dump_file_extension')) {
+        if ($extension = $this->config->backup->databaseDumpFileExtension) {
             return $extension;
         }
 

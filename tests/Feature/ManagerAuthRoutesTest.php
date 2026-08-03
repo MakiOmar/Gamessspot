@@ -32,6 +32,7 @@ class ManagerAuthRoutesTest extends TestCase
         $adminRole = Role::firstOrCreate(['name' => 'admin']);
         $user = User::factory()->create([
             'password' => Hash::make('password123'),
+            'is_active' => true,
         ]);
         $user->roles()->attach($adminRole->id);
 
@@ -41,7 +42,8 @@ class ManagerAuthRoutesTest extends TestCase
         ]);
 
         $response->assertRedirect('/manager');
-        $this->assertAuthenticatedAs($user);
+        // Manager auth uses the custom "admin" guard
+        $this->assertAuthenticatedAs($user, 'admin');
     }
 
     /**
@@ -55,7 +57,7 @@ class ManagerAuthRoutesTest extends TestCase
         ]);
 
         $response->assertSessionHasErrors();
-        $this->assertGuest();
+        $this->assertGuest('admin');
     }
 
     /**
@@ -66,15 +68,16 @@ class ManagerAuthRoutesTest extends TestCase
         $adminRole = Role::firstOrCreate(['name' => 'admin']);
         $user = User::factory()->create([
             'password' => Hash::make('password123'),
+            'is_active' => true,
         ]);
         $user->roles()->attach($adminRole->id);
 
-        $this->actingAs($user);
+        $this->actingAs($user, 'admin');
 
         $response = $this->post('/manager/logout');
 
         $response->assertRedirect('/manager/login');
-        $this->assertGuest();
+        $this->assertGuest('admin');
     }
 
     /**
