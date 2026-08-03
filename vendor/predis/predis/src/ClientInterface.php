@@ -4,7 +4,7 @@
  * This file is part of the Predis package.
  *
  * (c) 2009-2020 Daniele Alessandri
- * (c) 2021-2025 Till Krüss
+ * (c) 2021-2026 Till Krüss
  *
  * For the full copyright and license information, please view the LICENSE
  * file that was distributed with this source code.
@@ -19,6 +19,7 @@ use Predis\Command\Argument\Search\AlterArguments;
 use Predis\Command\Argument\Search\CreateArguments;
 use Predis\Command\Argument\Search\DropArguments;
 use Predis\Command\Argument\Search\ExplainArguments;
+use Predis\Command\Argument\Search\HybridSearch\HybridSearchQuery;
 use Predis\Command\Argument\Search\ProfileArguments;
 use Predis\Command\Argument\Search\SchemaFields\FieldInterface;
 use Predis\Command\Argument\Search\SearchArguments;
@@ -41,15 +42,18 @@ use Predis\Command\CommandInterface;
 use Predis\Command\Container\ACL;
 use Predis\Command\Container\CLIENT;
 use Predis\Command\Container\FUNCTIONS;
+use Predis\Command\Container\HOTKEYS;
 use Predis\Command\Container\Json\JSONDEBUG;
 use Predis\Command\Container\Search\FTCONFIG;
 use Predis\Command\Container\Search\FTCURSOR;
 use Predis\Command\Container\XGROUP;
 use Predis\Command\Container\XINFO;
 use Predis\Command\FactoryInterface;
+use Predis\Command\Redis\HSETEX;
 use Predis\Command\Redis\VADD;
 use Predis\Configuration\OptionsInterface;
 use Predis\Connection\ConnectionInterface;
+use Predis\Pipeline\Pipeline;
 use Predis\Response\Status;
 
 /**
@@ -62,6 +66,8 @@ use Predis\Response\Status;
  *
  * @method int               copy(string $source, string $destination, int $db = -1, bool $replace = false)
  * @method int               del(string[]|string $keyOrKeys, string ...$keys = null)
+ * @method int               delex(string $key, string $flag, $flagValue)
+ * @method string            digest(string $key)
  * @method string|null       dump(string $key)
  * @method int               exists(string $key)
  * @method int               expire(string $key, int $seconds, string $expireOption = '')
@@ -82,7 +88,26 @@ use Predis\Response\Status;
  * @method array             sort_ro(string $key, ?string $byPattern = null, ?LimitOffsetCount $limit = null, array $getPatterns = [], ?string $sorting = null, bool $alpha = false)
  * @method int               ttl(string $key)
  * @method mixed             type(string $key)
+ * @method int               unlink(string[]|string $keyOrKeys, string ...$keys = null)
  * @method int               append(string $key, $value)
+ * @method int               arcount(string $key)
+ * @method int               ardel(string $key, int ...$index)
+ * @method int               ardelrange(string $key, int ...$startEnd)
+ * @method string|null       arget(string $key, int $index)
+ * @method array             argetrange(string $key, int $start, int $end)
+ * @method array             argrep(string $key, int $start, int $end, array $predicates, ?string $combinator = null, ?int $limit = null, bool $withValues = false, bool $noCase = false)
+ * @method array             arinfo(string $key, bool $full = false)
+ * @method int               arinsert(string $key, string ...$value)
+ * @method array             arlastitems(string $key, int $count, bool $reverse = false)
+ * @method int               arlen(string $key)
+ * @method array             armget(string $key, int ...$index)
+ * @method int               armset(string $key, array $indexValueDictionary)
+ * @method int|null          arnext(string $key)
+ * @method mixed             arop(string $key, int $start, int $end, string $operation, $matchValue = null)
+ * @method int               arring(string $key, int $size, string ...$value)
+ * @method array             arscan(string $key, int $start, int $end, ?int $limit = null)
+ * @method int               arseek(string $key, int $index)
+ * @method int               arset(string $key, int $index, string ...$value)
  * @method mixed             bfadd(string $key, $item)
  * @method mixed             bfexists(string $key, $item)
  * @method array             bfinfo(string $key, string $modifier = '')
@@ -136,6 +161,7 @@ use Predis\Response\Status;
  * @method array             ftdictdump(string $dict)
  * @method Status            ftdropindex(string $index, ?DropArguments $arguments = null)
  * @method string            ftexplain(string $index, string $query, ?ExplainArguments $arguments = null)
+ * @method array             fthybrid(string $index, HybridSearchQuery $query)
  * @method array             ftinfo(string $index)
  * @method array             ftprofile(string $index, ProfileArguments $arguments)
  * @method array             ftsearch(string $index, string $query, ?SearchArguments $arguments = null)
@@ -156,11 +182,13 @@ use Predis\Response\Status;
  * @method int               incr(string $key)
  * @method int               incrby(string $key, int $increment)
  * @method string            incrbyfloat(string $key, int|float $increment)
+ * @method array             increx(string $key, int|float|string $value, ?int $lbound = null, ?int $ubound = null, bool $saturate = false, ?string $expireType = null, $expireValue = null, bool $enx = false)
  * @method array             mget(string[]|string $keyOrKeys, string ...$keys = null)
  * @method mixed             mset(array $dictionary)
+ * @method array             msetex(array $dictionary, ?string $existModifier = null, ?string $expireResolution = null, ?int $expireTTL = null)
  * @method int               msetnx(array $dictionary)
  * @method Status            psetex(string $key, $milliseconds, $value)
- * @method Status|null       set(string $key, $value, $expireResolution = null, $expireTTL = null, $flag = null)
+ * @method Status|null       set(string $key, $value, $expireResolution = null, $expireTTL = null, $flag = null, $flagValue = null)
  * @method int               setbit(string $key, $offset, $value)
  * @method Status            setex(string $key, $seconds, $value)
  * @method int               setnx(string $key, $value)
@@ -211,7 +239,7 @@ use Predis\Response\Status;
  * @method array             jsonobjkeys(string $key, string $path = '$')
  * @method array             jsonobjlen(string $key, string $path = '$')
  * @method array             jsonresp(string $key, string $path = '$')
- * @method string            jsonset(string $key, string $path, string $value, ?string $subcommand = null)
+ * @method string            jsonset(string $key, string $path, string $value, ?string $subcommand = null, ?string $fpha = null)
  * @method array             jsonstrappend(string $key, string $path, string $value)
  * @method array             jsonstrlen(string $key, string $path = '$')
  * @method array             jsontoggle(string $key, string $path)
@@ -278,7 +306,7 @@ use Predis\Response\Status;
  * @method array             topklist(string $key, bool $withCount = false)
  * @method array             topkquery(string $key, ...$items)
  * @method Status            topkreserve(string $key, int $topK, int $width = 8, int $depth = 7, float $decay = 0.9)
- * @method int               tsadd(string $key, int $timestamp, float $value, ?AddArguments $arguments = null)
+ * @method int               tsadd(string $key, int $timestamp, string|float $value, ?AddArguments $arguments = null)
  * @method Status            tsalter(string $key, ?TSAlterArguments $arguments = null)
  * @method Status            tscreate(string $key, ?TSCreateArguments $arguments = null)
  * @method Status            tscreaterule(string $sourceKey, string $destKey, string $aggregator, int $bucketDuration, int $alignTimestamp = 0)
@@ -300,14 +328,17 @@ use Predis\Response\Status;
  * @method string            xadd(string $key, array $dictionary, string $id = '*', array $options = null)
  * @method array             xautoclaim(string $key, string $group, string $consumer, int $minIdleTime, string $start, ?int $count = null, bool $justId = false)
  * @method array             xclaim(string $key, string $group, string $consumer, int $minIdleTime, string|array $ids, ?int $idle = null, ?int $time = null, ?int $retryCount = null, bool $force = false, bool $justId = false, ?string $lastId = null)
+ * @method Status            xcfgset(string $key, ?int $duration = null, ?int $maxsize = null)
  * @method int               xdel(string $key, string ...$id)
  * @method array             xdelex(string $key, string $mode, array $ids)
  * @method int               xlen(string $key)
+ * @method int               xnack(string $key, string $group, string $mode, array $ids, ?int $retryCount = null, bool $force = false)
  * @method array             xpending(string $key, string $group, ?int $minIdleTime = null, ?string $start = null, ?string $end = null, ?int $count = null, ?string $consumer = null)
  * @method array             xrevrange(string $key, string $end, string $start, ?int $count = null)
  * @method array             xrange(string $key, string $start, string $end, ?int $count = null)
  * @method array|null        xread(int $count = null, int $block = null, array $streams = null, string ...$id)
  * @method array             xreadgroup(string $group, string $consumer, ?int $count = null, ?int $blockMs = null, bool $noAck = false, string ...$keyOrId)
+ * @method array             xreadgroup_claim(string $group, string $consumer, array $keyIdDict, ?int $count = null, ?int $blockMs = null, bool $noAck = false, ?int $claim = null)
  * @method Status            xsetid(string $key, string $lastId, ?int $entriesAdded = null, ?string $maxDeleteId = null)
  * @method string            xtrim(string $key, array|string $strategy, string $threshold, array $options = null)
  * @method int               zadd(string $key, array $membersAndScoresDictionary)
@@ -351,6 +382,7 @@ use Predis\Response\Status;
  * @method mixed             discard()
  * @method array|null        exec()
  * @method mixed             multi()
+ * @method Pipeline|array    pipeline(mixed ...$arguments)
  * @method mixed             unwatch()
  * @method array             unsubscribe(string ...$channels)
  * @method bool              vadd(string $key, string|array $vector, string $elem, int $dim = null, bool $cas = false, string $quant = VADD::QUANT_DEFAULT, int $bef = null, string|array $attributes = null, int $numlinks = null)
@@ -361,6 +393,7 @@ use Predis\Response\Status;
  * @method array|null        vinfo(string $key)
  * @method array|null        vlinks(string $key, string $elem, bool $withScores = false)
  * @method string|array|null vrandmember(string $key, int $count = null)
+ * @method array             vrange(string $key, string $start, string $end, int $count = null)
  * @method bool              vrem(string $key, string $elem)
  * @method array             vsim(string $key, string|array $vectorOrElem, bool $isElem = false, bool $withScores = false, int $count = null, float $epsilon = null, int $ef = null, string $filter = null, int $filterEf = null, bool $truth = false, bool $noThread = false)
  * @method bool              vsetattr(string $key, string $elem, string|array $attributes)
@@ -401,6 +434,7 @@ use Predis\Response\Status;
  *
  * Container commands
  * @property CLIENT    $client
+ * @property HOTKEYS   $hotkeys
  * @property FUNCTIONS $function
  * @property FTCONFIG  $ftconfig
  * @property FTCURSOR  $ftcursor

@@ -57,18 +57,38 @@ final class PregMatchTypeSpecifyingExtension implements StaticMethodTypeSpecifyi
     {
         $args = $node->getArgs();
         $patternArg = $args[0] ?? null;
+        $subjectArg = $args[1] ?? null;
         $matchesArg = $args[2] ?? null;
         $flagsArg = $args[3] ?? null;
 
+        $subjectTypes = new SpecifiedTypes();
+        if ($patternArg === null) {
+            return $subjectTypes;
+        }
+
         if (
-            $patternArg === null || $matchesArg === null
+            $subjectArg !== null
+            && $context->true()
+            && $scope->getType($subjectArg->value)->isString()->yes()
         ) {
-            return new SpecifiedTypes();
+            $subjectType = $this->regexShapeMatcher->matchSubjectExpr($patternArg->value, $scope);
+            if ($subjectType !== null) {
+                $subjectTypes = $this->typeSpecifier->create(
+                    $subjectArg->value,
+                    $subjectType,
+                    $context,
+                    $scope,
+                )->setRootExpr($node);
+            }
+        }
+
+        if ($matchesArg === null) {
+            return $subjectTypes;
         }
 
         $flagsType = PregMatchFlags::getType($flagsArg, $scope);
         if ($flagsType === null) {
-            return new SpecifiedTypes();
+            return $subjectTypes;
         }
 
         if (stripos($methodReflection->getName(), 'matchAll') !== false) {
@@ -78,7 +98,7 @@ final class PregMatchTypeSpecifyingExtension implements StaticMethodTypeSpecifyi
         }
 
         if ($matchedType === null) {
-            return new SpecifiedTypes();
+            return $subjectTypes;
         }
 
         if (
@@ -93,13 +113,13 @@ final class PregMatchTypeSpecifyingExtension implements StaticMethodTypeSpecifyi
             $context = $context->negate();
         }
 
-        return $this->typeSpecifier->create(
+        $specifiedTypes = $this->typeSpecifier->create(
             $matchesArg->value,
             $matchedType,
             $context,
-            $overwrite,
-            $scope,
-            $node
-        );
+            $scope
+        )->setRootExpr($node);
+
+        return $subjectTypes->unionWith($overwrite ? $specifiedTypes->setAlwaysOverwriteTypes() : $specifiedTypes);
     }
 }
