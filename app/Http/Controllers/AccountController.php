@@ -18,7 +18,7 @@ class AccountController extends Controller
     public function index()
     {
         // Get current page from request
-        $page = request()->get('page', 1);
+        $page = request()->input('page', 1);
         
         // Get cache key for this listing
         $cacheKey = CacheManager::getAccountListingKey($page);
@@ -96,7 +96,7 @@ class AccountController extends Controller
 
     public function search(Request $request)
     {
-        $query = $request->get('search');
+        $query = $request->input('search');
 
         $accounts = Account::with('game')
         ->where('mail', 'like', "%{$query}%")

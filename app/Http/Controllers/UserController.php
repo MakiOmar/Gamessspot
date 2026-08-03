@@ -36,7 +36,7 @@ class UserController extends Controller
     public function users($role = 'any')
     {
         // Get current page from request
-        $page = request()->get('page', 1);
+        $page = request()->input('page', 1);
         
         // Get cache key for this listing
         $cacheKey = CacheManager::getUserListingKey($role, $page);

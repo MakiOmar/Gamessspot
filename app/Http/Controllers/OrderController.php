@@ -91,7 +91,7 @@ class OrderController extends Controller
         if ($roles->contains('admin')) {
             // Apply store profile filter if 'id' is provided
             if (request()->has('id')) {
-                $storeId = request()->get('id');
+                $storeId = request()->input('id');
                 $ordersQuery->where('store_profile_id', $storeId);
             }
 
@@ -110,7 +110,7 @@ class OrderController extends Controller
 
         // Check for 'accountant' role with a specific store profile ID
         if ($roles->contains('accountant') && request()->has('id')) {
-            $storeId = request()->get('id');
+            $storeId = request()->input('id');
 
             $orders = $ordersQuery
                 ->where('store_profile_id', $storeId)
@@ -185,7 +185,7 @@ class OrderController extends Controller
      */
     protected function renderOrders($orders, $user)
     {
-        $status = request()->get('status', 'all');
+        $status = request()->input('status', 'all');
         return view('manager.orders', compact('orders', 'user', 'status'));
     }
 

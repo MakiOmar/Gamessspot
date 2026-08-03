@@ -45,11 +45,11 @@ class MasterController extends Controller
         ]);
 
         $master = new Master([
-            'mail' => $request->get('mail'),
-            'password' => bcrypt($request->get('password')),
-            'region' => $request->get('region'),
-            'value' => $request->get('value'),
-            'rate' => $request->get('rate'),
+            'mail' => $request->input('mail'),
+            'password' => bcrypt($request->input('password')),
+            'region' => $request->input('region'),
+            'value' => $request->input('value'),
+            'rate' => $request->input('rate'),
         ]);
         $master->save();
 
@@ -86,13 +86,13 @@ class MasterController extends Controller
         ]);
 
         $master = Master::findOrFail($id);
-        $master->mail = $request->get('mail');
+        $master->mail = $request->input('mail');
         if ($request->filled('password')) {
-            $master->password = bcrypt($request->get('password'));
+            $master->password = bcrypt($request->input('password'));
         }
-        $master->region = $request->get('region');
-        $master->value = $request->get('value');
-        $master->rate = $request->get('rate');
+        $master->region = $request->input('region');
+        $master->value = $request->input('value');
+        $master->rate = $request->input('rate');
         $master->save();
 
         return redirect()->route('masters.index')->with('success', 'Record updated successfully.');

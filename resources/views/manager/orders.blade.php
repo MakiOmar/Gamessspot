@@ -120,7 +120,7 @@
                             <td colspan="100%">
                                 <div id="orderPagination">
                                     @if(request()->has('id'))
-                                        {{ $orders->appends(['id' => request()->get('id')])->links('vendor.pagination.bootstrap-5') }}
+                                        {{ $orders->appends(['id' => request()->input('id')])->links('vendor.pagination.bootstrap-5') }}
                                     @else
                                         {{ $orders->links('vendor.pagination.bootstrap-5') }}
                                     @endif

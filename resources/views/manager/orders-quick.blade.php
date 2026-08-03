@@ -164,7 +164,7 @@
             <!-- Pagination links (if needed) -->
             <div class="d-flex justify-content-center mt-4">
                 @if (request()->has('search'))
-                    {{ $orders->appends(['search' => request()->get('search')])->links('vendor.pagination.bootstrap-5') }}
+                    {{ $orders->appends(['search' => request()->input('search')])->links('vendor.pagination.bootstrap-5') }}
                 @else
                     {{ $orders->links('vendor.pagination.bootstrap-5') }}
                 @endif

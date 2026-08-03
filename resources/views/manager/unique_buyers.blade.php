@@ -64,7 +64,7 @@
         <!-- Pagination links (if needed) -->
         <div class="d-flex justify-content-center mt-4">
             @if(request()->has('id'))
-                {{ $uniqueBuyers->appends(['id' => request()->get('id')])->links('vendor.pagination.bootstrap-5') }}
+                {{ $uniqueBuyers->appends(['id' => request()->input('id')])->links('vendor.pagination.bootstrap-5') }}
             @else
                 {{ $uniqueBuyers->links('vendor.pagination.bootstrap-5') }}
             @endif

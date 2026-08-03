@@ -30,7 +30,7 @@ class ManagerController extends Controller
     public function showGames()
     {
         // Get current page from request
-        $page = request()->get('page', 1);
+        $page = request()->input('page', 1);
         
         // Get cache key for this listing (no store profile - global view)
         $cacheKey = CacheManager::getGameListingKey('all', $page, null);
@@ -362,7 +362,7 @@ class ManagerController extends Controller
     public function getGamesByPlatform($n)
     {
         // Get current page from request
-        $page = request()->get('page', 1);
+        $page = request()->input('page', 1);
         
         // Get current user's store profile ID
         $user = Auth::user();
@@ -775,7 +775,7 @@ class ManagerController extends Controller
      */
     public function showWooCommerceEligiblePS4Games()
     {
-        $page = request()->get('page', 1);
+        $page = request()->input('page', 1);
 
         $user = Auth::user();
         $storeProfileId = $user->store_profile_id;
@@ -840,7 +840,7 @@ class ManagerController extends Controller
     }
     public function searchPS4Games(Request $request)
     {
-        $query = $request->get('query', '');
+        $query = $request->input('query', '');
         $n = 4; // Define the platform as PS4
         $psGames = $this->filterGames($n, $query);
         $offline_stock   = "ps{$n}_offline_stock";
@@ -853,7 +853,7 @@ class ManagerController extends Controller
 
     public function searchPS5Games(Request $request)
     {
-        $query = $request->get('query', '');
+        $query = $request->input('query', '');
         $n = 5; // Define the platform as PS5
         $psGames = $this->filterGames($n, $query);
         $offline_stock   = "ps{$n}_offline_stock";
@@ -866,7 +866,7 @@ class ManagerController extends Controller
     }
     public function searchGamesByTitle(Request $request)
     {
-        $query = $request->get('query', '');
+        $query = $request->input('query', '');
 
     // Fetch games matching the title
         $games = Game::where('title', 'LIKE', "%{$query}%")->paginate(10); // Paginate results
