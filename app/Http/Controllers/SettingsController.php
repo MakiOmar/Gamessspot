@@ -7,6 +7,8 @@ use App\Services\SettingsService;
 use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Illuminate\View\View;
 use Rawilk\Settings\Facades\Settings;
 
@@ -22,6 +24,7 @@ class SettingsController extends Controller
                 'name' => Settings::get('app.name', config('app.name')),
                 'timezone' => Settings::get('app.timezone', config('app.timezone')),
                 'locale' => Settings::get('app.locale', config('app.locale')),
+                'logo' => Settings::get('app.logo'),
             ],
             'business' => [
                 'company_name' => Settings::get('business.company_name', config('app.company_name')),
@@ -99,6 +102,7 @@ class SettingsController extends Controller
             'app.name' => 'required|string|max:255',
             'app.timezone' => 'required|string',
             'app.locale' => 'required|string',
+            'app_logo' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg,webp|max:2048',
             'business.company_name' => 'required|string|max:255',
             'business.phone' => 'nullable|string|max:20',
             'business.email' => 'nullable|email|max:255',
@@ -128,6 +132,34 @@ class SettingsController extends Controller
             return redirect()->back()
                 ->withErrors($validator)
                 ->withInput();
+        }
+
+        // Handle logo upload if provided (store directly in public/logos, no symlink needed)
+        if ($request->hasFile('app_logo')) {
+            $file = $request->file('app_logo');
+
+            // Ensure logos directory exists in public path
+            $logosPath = public_path('logos');
+            if (! is_dir($logosPath)) {
+                mkdir($logosPath, 0755, true);
+            }
+
+            $extension = $file->getClientOriginalExtension();
+            $filename = Str::uuid()->toString() . '.' . $extension;
+
+            $file->move($logosPath, $filename);
+
+            // Delete old logo file if it exists
+            $oldLogo = Settings::get('app.logo');
+            if ($oldLogo) {
+                $oldLogoPath = public_path($oldLogo);
+                if (is_file($oldLogoPath)) {
+                    @unlink($oldLogoPath);
+                }
+            }
+
+            // Store relative path from public root, e.g. logos/xxxx.webp
+            Settings::set('app.logo', 'logos/' . $filename);
         }
 
         // Update app settings
@@ -239,5 +271,177 @@ class SettingsController extends Controller
         Settings::set($key, $value);
 
         return response()->json(['success' => true, 'value' => $value]);
+    }
+
+    /**
+     * Export all settings to a JSON file.
+     */
+    public function export()
+    {
+        try {
+            // Define all known setting keys (since the package uses MD5 key hashing)
+            $knownSettings = [
+                // App settings
+                'app.name',
+                'app.timezone',
+                'app.locale',
+                
+                // Business settings
+                'business.company_name',
+                'business.phone',
+                'business.email',
+                'business.address',
+                
+                // Order settings
+                'orders.auto_approve',
+                'orders.notification_email',
+                'orders.max_order_amount',
+                
+                // Notification settings
+                'notifications.email_enabled',
+                'notifications.sms_enabled',
+                'notifications.order_notifications',
+                
+                // POS settings
+                'pos.offline_sku',
+                'pos.secondary_sku',
+                'pos.primary_sku',
+                'pos.card_sku',
+                'pos.offline_id',
+                'pos.secondary_id',
+                'pos.primary_id',
+                'pos.card_id',
+                'pos.username',
+                'pos.password',
+                'pos.base_url',
+                'pos.location_map',
+            ];
+            
+            // Build settings array - get actual values using Settings facade
+            // This ensures we get decrypted/unserialized values
+            $settings = [];
+            foreach ($knownSettings as $key) {
+                $value = Settings::get($key);
+                // Only include settings that have been set (not null or have a value)
+                if ($value !== null) {
+                    $settings[$key] = $value;
+                }
+            }
+
+            // Add metadata
+            $exportData = [
+                'export_date' => now()->toIso8601String(),
+                'export_version' => '1.0',
+                'settings' => $settings,
+            ];
+
+            // Generate filename with timestamp
+            $filename = 'settings_export_' . now()->format('Y-m-d_His') . '.json';
+
+            // Return JSON download response
+            return response()->json($exportData, 200, [
+                'Content-Type' => 'application/json',
+                'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+            ]);
+        } catch (\Exception $e) {
+            return redirect()->route('settings.index')
+                ->with('error', 'Failed to export settings: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Import settings from a JSON file.
+     */
+    public function import(Request $request)
+    {
+        $request->validate([
+            'settings_file' => 'required|file|mimes:json|max:5120', // 5MB max
+        ]);
+
+        try {
+            $file = $request->file('settings_file');
+            $content = file_get_contents($file->getRealPath());
+            $data = json_decode($content, true);
+
+            if (json_last_error() !== JSON_ERROR_NONE) {
+                return redirect()->route('settings.index')
+                    ->with('error', 'Invalid JSON file format: ' . json_last_error_msg());
+            }
+
+            // Check if the JSON has the expected structure
+            if (!isset($data['settings']) || !is_array($data['settings'])) {
+                return redirect()->route('settings.index')
+                    ->with('error', 'Invalid settings file format. Expected a "settings" array.');
+            }
+
+            $importedCount = 0;
+            $skippedCount = 0;
+            $errors = [];
+
+            // Import each setting
+            foreach ($data['settings'] as $key => $value) {
+                try {
+                    // Validate key format (should be a string)
+                    if (!is_string($key)) {
+                        $skippedCount++;
+                        $errors[] = "Skipped invalid key: " . var_export($key, true);
+                        continue;
+                    }
+
+                    // Set the setting value
+                    Settings::set($key, $value);
+                    $importedCount++;
+                } catch (\Exception $e) {
+                    $skippedCount++;
+                    $errors[] = "Failed to import '{$key}': " . $e->getMessage();
+                }
+            }
+
+            $message = "Settings imported successfully! {$importedCount} setting(s) imported.";
+            if ($skippedCount > 0) {
+                $message .= " {$skippedCount} setting(s) skipped.";
+            }
+
+            if (!empty($errors) && count($errors) <= 10) {
+                // Show errors if there are few
+                $message .= " Errors: " . implode('; ', $errors);
+            } elseif (!empty($errors)) {
+                $message .= " " . count($errors) . " errors occurred.";
+            }
+
+            return redirect()->route('settings.index')
+                ->with('success', $message);
+        } catch (\Exception $e) {
+            return redirect()->route('settings.index')
+                ->with('error', 'Failed to import settings: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Clear all settings from the database.
+     */
+    public function clear()
+    {
+        try {
+            // Get all settings from the database table
+            $tableName = config('settings.table', 'settings');
+            $settingsCount = DB::table($tableName)->count();
+            
+            // Delete all settings
+            DB::table($tableName)->delete();
+            
+            // Clear settings cache if caching is enabled
+            if (config('settings.cache', true)) {
+                $cachePrefix = config('settings.cache_key_prefix', 'settings.');
+                // Clear all cache entries that start with the settings prefix
+                \Illuminate\Support\Facades\Cache::flush();
+            }
+
+            return redirect()->route('settings.index')
+                ->with('success', "All settings cleared successfully! {$settingsCount} setting(s) removed.");
+        } catch (\Exception $e) {
+            return redirect()->route('settings.index')
+                ->with('error', 'Failed to clear settings: ' . $e->getMessage());
+        }
     }
 }

@@ -7,7 +7,9 @@ use App\Models\DeviceModel;
 use App\Models\User;
 use App\Notifications\DeviceServiceNotification;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Rawilk\Settings\Facades\Settings;
 
 class PublicDeviceController extends Controller
 {
@@ -17,7 +19,9 @@ class PublicDeviceController extends Controller
     public function showSubmissionForm()
     {
         $deviceModels = DeviceModel::active()->orderBy('brand')->orderBy('name')->get();
-        return view('public.device-submission', compact('deviceModels'));
+        $appLogo = Settings::get('app.logo');
+
+        return view('public.device-submission', compact('deviceModels', 'appLogo'));
     }
 
     /**
@@ -45,23 +49,27 @@ class PublicDeviceController extends Controller
         }
 
         $deviceRepair = null;
+        $isDuplicateSubmission = false;
+        $normalizedSerial = DeviceRepair::normalizeSerial($validated['device_serial_number']);
+        $lockKey = 'device-repair:public:' . md5(implode('|', [
+            $validated['phone_number'],
+            $validated['device_model_id'],
+            $normalizedSerial,
+        ]));
 
         try {
-            DB::transaction(function () use ($validated, $phoneNumber, $countryCode, &$deviceRepair) {
-            // Create or find user first
+            Cache::lock($lockKey, 10)->block(5, function () use ($validated, $phoneNumber, $countryCode, $normalizedSerial, &$deviceRepair, &$isDuplicateSubmission) {
+            DB::transaction(function () use ($validated, $phoneNumber, $countryCode, $normalizedSerial, &$deviceRepair, &$isDuplicateSubmission) {
             $fullPhoneNumber = $countryCode . $phoneNumber;
-            
-            // Check if user exists by phone
+
             $existingUser = User::where('phone', $fullPhoneNumber)->first();
-            
+
             if ($existingUser) {
-                // User exists by phone, check if email matches
                 if ($existingUser->email !== $validated['client_email']) {
                     throw new \Exception('A user with this phone number already exists with a different email address.');
                 }
                 $user = $existingUser;
             } else {
-                // Create new user
                 $user = User::create([
                     'name' => $validated['client_name'],
                     'email' => $validated['client_email'],
@@ -70,7 +78,6 @@ class PublicDeviceController extends Controller
                 ]);
             }
 
-            // Assign customer role if user is newly created
             if ($user->wasRecentlyCreated && $user->roles()->count() === 0) {
                 $customerRole = \App\Models\Role::where('name', 'customer')->first();
                 if ($customerRole) {
@@ -78,30 +85,56 @@ class PublicDeviceController extends Controller
                 }
             }
 
-            // Create device repair and link to user
+            $recentDuplicate = DeviceRepair::findRecentDuplicate(
+                $user->id,
+                $validated['device_model_id'],
+                $normalizedSerial
+            );
+
+            if ($recentDuplicate) {
+                $deviceRepair = $recentDuplicate;
+                $isDuplicateSubmission = true;
+                return;
+            }
+
+            $activeDuplicate = DeviceRepair::findActiveDuplicate(
+                $user->id,
+                $validated['device_model_id'],
+                $normalizedSerial
+            );
+
+            if ($activeDuplicate) {
+                throw new \Exception(
+                    'An active service request already exists for this device (Tracking: ' . $activeDuplicate->tracking_code . ').'
+                );
+            }
+
             $deviceRepair = $user->deviceRepairs()->create([
                 'device_model_id' => $validated['device_model_id'],
-                'device_serial_number' => $validated['device_serial_number'],
+                'device_serial_number' => $normalizedSerial,
                 'notes' => $validated['notes'],
                 'tracking_code' => DeviceRepair::generateTrackingCode(),
                 'submitted_at' => now(),
                 'status_updated_at' => now()
             ]);
             });
+            });
 
-            // Send email notification after transaction
-            if ($deviceRepair) {
+            if ($deviceRepair && !$isDuplicateSubmission) {
                 $deviceRepair->load(['user', 'deviceModel']);
                 try {
                     $deviceRepair->user->notify(new DeviceServiceNotification($deviceRepair, 'created'));
                 } catch (\Exception $e) {
-                    // Log email failure but don't fail the entire operation
                     \Log::warning('Failed to send device repair notification email: ' . $e->getMessage());
                 }
             }
 
+            $successMessage = $isDuplicateSubmission
+                ? 'Your device submission was already received. Your tracking code is: ' . $deviceRepair->tracking_code
+                : 'Your device has been submitted successfully! Your tracking code is: ' . $deviceRepair->tracking_code;
+
             return redirect()->route('device.tracking', ['code' => $deviceRepair->tracking_code])
-                ->with('success', 'Your device has been submitted successfully! Your tracking code is: ' . $deviceRepair->tracking_code);
+                ->with('success', $successMessage);
         } catch (\Exception $e) {
             return back()->withErrors(['client_email' => $e->getMessage()])->withInput();
         }
@@ -114,6 +147,7 @@ class PublicDeviceController extends Controller
     {
         $trackingCode = $request->query('code');
         $deviceRepair = null;
+        $appLogo = Settings::get('app.logo');
 
         if ($trackingCode) {
             $deviceRepair = DeviceRepair::with(['user', 'deviceModel'])
@@ -121,7 +155,7 @@ class PublicDeviceController extends Controller
                 ->first();
         }
 
-        return view('public.device-tracking', compact('deviceRepair', 'trackingCode'));
+        return view('public.device-tracking', compact('deviceRepair', 'trackingCode', 'appLogo'));
     }
 
     /**
@@ -162,7 +196,8 @@ class PublicDeviceController extends Controller
             'searchPhone' => $phoneNumber,
             'searchCountryCode' => $countryCode,
             'trackingCode' => null,
-            'deviceRepair' => null
+            'deviceRepair' => null,
+            'appLogo' => Settings::get('app.logo'),
         ]);
     }
 

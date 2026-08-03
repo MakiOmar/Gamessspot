@@ -119,14 +119,14 @@
                     <!-- Search and Filter Form -->
                     <form method="GET" action="{{ route('device-repairs.index') }}" class="mb-4">
                         <div class="row">
-                            <div class="{{ Auth::user()->hasRole('admin') ? 'col-md-4' : 'col-md-5' }}">
+                            <div class="{{ Auth::user()->hasRole('admin') ? 'col-md-3' : 'col-md-4' }}">
                                 <div class="form-group">
                                     <label for="search">Search</label>
                                     <input type="text" class="form-control" id="search" name="search" 
                                            value="{{ request('search') }}" placeholder="Search by name, phone, model, serial, or tracking code">
                                 </div>
                             </div>
-                            <div class="{{ Auth::user()->hasRole('admin') ? 'col-md-3' : 'col-md-4' }}">
+                            <div class="{{ Auth::user()->hasRole('admin') ? 'col-md-2' : 'col-md-3' }}">
                                 <div class="form-group">
                                     <label for="status">Status</label>
                                     <select class="form-control" id="status" name="status">
@@ -138,8 +138,22 @@
                                     </select>
                                 </div>
                             </div>
+                            <div class="{{ Auth::user()->hasRole('admin') ? 'col-md-2' : 'col-md-2' }}">
+                                <div class="form-group">
+                                    <label for="start_date">Start Date</label>
+                                    <input type="date" class="form-control" id="start_date" name="start_date" 
+                                           value="{{ request('start_date') }}">
+                                </div>
+                            </div>
+                            <div class="{{ Auth::user()->hasRole('admin') ? 'col-md-2' : 'col-md-2' }}">
+                                <div class="form-group">
+                                    <label for="end_date">End Date</label>
+                                    <input type="date" class="form-control" id="end_date" name="end_date" 
+                                           value="{{ request('end_date') }}">
+                                </div>
+                            </div>
                             @if(Auth::user()->hasRole('admin'))
-                            <div class="col-md-3">
+                            <div class="col-md-2">
                                 <div class="form-group">
                                     <label for="store_profile_id">Store Profile</label>
                                     <select class="form-control" id="store_profile_id" name="store_profile_id">
@@ -153,15 +167,15 @@
                                 </div>
                             </div>
                             @endif
-                            <div class="{{ Auth::user()->hasRole('admin') ? 'col-md-2' : 'col-md-3' }}">
+                            <div class="{{ Auth::user()->hasRole('admin') ? 'col-md-1' : 'col-md-1' }}">
                                 <div class="form-group">
                                     <label>&nbsp;</label>
                                     <div>
-                                        <button type="submit" class="btn btn-primary">
+                                        <button type="submit" class="btn btn-primary btn-block">
                                             <i class="fas fa-search"></i>
                                             Search
                                         </button>
-                                        <a href="{{ route('device-repairs.index') }}" class="btn btn-secondary">
+                                        <a href="{{ route('device-repairs.index') }}" class="btn btn-secondary btn-block">
                                             <i class="fas fa-times"></i>
                                             Clear
                                         </a>

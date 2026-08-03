@@ -3981,7 +3981,7 @@ namespace Illuminate\Support\Facades {
          * @static 
          */        public static function lock($name, $seconds = 0, $owner = null)
         {
-                        /** @var \Illuminate\Cache\FileStore $instance */
+                        /** @var \Illuminate\Cache\RedisStore $instance */
                         return $instance->lock($name, $seconds, $owner);
         }
                     /**
@@ -3993,7 +3993,7 @@ namespace Illuminate\Support\Facades {
          * @static 
          */        public static function restoreLock($name, $owner)
         {
-                        /** @var \Illuminate\Cache\FileStore $instance */
+                        /** @var \Illuminate\Cache\RedisStore $instance */
                         return $instance->restoreLock($name, $owner);
         }
                     /**
@@ -4003,50 +4003,70 @@ namespace Illuminate\Support\Facades {
          * @static 
          */        public static function flush()
         {
-                        /** @var \Illuminate\Cache\FileStore $instance */
+                        /** @var \Illuminate\Cache\RedisStore $instance */
                         return $instance->flush();
         }
                     /**
-         * Get the full path for the given cache key.
+         * Remove all expired tag set entries.
          *
-         * @param string $key
-         * @return string 
+         * @return void 
          * @static 
-         */        public static function path($key)
+         */        public static function flushStaleTags()
         {
-                        /** @var \Illuminate\Cache\FileStore $instance */
-                        return $instance->path($key);
+                        /** @var \Illuminate\Cache\RedisStore $instance */
+                        $instance->flushStaleTags();
         }
                     /**
-         * Get the Filesystem instance.
+         * Get the Redis connection instance.
          *
-         * @return \Illuminate\Filesystem\Filesystem 
+         * @return \Illuminate\Redis\Connections\Connection 
          * @static 
-         */        public static function getFilesystem()
+         */        public static function connection()
         {
-                        /** @var \Illuminate\Cache\FileStore $instance */
-                        return $instance->getFilesystem();
+                        /** @var \Illuminate\Cache\RedisStore $instance */
+                        return $instance->connection();
         }
                     /**
-         * Get the working directory of the cache.
+         * Get the Redis connection instance that should be used to manage locks.
          *
-         * @return string 
+         * @return \Illuminate\Redis\Connections\Connection 
          * @static 
-         */        public static function getDirectory()
+         */        public static function lockConnection()
         {
-                        /** @var \Illuminate\Cache\FileStore $instance */
-                        return $instance->getDirectory();
+                        /** @var \Illuminate\Cache\RedisStore $instance */
+                        return $instance->lockConnection();
         }
                     /**
-         * Set the cache directory where locks should be stored.
+         * Specify the name of the connection that should be used to store data.
          *
-         * @param string|null $lockDirectory
-         * @return \Illuminate\Cache\FileStore 
+         * @param string $connection
+         * @return void 
          * @static 
-         */        public static function setLockDirectory($lockDirectory)
+         */        public static function setConnection($connection)
         {
-                        /** @var \Illuminate\Cache\FileStore $instance */
-                        return $instance->setLockDirectory($lockDirectory);
+                        /** @var \Illuminate\Cache\RedisStore $instance */
+                        $instance->setConnection($connection);
+        }
+                    /**
+         * Specify the name of the connection that should be used to manage locks.
+         *
+         * @param string $connection
+         * @return \Illuminate\Cache\RedisStore 
+         * @static 
+         */        public static function setLockConnection($connection)
+        {
+                        /** @var \Illuminate\Cache\RedisStore $instance */
+                        return $instance->setLockConnection($connection);
+        }
+                    /**
+         * Get the Redis database instance.
+         *
+         * @return \Illuminate\Contracts\Redis\Factory 
+         * @static 
+         */        public static function getRedis()
+        {
+                        /** @var \Illuminate\Cache\RedisStore $instance */
+                        return $instance->getRedis();
         }
                     /**
          * Get the cache key prefix.
@@ -4055,8 +4075,150 @@ namespace Illuminate\Support\Facades {
          * @static 
          */        public static function getPrefix()
         {
-                        /** @var \Illuminate\Cache\FileStore $instance */
+                        /** @var \Illuminate\Cache\RedisStore $instance */
                         return $instance->getPrefix();
+        }
+                    /**
+         * Set the cache key prefix.
+         *
+         * @param string $prefix
+         * @return void 
+         * @static 
+         */        public static function setPrefix($prefix)
+        {
+                        /** @var \Illuminate\Cache\RedisStore $instance */
+                        $instance->setPrefix($prefix);
+        }
+            }
+            /**
+     * 
+     *
+     * @method static \Illuminate\Concurrency\ConcurrencyManager setApplication(\Illuminate\Contracts\Foundation\Application $app)
+     * @method static array run(\Closure|array $tasks)
+     * @method static \Illuminate\Support\Defer\DeferredCallback defer(\Closure|array $tasks)
+     * @see \Illuminate\Concurrency\ConcurrencyManager
+     */        class Concurrency {
+                    /**
+         * Get a driver instance by name.
+         *
+         * @param string|null $name
+         * @return mixed 
+         * @static 
+         */        public static function driver($name = null)
+        {
+                        /** @var \Illuminate\Concurrency\ConcurrencyManager $instance */
+                        return $instance->driver($name);
+        }
+                    /**
+         * Create an instance of the process concurrency driver.
+         *
+         * @param array $config
+         * @return \Illuminate\Concurrency\ProcessDriver 
+         * @static 
+         */        public static function createProcessDriver($config)
+        {
+                        /** @var \Illuminate\Concurrency\ConcurrencyManager $instance */
+                        return $instance->createProcessDriver($config);
+        }
+                    /**
+         * Create an instance of the fork concurrency driver.
+         *
+         * @param array $config
+         * @return \Illuminate\Concurrency\ForkDriver 
+         * @throws \RuntimeException
+         * @static 
+         */        public static function createForkDriver($config)
+        {
+                        /** @var \Illuminate\Concurrency\ConcurrencyManager $instance */
+                        return $instance->createForkDriver($config);
+        }
+                    /**
+         * Create an instance of the sync concurrency driver.
+         *
+         * @param array $config
+         * @return \Illuminate\Concurrency\SyncDriver 
+         * @static 
+         */        public static function createSyncDriver($config)
+        {
+                        /** @var \Illuminate\Concurrency\ConcurrencyManager $instance */
+                        return $instance->createSyncDriver($config);
+        }
+                    /**
+         * Get the default instance name.
+         *
+         * @return string 
+         * @static 
+         */        public static function getDefaultInstance()
+        {
+                        /** @var \Illuminate\Concurrency\ConcurrencyManager $instance */
+                        return $instance->getDefaultInstance();
+        }
+                    /**
+         * Set the default instance name.
+         *
+         * @param string $name
+         * @return void 
+         * @static 
+         */        public static function setDefaultInstance($name)
+        {
+                        /** @var \Illuminate\Concurrency\ConcurrencyManager $instance */
+                        $instance->setDefaultInstance($name);
+        }
+                    /**
+         * Get the instance specific configuration.
+         *
+         * @param string $name
+         * @return array 
+         * @static 
+         */        public static function getInstanceConfig($name)
+        {
+                        /** @var \Illuminate\Concurrency\ConcurrencyManager $instance */
+                        return $instance->getInstanceConfig($name);
+        }
+                    /**
+         * Get an instance instance by name.
+         *
+         * @param string|null $name
+         * @return mixed 
+         * @static 
+         */        public static function instance($name = null)
+        {            //Method inherited from \Illuminate\Support\MultipleInstanceManager         
+                        /** @var \Illuminate\Concurrency\ConcurrencyManager $instance */
+                        return $instance->instance($name);
+        }
+                    /**
+         * Unset the given instances.
+         *
+         * @param array|string|null $name
+         * @return \Illuminate\Concurrency\ConcurrencyManager 
+         * @static 
+         */        public static function forgetInstance($name = null)
+        {            //Method inherited from \Illuminate\Support\MultipleInstanceManager         
+                        /** @var \Illuminate\Concurrency\ConcurrencyManager $instance */
+                        return $instance->forgetInstance($name);
+        }
+                    /**
+         * Disconnect the given instance and remove from local cache.
+         *
+         * @param string|null $name
+         * @return void 
+         * @static 
+         */        public static function purge($name = null)
+        {            //Method inherited from \Illuminate\Support\MultipleInstanceManager         
+                        /** @var \Illuminate\Concurrency\ConcurrencyManager $instance */
+                        $instance->purge($name);
+        }
+                    /**
+         * Register a custom instance creator Closure.
+         *
+         * @param string $name
+         * @param \Closure $callback
+         * @return \Illuminate\Concurrency\ConcurrencyManager 
+         * @static 
+         */        public static function extend($name, $callback)
+        {            //Method inherited from \Illuminate\Support\MultipleInstanceManager         
+                        /** @var \Illuminate\Concurrency\ConcurrencyManager $instance */
+                        return $instance->extend($name, $callback);
         }
             }
             /**
@@ -4230,6 +4392,454 @@ namespace Illuminate\Support\Facades {
          */        public static function flushMacros()
         {
                         \Illuminate\Config\Repository::flushMacros();
+        }
+            }
+            /**
+     * 
+     *
+     * @see \Illuminate\Log\Context\Repository
+     */        class Context {
+                    /**
+         * Determine if the given key exists.
+         *
+         * @param string $key
+         * @return bool 
+         * @static 
+         */        public static function has($key)
+        {
+                        /** @var \Illuminate\Log\Context\Repository $instance */
+                        return $instance->has($key);
+        }
+                    /**
+         * Determine if the given key is missing.
+         *
+         * @param string $key
+         * @return bool 
+         * @static 
+         */        public static function missing($key)
+        {
+                        /** @var \Illuminate\Log\Context\Repository $instance */
+                        return $instance->missing($key);
+        }
+                    /**
+         * Determine if the given key exists within the hidden context data.
+         *
+         * @param string $key
+         * @return bool 
+         * @static 
+         */        public static function hasHidden($key)
+        {
+                        /** @var \Illuminate\Log\Context\Repository $instance */
+                        return $instance->hasHidden($key);
+        }
+                    /**
+         * Determine if the given key is missing within the hidden context data.
+         *
+         * @param string $key
+         * @return bool 
+         * @static 
+         */        public static function missingHidden($key)
+        {
+                        /** @var \Illuminate\Log\Context\Repository $instance */
+                        return $instance->missingHidden($key);
+        }
+                    /**
+         * Retrieve all the context data.
+         *
+         * @return array<string, mixed> 
+         * @static 
+         */        public static function all()
+        {
+                        /** @var \Illuminate\Log\Context\Repository $instance */
+                        return $instance->all();
+        }
+                    /**
+         * Retrieve all the hidden context data.
+         *
+         * @return array<string, mixed> 
+         * @static 
+         */        public static function allHidden()
+        {
+                        /** @var \Illuminate\Log\Context\Repository $instance */
+                        return $instance->allHidden();
+        }
+                    /**
+         * Retrieve the given key's value.
+         *
+         * @param string $key
+         * @param mixed $default
+         * @return mixed 
+         * @static 
+         */        public static function get($key, $default = null)
+        {
+                        /** @var \Illuminate\Log\Context\Repository $instance */
+                        return $instance->get($key, $default);
+        }
+                    /**
+         * Retrieve the given key's hidden value.
+         *
+         * @param string $key
+         * @param mixed $default
+         * @return mixed 
+         * @static 
+         */        public static function getHidden($key, $default = null)
+        {
+                        /** @var \Illuminate\Log\Context\Repository $instance */
+                        return $instance->getHidden($key, $default);
+        }
+                    /**
+         * Retrieve the given key's value and then forget it.
+         *
+         * @param string $key
+         * @param mixed $default
+         * @return mixed 
+         * @static 
+         */        public static function pull($key, $default = null)
+        {
+                        /** @var \Illuminate\Log\Context\Repository $instance */
+                        return $instance->pull($key, $default);
+        }
+                    /**
+         * Retrieve the given key's hidden value and then forget it.
+         *
+         * @param string $key
+         * @param mixed $default
+         * @return mixed 
+         * @static 
+         */        public static function pullHidden($key, $default = null)
+        {
+                        /** @var \Illuminate\Log\Context\Repository $instance */
+                        return $instance->pullHidden($key, $default);
+        }
+                    /**
+         * Retrieve only the values of the given keys.
+         *
+         * @param array<int, string> $keys
+         * @return array<string, mixed> 
+         * @static 
+         */        public static function only($keys)
+        {
+                        /** @var \Illuminate\Log\Context\Repository $instance */
+                        return $instance->only($keys);
+        }
+                    /**
+         * Retrieve only the hidden values of the given keys.
+         *
+         * @param array<int, string> $keys
+         * @return array<string, mixed> 
+         * @static 
+         */        public static function onlyHidden($keys)
+        {
+                        /** @var \Illuminate\Log\Context\Repository $instance */
+                        return $instance->onlyHidden($keys);
+        }
+                    /**
+         * Add a context value.
+         *
+         * @param string|array<string, mixed> $key
+         * @param mixed $value
+         * @return \Illuminate\Log\Context\Repository 
+         * @static 
+         */        public static function add($key, $value = null)
+        {
+                        /** @var \Illuminate\Log\Context\Repository $instance */
+                        return $instance->add($key, $value);
+        }
+                    /**
+         * Add a hidden context value.
+         *
+         * @param string|array<string, mixed> $key
+         * @param mixed $value
+         * @return \Illuminate\Log\Context\Repository 
+         * @static 
+         */        public static function addHidden($key, $value = null)
+        {
+                        /** @var \Illuminate\Log\Context\Repository $instance */
+                        return $instance->addHidden($key, $value);
+        }
+                    /**
+         * Forget the given context key.
+         *
+         * @param string|array<int, string> $key
+         * @return \Illuminate\Log\Context\Repository 
+         * @static 
+         */        public static function forget($key)
+        {
+                        /** @var \Illuminate\Log\Context\Repository $instance */
+                        return $instance->forget($key);
+        }
+                    /**
+         * Forget the given hidden context key.
+         *
+         * @param string|array<int, string> $key
+         * @return \Illuminate\Log\Context\Repository 
+         * @static 
+         */        public static function forgetHidden($key)
+        {
+                        /** @var \Illuminate\Log\Context\Repository $instance */
+                        return $instance->forgetHidden($key);
+        }
+                    /**
+         * Add a context value if it does not exist yet.
+         *
+         * @param string $key
+         * @param mixed $value
+         * @return \Illuminate\Log\Context\Repository 
+         * @static 
+         */        public static function addIf($key, $value)
+        {
+                        /** @var \Illuminate\Log\Context\Repository $instance */
+                        return $instance->addIf($key, $value);
+        }
+                    /**
+         * Add a hidden context value if it does not exist yet.
+         *
+         * @param string $key
+         * @param mixed $value
+         * @return \Illuminate\Log\Context\Repository 
+         * @static 
+         */        public static function addHiddenIf($key, $value)
+        {
+                        /** @var \Illuminate\Log\Context\Repository $instance */
+                        return $instance->addHiddenIf($key, $value);
+        }
+                    /**
+         * Push the given values onto the key's stack.
+         *
+         * @param string $key
+         * @param mixed $values
+         * @return \Illuminate\Log\Context\Repository 
+         * @throws \RuntimeException
+         * @static 
+         */        public static function push($key, ...$values)
+        {
+                        /** @var \Illuminate\Log\Context\Repository $instance */
+                        return $instance->push($key, ...$values);
+        }
+                    /**
+         * Pop the latest value from the key's stack.
+         *
+         * @param string $key
+         * @return mixed 
+         * @throws \RuntimeException
+         * @static 
+         */        public static function pop($key)
+        {
+                        /** @var \Illuminate\Log\Context\Repository $instance */
+                        return $instance->pop($key);
+        }
+                    /**
+         * Push the given hidden values onto the key's stack.
+         *
+         * @param string $key
+         * @param mixed $values
+         * @return \Illuminate\Log\Context\Repository 
+         * @throws \RuntimeException
+         * @static 
+         */        public static function pushHidden($key, ...$values)
+        {
+                        /** @var \Illuminate\Log\Context\Repository $instance */
+                        return $instance->pushHidden($key, ...$values);
+        }
+                    /**
+         * Pop the latest hidden value from the key's stack.
+         *
+         * @param string $key
+         * @return mixed 
+         * @throws \RuntimeException
+         * @static 
+         */        public static function popHidden($key)
+        {
+                        /** @var \Illuminate\Log\Context\Repository $instance */
+                        return $instance->popHidden($key);
+        }
+                    /**
+         * Determine if the given value is in the given stack.
+         *
+         * @param string $key
+         * @param mixed $value
+         * @param bool $strict
+         * @return bool 
+         * @throws \RuntimeException
+         * @static 
+         */        public static function stackContains($key, $value, $strict = false)
+        {
+                        /** @var \Illuminate\Log\Context\Repository $instance */
+                        return $instance->stackContains($key, $value, $strict);
+        }
+                    /**
+         * Determine if the given value is in the given hidden stack.
+         *
+         * @param string $key
+         * @param mixed $value
+         * @param bool $strict
+         * @return bool 
+         * @throws \RuntimeException
+         * @static 
+         */        public static function hiddenStackContains($key, $value, $strict = false)
+        {
+                        /** @var \Illuminate\Log\Context\Repository $instance */
+                        return $instance->hiddenStackContains($key, $value, $strict);
+        }
+                    /**
+         * Determine if the repository is empty.
+         *
+         * @return bool 
+         * @static 
+         */        public static function isEmpty()
+        {
+                        /** @var \Illuminate\Log\Context\Repository $instance */
+                        return $instance->isEmpty();
+        }
+                    /**
+         * Execute the given callback when context is about to be dehydrated.
+         *
+         * @param callable $callback
+         * @return \Illuminate\Log\Context\Repository 
+         * @static 
+         */        public static function dehydrating($callback)
+        {
+                        /** @var \Illuminate\Log\Context\Repository $instance */
+                        return $instance->dehydrating($callback);
+        }
+                    /**
+         * Execute the given callback when context has been hydrated.
+         *
+         * @param callable $callback
+         * @return \Illuminate\Log\Context\Repository 
+         * @static 
+         */        public static function hydrated($callback)
+        {
+                        /** @var \Illuminate\Log\Context\Repository $instance */
+                        return $instance->hydrated($callback);
+        }
+                    /**
+         * Handle unserialize exceptions using the given callback.
+         *
+         * @param callable|null $callback
+         * @return static 
+         * @static 
+         */        public static function handleUnserializeExceptionsUsing($callback)
+        {
+                        /** @var \Illuminate\Log\Context\Repository $instance */
+                        return $instance->handleUnserializeExceptionsUsing($callback);
+        }
+                    /**
+         * Flush all context data.
+         *
+         * @return \Illuminate\Log\Context\Repository 
+         * @static 
+         */        public static function flush()
+        {
+                        /** @var \Illuminate\Log\Context\Repository $instance */
+                        return $instance->flush();
+        }
+                    /**
+         * Dehydrate the context data.
+         *
+         * @internal 
+         * @return \Illuminate\Log\Context\?array 
+         * @static 
+         */        public static function dehydrate()
+        {
+                        /** @var \Illuminate\Log\Context\Repository $instance */
+                        return $instance->dehydrate();
+        }
+                    /**
+         * Hydrate the context instance.
+         *
+         * @internal 
+         * @param \Illuminate\Log\Context\?array $context
+         * @return \Illuminate\Log\Context\Repository 
+         * @throws \RuntimeException
+         * @static 
+         */        public static function hydrate($context)
+        {
+                        /** @var \Illuminate\Log\Context\Repository $instance */
+                        return $instance->hydrate($context);
+        }
+                    /**
+         * Apply the callback if the given "value" is (or resolves to) truthy.
+         *
+         * @template TWhenParameter
+         * @template TWhenReturnType
+         * @param \Illuminate\Log\Context\(\Closure($this):  TWhenParameter)|TWhenParameter|null  $value
+         * @param \Illuminate\Log\Context\(callable($this,  TWhenParameter): TWhenReturnType)|null  $callback
+         * @param \Illuminate\Log\Context\(callable($this,  TWhenParameter): TWhenReturnType)|null  $default
+         * @return $this|\Illuminate\Log\Context\TWhenReturnType 
+         * @static 
+         */        public static function when($value = null, $callback = null, $default = null)
+        {
+                        /** @var \Illuminate\Log\Context\Repository $instance */
+                        return $instance->when($value, $callback, $default);
+        }
+                    /**
+         * Apply the callback if the given "value" is (or resolves to) falsy.
+         *
+         * @template TUnlessParameter
+         * @template TUnlessReturnType
+         * @param \Illuminate\Log\Context\(\Closure($this):  TUnlessParameter)|TUnlessParameter|null  $value
+         * @param \Illuminate\Log\Context\(callable($this,  TUnlessParameter): TUnlessReturnType)|null  $callback
+         * @param \Illuminate\Log\Context\(callable($this,  TUnlessParameter): TUnlessReturnType)|null  $default
+         * @return $this|\Illuminate\Log\Context\TUnlessReturnType 
+         * @static 
+         */        public static function unless($value = null, $callback = null, $default = null)
+        {
+                        /** @var \Illuminate\Log\Context\Repository $instance */
+                        return $instance->unless($value, $callback, $default);
+        }
+                    /**
+         * Register a custom macro.
+         *
+         * @param string $name
+         * @param object|callable $macro
+         * @return void 
+         * @static 
+         */        public static function macro($name, $macro)
+        {
+                        \Illuminate\Log\Context\Repository::macro($name, $macro);
+        }
+                    /**
+         * Mix another object into the class.
+         *
+         * @param object $mixin
+         * @param bool $replace
+         * @return void 
+         * @throws \ReflectionException
+         * @static 
+         */        public static function mixin($mixin, $replace = true)
+        {
+                        \Illuminate\Log\Context\Repository::mixin($mixin, $replace);
+        }
+                    /**
+         * Checks if macro is registered.
+         *
+         * @param string $name
+         * @return bool 
+         * @static 
+         */        public static function hasMacro($name)
+        {
+                        return \Illuminate\Log\Context\Repository::hasMacro($name);
+        }
+                    /**
+         * Flush the existing macros.
+         *
+         * @return void 
+         * @static 
+         */        public static function flushMacros()
+        {
+                        \Illuminate\Log\Context\Repository::flushMacros();
+        }
+                    /**
+         * Restore the model from the model identifier instance.
+         *
+         * @param \Illuminate\Contracts\Database\ModelIdentifier $value
+         * @return \Illuminate\Database\Eloquent\Model 
+         * @static 
+         */        public static function restoreModel($value)
+        {
+                        /** @var \Illuminate\Log\Context\Repository $instance */
+                        return $instance->restoreModel($value);
         }
             }
             /**
@@ -9737,6 +10347,86 @@ namespace Illuminate\Support\Facades {
                         return $instance->setConnectionName($name);
         }
                     /**
+         * Migrate the delayed jobs that are ready to the regular queue.
+         *
+         * @param string $from
+         * @param string $to
+         * @param int $limit
+         * @return array 
+         * @static 
+         */        public static function migrateExpiredJobs($from, $to)
+        {
+                        /** @var \Illuminate\Queue\RedisQueue $instance */
+                        return $instance->migrateExpiredJobs($from, $to);
+        }
+                    /**
+         * Delete a reserved job from the queue.
+         *
+         * @param string $queue
+         * @param \Illuminate\Queue\Jobs\RedisJob $job
+         * @return void 
+         * @static 
+         */        public static function deleteReserved($queue, $job)
+        {
+                        /** @var \Illuminate\Queue\RedisQueue $instance */
+                        $instance->deleteReserved($queue, $job);
+        }
+                    /**
+         * Delete a reserved job from the reserved queue and release it.
+         *
+         * @param string $queue
+         * @param \Illuminate\Queue\Jobs\RedisJob $job
+         * @param int $delay
+         * @return void 
+         * @static 
+         */        public static function deleteAndRelease($queue, $job, $delay)
+        {
+                        /** @var \Illuminate\Queue\RedisQueue $instance */
+                        $instance->deleteAndRelease($queue, $job, $delay);
+        }
+                    /**
+         * Delete all of the jobs from the queue.
+         *
+         * @param string $queue
+         * @return int 
+         * @static 
+         */        public static function clear($queue)
+        {
+                        /** @var \Illuminate\Queue\RedisQueue $instance */
+                        return $instance->clear($queue);
+        }
+                    /**
+         * Get the queue or return the default.
+         *
+         * @param string|null $queue
+         * @return string 
+         * @static 
+         */        public static function getQueue($queue)
+        {
+                        /** @var \Illuminate\Queue\RedisQueue $instance */
+                        return $instance->getQueue($queue);
+        }
+                    /**
+         * Get the connection for the queue.
+         *
+         * @return \Illuminate\Redis\Connections\Connection 
+         * @static 
+         */        public static function getConnection()
+        {
+                        /** @var \Illuminate\Queue\RedisQueue $instance */
+                        return $instance->getConnection();
+        }
+                    /**
+         * Get the underlying Redis instance.
+         *
+         * @return \Illuminate\Contracts\Redis\Factory 
+         * @static 
+         */        public static function getRedis()
+        {
+                        /** @var \Illuminate\Queue\RedisQueue $instance */
+                        return $instance->getRedis();
+        }
+                    /**
          * Get the maximum number of attempts for an object-based queue handler.
          *
          * @param mixed $job
@@ -9744,7 +10434,7 @@ namespace Illuminate\Support\Facades {
          * @static 
          */        public static function getJobTries($job)
         {            //Method inherited from \Illuminate\Queue\Queue         
-                        /** @var \Illuminate\Queue\SyncQueue $instance */
+                        /** @var \Illuminate\Queue\RedisQueue $instance */
                         return $instance->getJobTries($job);
         }
                     /**
@@ -9755,7 +10445,7 @@ namespace Illuminate\Support\Facades {
          * @static 
          */        public static function getJobBackoff($job)
         {            //Method inherited from \Illuminate\Queue\Queue         
-                        /** @var \Illuminate\Queue\SyncQueue $instance */
+                        /** @var \Illuminate\Queue\RedisQueue $instance */
                         return $instance->getJobBackoff($job);
         }
                     /**
@@ -9766,7 +10456,7 @@ namespace Illuminate\Support\Facades {
          * @static 
          */        public static function getJobExpiration($job)
         {            //Method inherited from \Illuminate\Queue\Queue         
-                        /** @var \Illuminate\Queue\SyncQueue $instance */
+                        /** @var \Illuminate\Queue\RedisQueue $instance */
                         return $instance->getJobExpiration($job);
         }
                     /**
@@ -9777,7 +10467,7 @@ namespace Illuminate\Support\Facades {
          * @static 
          */        public static function createPayloadUsing($callback)
         {            //Method inherited from \Illuminate\Queue\Queue         
-                        \Illuminate\Queue\SyncQueue::createPayloadUsing($callback);
+                        \Illuminate\Queue\RedisQueue::createPayloadUsing($callback);
         }
                     /**
          * Get the container instance being used by the connection.
@@ -9786,7 +10476,7 @@ namespace Illuminate\Support\Facades {
          * @static 
          */        public static function getContainer()
         {            //Method inherited from \Illuminate\Queue\Queue         
-                        /** @var \Illuminate\Queue\SyncQueue $instance */
+                        /** @var \Illuminate\Queue\RedisQueue $instance */
                         return $instance->getContainer();
         }
                     /**
@@ -9797,7 +10487,7 @@ namespace Illuminate\Support\Facades {
          * @static 
          */        public static function setContainer($container)
         {            //Method inherited from \Illuminate\Queue\Queue         
-                        /** @var \Illuminate\Queue\SyncQueue $instance */
+                        /** @var \Illuminate\Queue\RedisQueue $instance */
                         $instance->setContainer($container);
         }
             }
@@ -13478,6 +14168,223 @@ namespace Illuminate\Support\Facades {
          */        public static function emailVerification()
         {
                         return \Illuminate\Routing\Router::emailVerification();
+        }
+            }
+            /**
+     * 
+     *
+     * @method static void group(\Closure $events)
+     * @method static mixed macroCall(string $method, array $parameters)
+     * @method static \Illuminate\Console\Scheduling\PendingEventAttributes withoutOverlapping(int $expiresAt = 1440)
+     * @method static void mergeAttributes(\Illuminate\Console\Scheduling\Event $event)
+     * @method static \Illuminate\Console\Scheduling\PendingEventAttributes user(string $user)
+     * @method static \Illuminate\Console\Scheduling\PendingEventAttributes environments(array|mixed $environments)
+     * @method static \Illuminate\Console\Scheduling\PendingEventAttributes evenInMaintenanceMode()
+     * @method static \Illuminate\Console\Scheduling\PendingEventAttributes onOneServer()
+     * @method static \Illuminate\Console\Scheduling\PendingEventAttributes runInBackground()
+     * @method static \Illuminate\Console\Scheduling\PendingEventAttributes when(\Closure|bool $callback)
+     * @method static \Illuminate\Console\Scheduling\PendingEventAttributes skip(\Closure|bool $callback)
+     * @method static \Illuminate\Console\Scheduling\PendingEventAttributes name(string $description)
+     * @method static \Illuminate\Console\Scheduling\PendingEventAttributes description(string $description)
+     * @method static \Illuminate\Console\Scheduling\PendingEventAttributes cron(string $expression)
+     * @method static \Illuminate\Console\Scheduling\PendingEventAttributes between(string $startTime, string $endTime)
+     * @method static \Illuminate\Console\Scheduling\PendingEventAttributes unlessBetween(string $startTime, string $endTime)
+     * @method static \Illuminate\Console\Scheduling\PendingEventAttributes everySecond()
+     * @method static \Illuminate\Console\Scheduling\PendingEventAttributes everyTwoSeconds()
+     * @method static \Illuminate\Console\Scheduling\PendingEventAttributes everyFiveSeconds()
+     * @method static \Illuminate\Console\Scheduling\PendingEventAttributes everyTenSeconds()
+     * @method static \Illuminate\Console\Scheduling\PendingEventAttributes everyFifteenSeconds()
+     * @method static \Illuminate\Console\Scheduling\PendingEventAttributes everyTwentySeconds()
+     * @method static \Illuminate\Console\Scheduling\PendingEventAttributes everyThirtySeconds()
+     * @method static \Illuminate\Console\Scheduling\PendingEventAttributes everyMinute()
+     * @method static \Illuminate\Console\Scheduling\PendingEventAttributes everyTwoMinutes()
+     * @method static \Illuminate\Console\Scheduling\PendingEventAttributes everyThreeMinutes()
+     * @method static \Illuminate\Console\Scheduling\PendingEventAttributes everyFourMinutes()
+     * @method static \Illuminate\Console\Scheduling\PendingEventAttributes everyFiveMinutes()
+     * @method static \Illuminate\Console\Scheduling\PendingEventAttributes everyTenMinutes()
+     * @method static \Illuminate\Console\Scheduling\PendingEventAttributes everyFifteenMinutes()
+     * @method static \Illuminate\Console\Scheduling\PendingEventAttributes everyThirtyMinutes()
+     * @method static \Illuminate\Console\Scheduling\PendingEventAttributes hourly()
+     * @method static \Illuminate\Console\Scheduling\PendingEventAttributes hourlyAt(array|string|int|int[] $offset)
+     * @method static \Illuminate\Console\Scheduling\PendingEventAttributes everyOddHour(array|string|int $offset = 0)
+     * @method static \Illuminate\Console\Scheduling\PendingEventAttributes everyTwoHours(array|string|int $offset = 0)
+     * @method static \Illuminate\Console\Scheduling\PendingEventAttributes everyThreeHours(array|string|int $offset = 0)
+     * @method static \Illuminate\Console\Scheduling\PendingEventAttributes everyFourHours(array|string|int $offset = 0)
+     * @method static \Illuminate\Console\Scheduling\PendingEventAttributes everySixHours(array|string|int $offset = 0)
+     * @method static \Illuminate\Console\Scheduling\PendingEventAttributes daily()
+     * @method static \Illuminate\Console\Scheduling\PendingEventAttributes at(string $time)
+     * @method static \Illuminate\Console\Scheduling\PendingEventAttributes dailyAt(string $time)
+     * @method static \Illuminate\Console\Scheduling\PendingEventAttributes twiceDaily(int $first = 1, int $second = 13)
+     * @method static \Illuminate\Console\Scheduling\PendingEventAttributes twiceDailyAt(int $first = 1, int $second = 13, int $offset = 0)
+     * @method static \Illuminate\Console\Scheduling\PendingEventAttributes weekdays()
+     * @method static \Illuminate\Console\Scheduling\PendingEventAttributes weekends()
+     * @method static \Illuminate\Console\Scheduling\PendingEventAttributes mondays()
+     * @method static \Illuminate\Console\Scheduling\PendingEventAttributes tuesdays()
+     * @method static \Illuminate\Console\Scheduling\PendingEventAttributes wednesdays()
+     * @method static \Illuminate\Console\Scheduling\PendingEventAttributes thursdays()
+     * @method static \Illuminate\Console\Scheduling\PendingEventAttributes fridays()
+     * @method static \Illuminate\Console\Scheduling\PendingEventAttributes saturdays()
+     * @method static \Illuminate\Console\Scheduling\PendingEventAttributes sundays()
+     * @method static \Illuminate\Console\Scheduling\PendingEventAttributes weekly()
+     * @method static \Illuminate\Console\Scheduling\PendingEventAttributes weeklyOn(array|mixed $dayOfWeek, string $time = '0:0')
+     * @method static \Illuminate\Console\Scheduling\PendingEventAttributes monthly()
+     * @method static \Illuminate\Console\Scheduling\PendingEventAttributes monthlyOn(int $dayOfMonth = 1, string $time = '0:0')
+     * @method static \Illuminate\Console\Scheduling\PendingEventAttributes twiceMonthly(int $first = 1, int $second = 16, string $time = '0:0')
+     * @method static \Illuminate\Console\Scheduling\PendingEventAttributes lastDayOfMonth(string $time = '0:0')
+     * @method static \Illuminate\Console\Scheduling\PendingEventAttributes quarterly()
+     * @method static \Illuminate\Console\Scheduling\PendingEventAttributes quarterlyOn(int $dayOfQuarter = 1, string $time = '0:0')
+     * @method static \Illuminate\Console\Scheduling\PendingEventAttributes yearly()
+     * @method static \Illuminate\Console\Scheduling\PendingEventAttributes yearlyOn(int $month = 1, int|string $dayOfMonth = 1, string $time = '0:0')
+     * @method static \Illuminate\Console\Scheduling\PendingEventAttributes days(array|mixed $days)
+     * @method static \Illuminate\Console\Scheduling\PendingEventAttributes timezone(\DateTimeZone|string $timezone)
+     * @see \Illuminate\Console\Scheduling\Schedule
+     */        class Schedule {
+                    /**
+         * Add a new callback event to the schedule.
+         *
+         * @param string|callable $callback
+         * @param array $parameters
+         * @return \Illuminate\Console\Scheduling\CallbackEvent 
+         * @static 
+         */        public static function call($callback, $parameters = [])
+        {
+                        /** @var \Illuminate\Console\Scheduling\Schedule $instance */
+                        return $instance->call($callback, $parameters);
+        }
+                    /**
+         * Add a new Artisan command event to the schedule.
+         *
+         * @param string $command
+         * @param array $parameters
+         * @return \Illuminate\Console\Scheduling\Event 
+         * @static 
+         */        public static function command($command, $parameters = [])
+        {
+                        /** @var \Illuminate\Console\Scheduling\Schedule $instance */
+                        return $instance->command($command, $parameters);
+        }
+                    /**
+         * Add a new job callback event to the schedule.
+         *
+         * @param object|string $job
+         * @param string|null $queue
+         * @param string|null $connection
+         * @return \Illuminate\Console\Scheduling\CallbackEvent 
+         * @static 
+         */        public static function job($job, $queue = null, $connection = null)
+        {
+                        /** @var \Illuminate\Console\Scheduling\Schedule $instance */
+                        return $instance->job($job, $queue, $connection);
+        }
+                    /**
+         * Add a new command event to the schedule.
+         *
+         * @param string $command
+         * @param array $parameters
+         * @return \Illuminate\Console\Scheduling\Event 
+         * @static 
+         */        public static function exec($command, $parameters = [])
+        {
+                        /** @var \Illuminate\Console\Scheduling\Schedule $instance */
+                        return $instance->exec($command, $parameters);
+        }
+                    /**
+         * Compile array input for a command.
+         *
+         * @param string|int $key
+         * @param array $value
+         * @return string 
+         * @static 
+         */        public static function compileArrayInput($key, $value)
+        {
+                        /** @var \Illuminate\Console\Scheduling\Schedule $instance */
+                        return $instance->compileArrayInput($key, $value);
+        }
+                    /**
+         * Determine if the server is allowed to run this event.
+         *
+         * @param \Illuminate\Console\Scheduling\Event $event
+         * @param \DateTimeInterface $time
+         * @return bool 
+         * @static 
+         */        public static function serverShouldRun($event, $time)
+        {
+                        /** @var \Illuminate\Console\Scheduling\Schedule $instance */
+                        return $instance->serverShouldRun($event, $time);
+        }
+                    /**
+         * Get all of the events on the schedule that are due.
+         *
+         * @param \Illuminate\Contracts\Foundation\Application $app
+         * @return \Illuminate\Support\Collection 
+         * @static 
+         */        public static function dueEvents($app)
+        {
+                        /** @var \Illuminate\Console\Scheduling\Schedule $instance */
+                        return $instance->dueEvents($app);
+        }
+                    /**
+         * Get all of the events on the schedule.
+         *
+         * @return \Illuminate\Console\Scheduling\Event[] 
+         * @static 
+         */        public static function events()
+        {
+                        /** @var \Illuminate\Console\Scheduling\Schedule $instance */
+                        return $instance->events();
+        }
+                    /**
+         * Specify the cache store that should be used to store mutexes.
+         *
+         * @param string $store
+         * @return \Illuminate\Console\Scheduling\Schedule 
+         * @static 
+         */        public static function useCache($store)
+        {
+                        /** @var \Illuminate\Console\Scheduling\Schedule $instance */
+                        return $instance->useCache($store);
+        }
+                    /**
+         * Register a custom macro.
+         *
+         * @param string $name
+         * @param object|callable $macro
+         * @return void 
+         * @static 
+         */        public static function macro($name, $macro)
+        {
+                        \Illuminate\Console\Scheduling\Schedule::macro($name, $macro);
+        }
+                    /**
+         * Mix another object into the class.
+         *
+         * @param object $mixin
+         * @param bool $replace
+         * @return void 
+         * @throws \ReflectionException
+         * @static 
+         */        public static function mixin($mixin, $replace = true)
+        {
+                        \Illuminate\Console\Scheduling\Schedule::mixin($mixin, $replace);
+        }
+                    /**
+         * Checks if macro is registered.
+         *
+         * @param string $name
+         * @return bool 
+         * @static 
+         */        public static function hasMacro($name)
+        {
+                        return \Illuminate\Console\Scheduling\Schedule::hasMacro($name);
+        }
+                    /**
+         * Flush the existing macros.
+         *
+         * @return void 
+         * @static 
+         */        public static function flushMacros()
+        {
+                        \Illuminate\Console\Scheduling\Schedule::flushMacros();
         }
             }
             /**
@@ -18000,6 +18907,331 @@ namespace Maatwebsite\Excel\Facades {
             }
     }
 
+namespace Rawilk\Settings\Facades {
+            /**
+     * 
+     *
+     * @see \Rawilk\Settings\Settings
+     */        class Settings {
+                    /**
+         * 
+         *
+         * @static 
+         */        public static function getDriver()
+        {
+                        /** @var \Rawilk\Settings\Settings $instance */
+                        return $instance->getDriver();
+        }
+                    /**
+         * Pass in `false` for context when calling `all()` to only return results
+         * that do not have context.
+         *
+         * @static 
+         */        public static function context($context = null)
+        {
+                        /** @var \Rawilk\Settings\Settings $instance */
+                        return $instance->context($context);
+        }
+                    /**
+         * 
+         *
+         * @static 
+         */        public static function getTeamId()
+        {
+                        /** @var \Rawilk\Settings\Settings $instance */
+                        return $instance->getTeamId();
+        }
+                    /**
+         * Set the team id for teams/groups support. This id is used when querying settings.
+         *
+         * @param int|string|null|\Illuminate\Database\Eloquent\Model $id
+         * @static 
+         */        public static function setTeamId($id)
+        {
+                        /** @var \Rawilk\Settings\Settings $instance */
+                        return $instance->setTeamId($id);
+        }
+                    /**
+         * 
+         *
+         * @static 
+         */        public static function usingTeam($teamId)
+        {
+                        /** @var \Rawilk\Settings\Settings $instance */
+                        return $instance->usingTeam($teamId);
+        }
+                    /**
+         * 
+         *
+         * @static 
+         */        public static function withoutTeams()
+        {
+                        /** @var \Rawilk\Settings\Settings $instance */
+                        return $instance->withoutTeams();
+        }
+                    /**
+         * 
+         *
+         * @static 
+         */        public static function getTeamForeignKey()
+        {
+                        /** @var \Rawilk\Settings\Settings $instance */
+                        return $instance->getTeamForeignKey();
+        }
+                    /**
+         * 
+         *
+         * @static 
+         */        public static function setTeamForeignKey($foreignKey)
+        {
+                        /** @var \Rawilk\Settings\Settings $instance */
+                        return $instance->setTeamForeignKey($foreignKey);
+        }
+                    /**
+         * 
+         *
+         * @static 
+         */        public static function cacheDefaultValue($cacheDefaultValue = true)
+        {
+                        /** @var \Rawilk\Settings\Settings $instance */
+                        return $instance->cacheDefaultValue($cacheDefaultValue);
+        }
+                    /**
+         * 
+         *
+         * @static 
+         */        public static function forget($key)
+        {
+                        /** @var \Rawilk\Settings\Settings $instance */
+                        return $instance->forget($key);
+        }
+                    /**
+         * 
+         *
+         * @static 
+         */        public static function get($key, $default = null, $resetTempTeam = true)
+        {
+                        /** @var \Rawilk\Settings\Settings $instance */
+                        return $instance->get($key, $default, $resetTempTeam);
+        }
+                    /**
+         * 
+         *
+         * @static 
+         */        public static function all($keys = null)
+        {
+                        /** @var \Rawilk\Settings\Settings $instance */
+                        return $instance->all($keys);
+        }
+                    /**
+         * 
+         *
+         * @static 
+         */        public static function has($key, $resetTempTeam = true)
+        {
+                        /** @var \Rawilk\Settings\Settings $instance */
+                        return $instance->has($key, $resetTempTeam);
+        }
+                    /**
+         * 
+         *
+         * @static 
+         */        public static function set($key, $value = null)
+        {
+                        /** @var \Rawilk\Settings\Settings $instance */
+                        return $instance->set($key, $value);
+        }
+                    /**
+         * 
+         *
+         * @static 
+         */        public static function isFalse($key, $default = false)
+        {
+                        /** @var \Rawilk\Settings\Settings $instance */
+                        return $instance->isFalse($key, $default);
+        }
+                    /**
+         * 
+         *
+         * @static 
+         */        public static function isTrue($key, $default = true)
+        {
+                        /** @var \Rawilk\Settings\Settings $instance */
+                        return $instance->isTrue($key, $default);
+        }
+                    /**
+         * 
+         *
+         * @static 
+         */        public static function flush($keys = null)
+        {
+                        /** @var \Rawilk\Settings\Settings $instance */
+                        return $instance->flush($keys);
+        }
+                    /**
+         * 
+         *
+         * @static 
+         */        public static function disableCache()
+        {
+                        /** @var \Rawilk\Settings\Settings $instance */
+                        return $instance->disableCache();
+        }
+                    /**
+         * 
+         *
+         * @static 
+         */        public static function enableCache()
+        {
+                        /** @var \Rawilk\Settings\Settings $instance */
+                        return $instance->enableCache();
+        }
+                    /**
+         * 
+         *
+         * @static 
+         */        public static function temporarilyDisableCache()
+        {
+                        /** @var \Rawilk\Settings\Settings $instance */
+                        return $instance->temporarilyDisableCache();
+        }
+                    /**
+         * 
+         *
+         * @static 
+         */        public static function setCache($cache)
+        {
+                        /** @var \Rawilk\Settings\Settings $instance */
+                        return $instance->setCache($cache);
+        }
+                    /**
+         * 
+         *
+         * @static 
+         */        public static function disableEncryption()
+        {
+                        /** @var \Rawilk\Settings\Settings $instance */
+                        return $instance->disableEncryption();
+        }
+                    /**
+         * 
+         *
+         * @static 
+         */        public static function enableEncryption()
+        {
+                        /** @var \Rawilk\Settings\Settings $instance */
+                        return $instance->enableEncryption();
+        }
+                    /**
+         * 
+         *
+         * @static 
+         */        public static function setEncrypter($encrypter)
+        {
+                        /** @var \Rawilk\Settings\Settings $instance */
+                        return $instance->setEncrypter($encrypter);
+        }
+                    /**
+         * 
+         *
+         * @static 
+         */        public static function enableTeams()
+        {
+                        /** @var \Rawilk\Settings\Settings $instance */
+                        return $instance->enableTeams();
+        }
+                    /**
+         * 
+         *
+         * @static 
+         */        public static function disableTeams()
+        {
+                        /** @var \Rawilk\Settings\Settings $instance */
+                        return $instance->disableTeams();
+        }
+                    /**
+         * 
+         *
+         * @static 
+         */        public static function teamsAreEnabled()
+        {
+                        /** @var \Rawilk\Settings\Settings $instance */
+                        return $instance->teamsAreEnabled();
+        }
+                    /**
+         * 
+         *
+         * @static 
+         */        public static function useCacheKeyPrefix($prefix)
+        {
+                        /** @var \Rawilk\Settings\Settings $instance */
+                        return $instance->useCacheKeyPrefix($prefix);
+        }
+                    /**
+         * 
+         *
+         * @static 
+         */        public static function getKeyGenerator()
+        {
+                        /** @var \Rawilk\Settings\Settings $instance */
+                        return $instance->getKeyGenerator();
+        }
+                    /**
+         * Generate the key to use for caching a specific setting.
+         * 
+         * This is meant for external usage.
+         *
+         * @static 
+         */        public static function cacheKeyForSetting($key)
+        {
+                        /** @var \Rawilk\Settings\Settings $instance */
+                        return $instance->cacheKeyForSetting($key);
+        }
+                    /**
+         * Register a custom macro.
+         *
+         * @param string $name
+         * @param object|callable $macro
+         * @return void 
+         * @static 
+         */        public static function macro($name, $macro)
+        {
+                        \Rawilk\Settings\Settings::macro($name, $macro);
+        }
+                    /**
+         * Mix another object into the class.
+         *
+         * @param object $mixin
+         * @param bool $replace
+         * @return void 
+         * @throws \ReflectionException
+         * @static 
+         */        public static function mixin($mixin, $replace = true)
+        {
+                        \Rawilk\Settings\Settings::mixin($mixin, $replace);
+        }
+                    /**
+         * Checks if macro is registered.
+         *
+         * @param string $name
+         * @return bool 
+         * @static 
+         */        public static function hasMacro($name)
+        {
+                        return \Rawilk\Settings\Settings::hasMacro($name);
+        }
+                    /**
+         * Flush the existing macros.
+         *
+         * @return void 
+         * @static 
+         */        public static function flushMacros()
+        {
+                        \Rawilk\Settings\Settings::flushMacros();
+        }
+            }
+    }
+
 namespace Spatie\LaravelIgnition\Facades {
             /**
      * 
@@ -18577,7 +19809,9 @@ namespace  {
             class Broadcast extends \Illuminate\Support\Facades\Broadcast {}
             class Bus extends \Illuminate\Support\Facades\Bus {}
             class Cache extends \Illuminate\Support\Facades\Cache {}
+            class Concurrency extends \Illuminate\Support\Facades\Concurrency {}
             class Config extends \Illuminate\Support\Facades\Config {}
+            class Context extends \Illuminate\Support\Facades\Context {}
             class Cookie extends \Illuminate\Support\Facades\Cookie {}
             class Crypt extends \Illuminate\Support\Facades\Crypt {}
             class Date extends \Illuminate\Support\Facades\Date {}
@@ -22106,16 +23340,20 @@ namespace  {
             class Request extends \Illuminate\Support\Facades\Request {}
             class Response extends \Illuminate\Support\Facades\Response {}
             class Route extends \Illuminate\Support\Facades\Route {}
+            class Schedule extends \Illuminate\Support\Facades\Schedule {}
             class Schema extends \Illuminate\Support\Facades\Schema {}
             class Session extends \Illuminate\Support\Facades\Session {}
             class Storage extends \Illuminate\Support\Facades\Storage {}
             class Str extends \Illuminate\Support\Str {}
             class URL extends \Illuminate\Support\Facades\URL {}
+            class Uri extends \Illuminate\Support\Uri {}
             class Validator extends \Illuminate\Support\Facades\Validator {}
             class View extends \Illuminate\Support\Facades\View {}
             class Vite extends \Illuminate\Support\Facades\Vite {}
             class Debugbar extends \Barryvdh\Debugbar\Facades\Debugbar {}
             class Excel extends \Maatwebsite\Excel\Facades\Excel {}
+            class Settings extends \Rawilk\Settings\Facades\Settings {}
+            class SettingsFactory extends \Rawilk\Settings\Drivers\Factory {}
             class Flare extends \Spatie\LaravelIgnition\Facades\Flare {}
             class Signal extends \Spatie\SignalAwareCommand\Facades\Signal {}
     }

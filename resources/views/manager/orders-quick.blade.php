@@ -2,6 +2,39 @@
 
 @section('title', 'Manager - Orders')
 
+@push('css')
+<style>
+    @media screen and (min-width: 1200px) {
+        .orders-quick-table-wrap .orders-responsive-table {
+            min-width: 1200px;
+        }
+    }
+    @media screen and (max-width: 768px) {
+        .orders-quick-table-wrap {
+            overflow-x: visible;
+            white-space: normal;
+        }
+        .orders-quick-table-wrap .orders-responsive-table {
+            min-width: 0 !important;
+        }
+        .orders-quick-table-wrap .toggle-details-btn {
+            min-width: 44px;
+            min-height: 44px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .orders-quick-table-wrap .mobile-detail-row td > div {
+            padding: 6px 0;
+            border-bottom: 1px solid #eee;
+        }
+        .orders-quick-table-wrap .mobile-detail-row td > div:last-child {
+            border-bottom: none;
+        }
+    }
+</style>
+@endpush
+
 @section('content')
     <div class="container mt-5">
         <h1 class="text-center mb-4">Search Management</h1>
@@ -18,8 +51,8 @@
                     </div>
                     <div class="card-body">
                         <!--begin: Datatable-->
-                        <div style="overflow-x:auto; max-width: 100%; white-space: nowrap;">
-                            <table class="table table-striped table-bordered" style="min-width: 1200px;">
+                        <div class="orders-quick-table-wrap" style="max-width: 100%;">
+                            <table class="table table-striped table-bordered orders-responsive-table">
                                 <thead>
                                     <tr role="row">
                                         <th>Buyer Phone</th>
@@ -54,8 +87,8 @@
                 <div class="card-body">
                     <!--begin: Datatable-->
                     <!-- Scrollable table container -->
-                    <div style="overflow-x:auto; max-width: 100%; white-space: nowrap;">
-                        <table class="table table-striped table-bordered" style="min-width: 1200px;">
+                    <div class="orders-quick-table-wrap" style="max-width: 100%;">
+                        <table class="table table-striped table-bordered orders-responsive-table">
                             <thead>
                                 <tr role="row">
                                     <th>ID</th>
@@ -80,7 +113,7 @@
                                 @foreach ($orders as $order)
                                     <tr id="orderRow-{{ $order->id }}">
                                         <td>{{ $order->id }}</td>
-                                        <td>{{ $order->seller->name }}</td>
+                                        <td>{{ optional($order->seller)->name ?? '—' }}</td>
                                         @if ($order->account)
                                             <td>{{ $order->account->game->title }}</td>
                                             <td>{{ $order->account->mail }}</td>
@@ -118,36 +151,64 @@
                                                     data-report-id="{{ $order->reports->first()->id }}">
                                                     Undo
                                                 </button>
+                                                <button class="btn btn-outline-secondary btn-sm unreport-report"
+                                                    data-report-id="{{ $order->reports->first()->id }}">
+                                                    Unreport
+                                                </button>
                                             @elseif(isset($status) && 'has_problem' === $status)
                                                 <button class="btn btn-success btn-sm solve-problem"
                                                     data-report-id="{{ $order->reports->first()->id }}">
                                                     Mark as Solved
                                                 </button>
+                                                <button class="btn btn-secondary btn-sm archive-report"
+                                                    data-report-id="{{ $order->reports->first()->id }}">
+                                                    Archive
+                                                </button>
+                                                <button class="btn btn-outline-secondary btn-sm unreport-report"
+                                                    data-report-id="{{ $order->reports->first()->id }}">
+                                                    Unreport
+                                                </button>
                                             @elseif(isset($status) && 'solved' === $status)
-                                                @if (Auth::user()->roles->contains('name', 'admin'))
-                                                    <!-- Regular undo button -->
+                                                @can('undo-orders')
+                                                <button class="btn btn-danger btn-sm undo-order"
+                                                    data-order-id="{{ $order->id }}"
+                                                    data-sold-item="{{ $order->sold_item }}">
+                                                    Undo
+                                                </button>
+                                                @endcan
+                                                <button class="btn btn-secondary btn-sm archive-report"
+                                                    data-report-id="{{ $order->reports->first()->id }}">
+                                                    Archive
+                                                </button>
+                                                <button class="btn btn-outline-secondary btn-sm unreport-report"
+                                                    data-report-id="{{ $order->reports->first()->id }}">
+                                                    Unreport
+                                                </button>
+                                            @elseif(isset($status) && 'archived' === $status)
+                                                <button class="btn btn-primary btn-sm unarchive-report"
+                                                    data-report-id="{{ $order->reports->first()->id }}">
+                                                    Undo
+                                                </button>
+                                                <button class="btn btn-outline-secondary btn-sm unreport-report"
+                                                    data-report-id="{{ $order->reports->first()->id }}">
+                                                    Unreport
+                                                </button>
+                                            @else
+                                                @if (!Auth::user()->roles->contains('name', 'accountant'))
+                                                    @can('undo-orders')
                                                     <button class="btn btn-danger btn-sm undo-order"
                                                         data-order-id="{{ $order->id }}"
                                                         data-sold-item="{{ $order->sold_item }}">
                                                         Undo
                                                     </button>
-                                                @endif
-                                            @else
-                                                @if (!Auth::user()->roles->contains('name', 'accountant'))
-                                                    @if (Auth::user()->roles->contains('name', 'admin'))
-                                                        <!-- Regular undo button -->
-                                                        <button class="btn btn-danger btn-sm undo-order"
-                                                            data-order-id="{{ $order->id }}"
-                                                            data-sold-item="{{ $order->sold_item }}">
-                                                            Undo
-                                                        </button>
-                                                    @endif
-                                                    <!-- Button to open report modal for sales -->
+                                                    @endcan
+                                                    @can('create-order-reports')
                                                     <button class="btn btn-warning btn-sm report-order"
                                                         data-order-id="{{ $order->id }}" data-toggle="modal"
                                                         data-target="#reportOrderModal">
                                                         Actions
                                                     </button>
+                                                    @endcan
                                                 @endif
                                             @endif
                                         </td>
@@ -172,6 +233,7 @@
         @endif
     </div>
     @if ($orders && !empty($orders))
+        @can('create-order-reports')
         <!-- Report Order Modal -->
         <div class="modal fade" id="reportOrderModal" tabindex="-1" aria-labelledby="reportOrderModalLabel"
             aria-hidden="true">
@@ -209,6 +271,7 @@
                 </div>
             </div>
         </div>
+        @endcan
     @endif
 
 @endsection
@@ -216,6 +279,33 @@
     @push('js')
         <script>
             jQuery(document).ready(function($) {
+                function refreshQuickSearchMobileTables() {
+                    $('.orders-responsive-table').each(function() {
+                        const $table = $(this);
+                        $table.find('.mobile-detail-row').remove();
+                        $table.find('.toggle-details-btn').remove();
+                        $table.find('thead th, tbody td').removeClass('mobile-hidden mobile-toggle-cell');
+                        $table.removeClass('mobile-responsive-table');
+                    });
+                    $('.orders-responsive-table').mobileTableToggle({
+                        maxVisibleCols: 3,
+                        maxVisibleColsDesktop: 5,
+                        enableOnDesktop: true
+                    });
+                }
+
+                refreshQuickSearchMobileTables();
+
+                // Re-init only when crossing mobile/desktop breakpoint (not on scroll-induced resize)
+                let lastMobileLayout = $(window).width() <= 768;
+                $(window).on('resize', function() {
+                    const isMobileLayout = $(window).width() <= 768;
+                    if (isMobileLayout !== lastMobileLayout) {
+                        lastMobileLayout = isMobileLayout;
+                        refreshQuickSearchMobileTables();
+                    }
+                });
+
                 // Initialize Flatpickr for startDate and endDate inputs
                 flatpickr("#startDate", {
                     altInput: true,
@@ -266,9 +356,9 @@
 
                 $(document).on('click', '.solve-problem', function(e) {
                     e.preventDefault();
-
                     let reportId = $(this).data('report-id');
-
+                    let $row = $(this).closest('tr');
+                    let $prevRow = $row.prev('tr');
                     // Use SweetAlert2 for confirmation dialog
                     Swal.fire({
                         title: 'Are you sure?',
@@ -282,26 +372,24 @@
                         if (result.isConfirmed) {
                             // Make the AJAX request if confirmed
                             $.ajax({
-                                url: "{{ route('reports.solve_problem') }}", // Route to handle the status change
+                                url: "{{ route('reports.solve_problem') }}",
                                 method: 'POST',
                                 data: {
                                     _token: "{{ csrf_token() }}",
                                     report_id: reportId
                                 },
                                 success: function(response) {
+                                    console.log($row);
                                     if (response.success) {
-                                        // Use SweetAlert2 for success notification
+                                        $row.remove();
+                                        $prevRow.remove();
                                         Swal.fire({
                                             title: 'Success!',
                                             text: 'Report status successfully updated to solved!',
                                             icon: 'success',
                                             confirmButtonText: 'OK'
-                                        }).then(() => {
-                                            location
-                                                .reload(); // Reload the page to reflect the changes
                                         });
                                     } else {
-                                        // Use SweetAlert2 for failure notification
                                         Swal.fire({
                                             title: 'Failed',
                                             text: 'Failed to update report status. Please try again.',
@@ -311,7 +399,6 @@
                                     }
                                 },
                                 error: function(xhr) {
-                                    // Use SweetAlert2 for error notification
                                     Swal.fire({
                                         title: 'Error',
                                         text: 'An error occurred while processing your request.',
@@ -323,6 +410,168 @@
                         }
                     });
                 });
+
+                // Archive report: set status to archived and remove row
+                $(document).on('click', '.archive-report', function(e) {
+                    e.preventDefault();
+                    let reportId = $(this).data('report-id');
+                    let $row = $(this).closest('tr');
+                    let $prevRow = $row.prev('tr');
+                    Swal.fire({
+                        title: 'Archive report?',
+                        text: 'This report will be moved to Archived.',
+                        icon: 'question',
+                        showCancelButton: true,
+                        confirmButtonText: 'Yes, archive',
+                        cancelButtonText: 'Cancel',
+                        reverseButtons: true
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            $.ajax({
+                                url: "{{ route('reports.archive') }}",
+                                method: 'POST',
+                                data: {
+                                    _token: "{{ csrf_token() }}",
+                                    report_id: reportId
+                                },
+                                success: function(response) {
+                                    if (response.success) {
+                                        $row.remove();
+                                        $prevRow.remove();
+                                        Swal.fire({
+                                            title: 'Archived',
+                                            text: 'Report has been archived.',
+                                            icon: 'success',
+                                            confirmButtonText: 'OK'
+                                        });
+                                    } else {
+                                        Swal.fire({
+                                            title: 'Failed',
+                                            text: 'Could not archive report.',
+                                            icon: 'error',
+                                            confirmButtonText: 'OK'
+                                        });
+                                    }
+                                },
+                                error: function() {
+                                    Swal.fire({
+                                        title: 'Error',
+                                        text: 'An error occurred.',
+                                        icon: 'error',
+                                        confirmButtonText: 'OK'
+                                    });
+                                }
+                            });
+                        }
+                    });
+                });
+
+                // Unarchive report: move from archived back to solved, remove row from list
+                $(document).on('click', '.unarchive-report', function(e) {
+                    e.preventDefault();
+                    let reportId = $(this).data('report-id');
+                    let $row = $(this).closest('tr');
+                    Swal.fire({
+                        title: 'Undo archive?',
+                        text: 'This report will be moved back to Solved.',
+                        icon: 'question',
+                        showCancelButton: true,
+                        confirmButtonText: 'Yes, undo',
+                        cancelButtonText: 'Cancel',
+                        reverseButtons: true
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            $.ajax({
+                                url: "{{ route('reports.unarchive') }}",
+                                method: 'POST',
+                                data: {
+                                    _token: "{{ csrf_token() }}",
+                                    report_id: reportId
+                                },
+                                success: function(response) {
+                                    if (response.success) {
+                                        $row.remove();
+                                        Swal.fire({
+                                            title: 'Undone',
+                                            text: 'Report has been moved back to Solved.',
+                                            icon: 'success',
+                                            confirmButtonText: 'OK'
+                                        });
+                                    } else {
+                                        Swal.fire({
+                                            title: 'Failed',
+                                            text: 'Could not undo archive.',
+                                            icon: 'error',
+                                            confirmButtonText: 'OK'
+                                        });
+                                    }
+                                },
+                                error: function() {
+                                    Swal.fire({
+                                        title: 'Error',
+                                        text: 'An error occurred.',
+                                        icon: 'error',
+                                        confirmButtonText: 'OK'
+                                    });
+                                }
+                            });
+                        }
+                    });
+                });
+
+                // Unreport: remove report entirely, remove row from list
+                $(document).on('click', '.unreport-report', function(e) {
+                    e.preventDefault();
+                    let reportId = $(this).data('report-id');
+                    let $row = $(this).closest('tr');
+                    Swal.fire({
+                        title: 'Unreport?',
+                        text: 'This report will be removed. The order will no longer appear in reports.',
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonText: 'Yes, unreport',
+                        cancelButtonText: 'Cancel',
+                        reverseButtons: true
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            $.ajax({
+                                url: "{{ route('reports.unreport') }}",
+                                method: 'POST',
+                                data: {
+                                    _token: "{{ csrf_token() }}",
+                                    report_id: reportId
+                                },
+                                success: function(response) {
+                                    if (response.success) {
+                                        $row.remove();
+                                        Swal.fire({
+                                            title: 'Unreported',
+                                            text: 'Report has been removed.',
+                                            icon: 'success',
+                                            confirmButtonText: 'OK'
+                                        });
+                                    } else {
+                                        Swal.fire({
+                                            title: 'Failed',
+                                            text: 'Could not unreport.',
+                                            icon: 'error',
+                                            confirmButtonText: 'OK'
+                                        });
+                                    }
+                                },
+                                error: function() {
+                                    Swal.fire({
+                                        title: 'Error',
+                                        text: 'An error occurred.',
+                                        icon: 'error',
+                                        confirmButtonText: 'OK'
+                                    });
+                                }
+                            });
+                        }
+                    });
+                });
+
                 // Handle search input and date range filter
                 $('#searchOrder, #startDate, #endDate').on('input change', function() {
                     let query = $('#searchOrder').val();

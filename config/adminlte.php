@@ -301,13 +301,13 @@ return [
     'menu' => [
         [
             'type' => 'navbar-search',
-            'text' => 'search',          // Placeholder for the underlying input.
-            'topnav_right' => true,      // Or "topnav => true" to place on the left.
-            'url' => 'manager/orders/quick-search',    // The url used to submit the data ('#' by default).
-            'method' => 'get',          // 'get' or 'post' ('get' by default).
-            'input_name' => 'search', // Name for the underlying input ('adminlteSearch' by default).
-            'id' => 'search-query',       // ID attribute for the underlying input (optional).
-            'placeholder' => 'Enter email, phone, or name'       // ID attribute for the underlying input (optional).
+            'text' => 'Enter email, phone, or name',
+            'topnav_right' => true,
+            'route' => 'manager.orders.qsearch',
+            'method' => 'get',
+            'input_name' => 'search',
+            'id' => 'search-query',
+            'can' => 'search-customer-orders',
         ],
         [
             'type' => 'fullscreen-widget',
@@ -391,14 +391,14 @@ return [
             'text' => 'Accounts',
             'route' => 'manager.accounts',
             'icon' => 'bi bi-ui-checks-grid',
-            'can' => 'manage-accounts',
+            'can' => ['view-game-accounts', 'manage-accounts'],
         ],
 
         // Reports
         [
             'text' => 'Reports',
             'icon' => 'bi bi-clipboard-fill',
-            'can' => 'manage-options',
+            'can' => 'view-reports',
             'submenu' => [
                 [
                     'text' => 'Needs Return',
@@ -413,6 +413,11 @@ return [
                 [
                     'text' => 'Solved',
                     'route' => 'manager.orders.solved',
+                    'icon' => 'bi bi-circle',
+                ],
+                [
+                    'text' => 'Archived',
+                    'route' => 'manager.orders.archived',
                     'icon' => 'bi bi-circle',
                 ],
             ],
@@ -447,6 +452,11 @@ return [
                 [
                     'text' => 'Admins',
                     'route' => 'manager.users.admins',
+                    'icon' => 'bi bi-circle',
+                ],
+                [
+                    'text' => 'Call Center',
+                    'route' => 'manager.users.call_center',
                     'icon' => 'bi bi-circle',
                 ],
                 [
@@ -502,6 +512,14 @@ return [
                     'icon' => 'bi bi-circle',
                 ],
             ],
+        ],
+
+        // Roles & Permissions
+        [
+            'text' => 'Roles & Permissions',
+            'route' => 'manager.roles-permissions.index',
+            'icon' => 'bi bi-shield-lock',
+            'can' => 'manage-options',
         ],
 
         // Settings

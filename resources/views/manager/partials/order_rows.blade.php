@@ -1,14 +1,23 @@
+@php
+    $readOnly = $readOnly ?? false;
+@endphp
 @foreach ($orders as $order)
     <tr id="orderRow-{{ $order->id }}">
+        @unless($readOnly)
         <td>
             @if ($order->pos_order_id)
-                <span class="text-success font-weight-bold">POS</span>
+                <div class="d-flex align-items-center gap-2">
+                    <input type="checkbox" name="unsend_order_ids[]" value="{{ $order->id }}" class="unsend-checkbox" />
+                    <span class="badge bg-success" title="POS Order ID: {{ $order->pos_order_id }}">POS</span>
+                </div>
             @else
                 <input type="checkbox" name="order_ids[]" value="{{ $order->id }}" />
             @endif
         </td>
+        @endunless
         <td>{{ $order->id }}</td>
-        @if ( $order->store_profile_id === 17 )
+        {{-- Website label only when WooCommerce profile and no seller user; otherwise show seller name --}}
+        @if ( $order->store_profile_id === 17 && is_null($order->seller_id) )
         <td>Website</td>
         @else
         <td class="{{ $order->seller ? '' : 'text-danger' }}">{{ $order->seller?->name ?? 'Maybe deleted' }}</td>
@@ -40,6 +49,7 @@
             @endif
         </td>
         <td>{{ $order->created_at }}</td>
+        @unless($readOnly)
         <td>
             @if (isset($status) && 'needs_return' === $status)
                 <!-- Button for orders with 'needs_return' -->
@@ -47,31 +57,52 @@
                     data-sold-item="{{ $order->sold_item }}" data-report-id="{{ $order->reports->id }}">
                     Undo
                 </button>
+                <button class="btn btn-outline-secondary btn-sm unreport-report" data-report-id="{{ $order->reports->id }}">
+                    Unreport
+                </button>
             @elseif(isset($status) && 'has_problem' === $status)
                 <button class="btn btn-success btn-sm solve-problem" data-report-id="{{ $order->reports->id }}">
                     Mark as Solved
                 </button>
+                <button class="btn btn-secondary btn-sm archive-report" data-report-id="{{ $order->reports->id }}">
+                    Archive
+                </button>
+                <button class="btn btn-outline-secondary btn-sm unreport-report" data-report-id="{{ $order->reports->id }}">
+                    Unreport
+                </button>
             @elseif(isset($status) && 'solved' === $status)
-                @if ( Auth::user()->roles->contains('name', 'admin') )
-                <!-- Regular undo button -->
+                @can('undo-orders')
                 <button class="btn btn-danger btn-sm undo-order" data-order-id="{{ $order->id }}" data-sold-item="{{ $order->sold_item }}">
                     Undo
                 </button>
-                @endif
+                @endcan
+                <button class="btn btn-secondary btn-sm archive-report" data-report-id="{{ $order->reports->id }}">
+                    Archive
+                </button>
+                <button class="btn btn-outline-secondary btn-sm unreport-report" data-report-id="{{ $order->reports->id }}">
+                    Unreport
+                </button>
+            @elseif(isset($status) && 'archived' === $status)
+                <!-- Undo archive: move report back to solved; Unreport: remove report entirely -->
+                <button class="btn btn-primary btn-sm unarchive-report" data-report-id="{{ $order->reports->id }}">
+                    Undo
+                </button>
+                <button class="btn btn-outline-secondary btn-sm unreport-report" data-report-id="{{ $order->reports->id }}">
+                    Unreport
+                </button>
             @else
-                @if(Auth::user()->roles->contains('name', 'admin')  || Auth::user()->roles->contains('name', 'sales'))
-                    @if ( Auth::user()->roles->contains('name', 'admin') )
-                    <!-- Regular undo button -->
-                    <button class="btn btn-danger btn-sm undo-order" data-order-id="{{ $order->id }}" data-sold-item="{{ $order->sold_item }}">
-                        Undo
-                    </button>
-                    @endif
-                    <!-- Button to open report modal for sales -->
-                    <button class="btn btn-warning btn-sm report-order" data-order-id="{{ $order->id }}" data-toggle="modal" data-target="#reportOrderModal">
-                        Actions
-                    </button>
-                @endif
+                @can('undo-orders')
+                <button class="btn btn-danger btn-sm undo-order" data-order-id="{{ $order->id }}" data-sold-item="{{ $order->sold_item }}">
+                    Undo
+                </button>
+                @endcan
+                @can('create-order-reports')
+                <button class="btn btn-warning btn-sm report-order" data-order-id="{{ $order->id }}" data-toggle="modal" data-target="#reportOrderModal">
+                    Actions
+                </button>
+                @endcan
             @endif
-        </td> 
+        </td>
+        @endunless
     </tr>
 @endforeach

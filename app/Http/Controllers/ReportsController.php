@@ -6,6 +6,7 @@ use App\Models\Report;
 use App\Models\Order;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 
 class ReportsController extends Controller
 {
@@ -40,13 +41,17 @@ class ReportsController extends Controller
             ], 409);
         }
 
-        // Create a new report
-        $report = Report::create([
-        'order_id'  => $validatedData['order_id'],
-        'seller_id' => Auth::id(), // Current authenticated seller
-        'status'    => $validatedData['status'],
-        'note'      => $validatedData['note'],
-        ]);
+        $report = Report::updateOrCreate(
+            // Search condition (unique per order)
+            ['order_id' => $validatedData['order_id']],
+            // Data to update or insert
+            [
+                'seller_id' => Auth::id(), // Current authenticated seller
+                'status'    => $validatedData['status'],
+                'note'      => $validatedData['note'],
+            ]
+        );
+
 
         // Return a success response
         return response()->json([
@@ -86,5 +91,73 @@ class ReportsController extends Controller
         }
 
         return response()->json(array( 'success' => false ));
+    }
+
+    /**
+     * Archive a report (set status to 'archived').
+     * Allowed from 'has_problem' or 'solved' status.
+     *
+     * @param  \Illuminate\Http\Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function archiveReport(Request $request)
+    {
+        $request->validate([
+            'report_id' => 'required|exists:reports,id',
+        ]);
+
+        $report = Report::find($request->report_id);
+        if ($report && in_array($report->status, ['has_problem', 'solved'], true)) {
+            $report->update(['status' => 'archived']);
+            return response()->json(['success' => true]);
+        } elseif ($report && in_array($report->status, ['archived'], true)) {
+            return response()->json(['success' => true]);
+        }
+
+        return response()->json(['success' => false]);
+    }
+
+    /**
+     * Unarchive a report (set status from 'archived' back to 'solved').
+     * Removes the report from the archived list.
+     *
+     * @param  \Illuminate\Http\Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function unarchiveReport(Request $request)
+    {
+        $request->validate([
+            'report_id' => 'required|exists:reports,id',
+        ]);
+
+        $report = Report::find($request->report_id);
+        if ($report && $report->status === 'archived') {
+            $report->update(['status' => 'solved']);
+            return response()->json(['success' => true]);
+        }
+
+        return response()->json(['success' => false]);
+    }
+
+    /**
+     * Unreport: delete the report so the order is no longer reported.
+     * Allowed for any report status.
+     *
+     * @param  \Illuminate\Http\Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function unreport(Request $request)
+    {
+        $request->validate([
+            'report_id' => 'required|exists:reports,id',
+        ]);
+
+        $report = Report::find($request->report_id);
+        if ($report) {
+            $report->delete();
+            return response()->json(['success' => true]);
+        }
+
+        return response()->json(['success' => false]);
     }
 }

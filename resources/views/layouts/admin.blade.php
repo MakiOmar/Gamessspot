@@ -147,6 +147,8 @@
                     $table.addClass('mobile-responsive-table');
 
                     const hiddenIndexes = [];
+                    const $toggleHeader = $headers.eq(maxVisible - 1);
+                    $toggleHeader.addClass('mobile-toggle-cell');
                     $headers.each(function (i) {
                         if (i >= maxVisible) {
                             $(this).addClass('mobile-hidden');
@@ -163,22 +165,49 @@
                         });
 
                         const $toggleBtn = $(`
-                            <button class="toggle-details-btn">
+                            <button type="button" class="toggle-details-btn" title="Show more details" aria-label="Show more details">
                                 <span class="chevron chevron-down"></span>
                             </button>
                         `);
 
-                        // تفادي تكرار الحدث
+                        let toggleTouchMoved = false;
+                        $toggleBtn.on('touchstart', function () {
+                            toggleTouchMoved = false;
+                        });
+                        $toggleBtn.on('touchmove', function () {
+                            toggleTouchMoved = true;
+                        });
                         $toggleBtn.on('click', function (e) {
                             e.preventDefault();
-                            const $detailRow = $(this).closest('tr').next('.mobile-detail-row');
-                            $detailRow.toggle();
-                            $(this).find('.chevron').toggleClass('chevron-down chevron-up');
+                            e.stopPropagation();
+                            if (toggleTouchMoved) {
+                                toggleTouchMoved = false;
+                                return;
+                            }
+                            const $btn = $(this);
+                            const $detailRow = $btn.closest('tr').next('.mobile-detail-row');
+                            const isExpanded = $detailRow.hasClass('is-expanded');
+                            if (isExpanded) {
+                                $detailRow.removeClass('is-expanded');
+                                $btn.removeClass('is-expanded');
+                                $btn.find('.chevron').removeClass('chevron-up').addClass('chevron-down');
+                                $btn.attr('aria-expanded', 'false');
+                                $btn.attr('title', 'Show more details');
+                                $btn.attr('aria-label', 'Show more details');
+                            } else {
+                                $detailRow.addClass('is-expanded');
+                                $btn.addClass('is-expanded');
+                                $btn.find('.chevron').removeClass('chevron-down').addClass('chevron-up');
+                                $btn.attr('aria-expanded', 'true');
+                                $btn.attr('title', 'Hide details');
+                                $btn.attr('aria-label', 'Hide details');
+                            }
                         });
 
-                        // داخل each row loop:
-                        if ($cells.eq(maxVisible - 1).find('.toggle-details-btn').length === 0) {
-                            $cells.eq(maxVisible - 1).append($toggleBtn);
+                        const $toggleCell = $cells.eq(maxVisible - 1);
+                        $toggleCell.addClass('mobile-toggle-cell');
+                        if ($toggleCell.find('.toggle-details-btn').length === 0) {
+                            $toggleCell.append($toggleBtn);
                         }
 
 
@@ -189,8 +218,7 @@
                             detailHTML += '<div><strong>' + key + ':</strong> ' + val + '</div>';
                         });
                         detailHTML += '</td></tr>';
-                        const $detailRow = $(detailHTML).hide();
-                        $row.after($detailRow);
+                        $row.after(detailHTML);
                     });
                 });
             };
@@ -305,6 +333,9 @@
         .mobile-detail-row {
             display: none;
         }
+        .mobile-detail-row.is-expanded {
+            display: table-row;
+        }
         .mobile-detail-row td > div {
             word-wrap: break-word;   /* يُقسّم الكلمة الطويلة */
             white-space: normal;     /* يسمح بلف النص */
@@ -328,6 +359,7 @@
             border: none;
             cursor: pointer;
             padding: 5px;
+            touch-action: manipulation;
         }
 
         .chevron {
@@ -348,6 +380,12 @@
         .chevron-up {
             transform: rotate(-135deg);
         }
+
+    @media screen and (max-width: 768px) {
+        .mobile-responsive-table .mobile-toggle-cell {
+            padding-right: 20px !important;
+        }
+    }
 
     /*
     .card-header {

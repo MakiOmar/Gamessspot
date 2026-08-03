@@ -14,15 +14,30 @@
     $status = $status ?? 'all';
 @endphp
 
+@php
+    $isCallCenter = Auth::user()->hasRole('call center');
+    $searchOnly = $searchOnly ?? false;
+    $canManageSellLog = Auth::user()->can('manage-sell-log');
+@endphp
+
 @section('content')
     <div class="container mt-5">
         <h1 class="text-center mb-4">
             @if (! isset($status))
+            @if($isCallCenter || $searchOnly)
+            Sell Log — Order Lookup
+            @else
             Orders Management
+            @endif
             @else
             Reports Management
             @endif
         </h1>
+        @if($isCallCenter || $searchOnly)
+        <div class="alert alert-info text-center">
+            Search by customer phone number or account email to view order details.
+        </div>
+        @endif
         <!-- Display Success Message -->
         @if(session('success'))
         <div class="alert alert-success">
@@ -37,16 +52,19 @@
         </div>
         @endif
         <div class="container-fluid">
-            <form action="{{ route('manager.orders.export') }}" method="GET">
+            <form @unless($isCallCenter) action="{{ route('manager.orders.export') }}" @endunless method="GET">
                 <div class="row g-2">
                     <!-- Search Input -->
                     <div class="col-12 col-md-4">
-                        <input type="text" class="form-control" name="searchOrder" id="searchOrder" placeholder="Search orders by buyer phone">
+                        <input type="text" class="form-control" name="searchOrder" id="searchOrder" placeholder="{{ $isCallCenter ? 'Customer phone or account email' : 'Search orders by buyer phone' }}">
                         <input type="hidden" id="storeId" value="@if( ! empty( $_GET['id'] ) ){{ $_GET['id'] }}@else{{0}}@endif">
+                        @if ( isset($status) )
+                            <input type="hidden" name="status" value="{{ $status }}">
+                        @endif
                     </div>
 
                     <!-- Date Range -->
-                    @if( ! Auth::user()->roles->contains('name', 'sales') )
+                    @if( ! Auth::user()->roles->contains('name', 'sales') && ! $isCallCenter )
                         <div class="col-12 col-md-6 d-flex flex-column flex-md-row align-items-md-center">
                             <input type="date" class="form-control mb-2 mb-md-0 me-md-2"
                                 id="startDate" name="start_date"
@@ -58,6 +76,18 @@
                         </div>
                     @endif
 
+                    <!-- Show All Checkbox -->
+                    @unless($isCallCenter)
+                    <div class="col-12 col-md-2 d-flex align-items-center">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="showAllCheckbox" name="show_all">
+                            <label class="form-check-label" for="showAllCheckbox">
+                                Show All (No Pagination)
+                            </label>
+                        </div>
+                    </div>
+                    @endunless
+
                     <!-- Custom Search Button -->
                     <div class="col-12 col-md-2">
                         <button type="button" id="customSearchBtn" class="btn btn-primary w-100">Search</button>
@@ -65,7 +95,7 @@
 
                 </div>
         
-                @if(Auth::user()->roles->contains('name', 'admin') || Auth::user()->roles->contains('name', 'accountant'))
+                @can('manage-sell-log')
                 <div class="row mt-3">
                     <div class="col-12 d-flex justify-content-end">
                         @if(!empty($_GET['id']))
@@ -83,19 +113,21 @@
                         </button>
                     </div>
                 </div>
-                @endif
+                @endcan
             </form>
         </div>
         
 
         <!-- Scrollable table container -->
         <div style="overflow-x:auto; max-width: 100%; white-space: nowrap;">
-            <form method="post" action="{{ route('manager.orders.sendToPos') }}">
+            <form method="post" action="{{ route('manager.orders.sendToPos') }}" id="sendToPosForm">
                 @csrf
                 <table class="table table-striped table-bordered orders-responsive-table">
                     <thead>
                         <tr role="row">
+                            @can('manage-sell-log')
                             <th><input type="checkbox" id="select_all" /></th>
+                            @endcan
                             <th>ID</th>
                             <th>Seller</th>
                             <th>Product</th>
@@ -109,11 +141,21 @@
                             <th>Sold Item</th>
                             <th>Notes</th>
                             <th>Date</th>
+                            @can('manage-sell-log')
                             <th>Action</th>
+                            @endcan
                         </tr>
                     </thead>
                     <tbody id="orderTableBody">
-                        @include('manager.partials.order_rows', ['orders' => $orders, 'status' => $status])
+                        @if(($isCallCenter || $searchOnly) && $orders->isEmpty())
+                        <tr>
+                            <td colspan="12" class="text-center text-muted py-4">
+                                Enter a customer phone number or account email above, then click Search.
+                            </td>
+                        </tr>
+                        @else
+                        @include('manager.partials.order_rows', ['orders' => $orders, 'status' => $status, 'readOnly' => ! $canManageSellLog])
+                        @endif
                     </tbody>
                     <tfoot>
                         <tr>
@@ -129,18 +171,34 @@
                         </tr>
                     </tfoot>
                 </table>
+                @can('manage-sell-log')
                 @unless(Auth::user()->hasRole('accountant'))
                     <p>
-                        <input type="submit" name="bulk_send_odoo" class="btn btn-primary" value="{{ __('Send to POS') }}" />
+                        <input type="submit" name="bulk_send_odoo" class="btn btn-primary" value="{{ __('Send to POS') }}" id="sendToPosBtn" />
                     </p>
                 @endunless
+                @endcan
 
             </form>
+            
+            @can('manage-sell-log')
+            @unless(Auth::user()->hasRole('accountant'))
+            <!-- Form for unsending orders from POS -->
+            <form method="post" action="{{ route('manager.orders.unsendFromPos') }}" id="unsendPosForm" style="display: none;">
+                @csrf
+                <div id="unsendOrderIds"></div>
+                <p>
+                    <input type="submit" name="bulk_unsend_pos" class="btn btn-warning" value="{{ __('Unsend from POS') }}" />
+                </p>
+            </form>
+            @endunless
+            @endcan
         </div>
         @if (isset($status))
         <input type="hidden" id="currentReportStatus" value="{{$status}}"/>
         @endif
     </div>
+    @can('create-order-reports')
     <!-- Report Order Modal -->
     <div class="modal fade" id="reportOrderModal" tabindex="-1" aria-labelledby="reportOrderModalLabel" aria-hidden="true">
         <div class="modal-dialog">
@@ -177,17 +235,27 @@
             </div>
         </div>
     </div>
+    @endcan
 
 @endsection
 
 @push('js')
     <script>
         jQuery(document).ready(function($) {
-            $('.orders-responsive-table').mobileTableToggle({
-                maxVisibleCols: 3,
-                maxVisibleColsDesktop: 5,
-                enableOnDesktop: true
-            });
+            function refreshOrdersMobileTable() {
+                const $table = $('.orders-responsive-table');
+                $table.find('.mobile-detail-row').remove();
+                $table.find('.toggle-details-btn').remove();
+                $table.find('thead th, tbody td').removeClass('mobile-hidden mobile-toggle-cell');
+                $table.removeClass('mobile-responsive-table');
+                $table.mobileTableToggle({
+                    maxVisibleCols: 3,
+                    maxVisibleColsDesktop: 5,
+                    enableOnDesktop: true
+                });
+            }
+
+            refreshOrdersMobileTable();
             // Initialize Flatpickr for startDate and endDate inputs
             flatpickr("#startDate", {
                 altInput: true,
@@ -241,7 +309,8 @@
                 e.preventDefault();
 
                 let reportId = $(this).data('report-id');
-
+                let $row = $(this).closest('tr');
+                let $prevRow = $row.prev('tr');
                 // Use SweetAlert2 for confirmation dialog
                 Swal.fire({
                     title: 'Are you sure?',
@@ -262,17 +331,15 @@
                                 report_id: reportId
                             },
                             success: function(response) {
-                                console.log(response);
                                 if (response.success) {
+                                    $row.remove();
+                                    $prevRow.remove();
                                     // Use SweetAlert2 for success notification
                                     Swal.fire({
                                         title: 'Success!',
                                         text: 'Report status successfully updated to solved!',
                                         icon: 'success',
                                         confirmButtonText: 'OK'
-                                    }).then(() => {
-                                        location
-                                    .reload(); // Reload the page to reflect the changes
                                     });
                                 } else {
                                     // Use SweetAlert2 for failure notification
@@ -298,6 +365,167 @@
                 });
             });
 
+            // Archive report: set status to archived and remove row
+            $(document).on('click', '.archive-report', function(e) {
+                e.preventDefault();
+                let reportId = $(this).data('report-id');
+                let $row = $(this).closest('tr');
+                let $prevRow = $row.prev('tr');
+                Swal.fire({
+                    title: 'Archive report?',
+                    text: 'This report will be moved to Archived.',
+                    icon: 'question',
+                    showCancelButton: true,
+                    confirmButtonText: 'Yes, archive',
+                    cancelButtonText: 'Cancel',
+                    reverseButtons: true
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        $.ajax({
+                            url: "{{ route('reports.archive') }}",
+                            method: 'POST',
+                            data: {
+                                _token: "{{ csrf_token() }}",
+                                report_id: reportId
+                            },
+                            success: function(response) {
+                                if (response.success) {
+                                    $row.remove();
+                                    $prevRow.remove();
+                                    Swal.fire({
+                                        title: 'Archived',
+                                        text: 'Report has been archived.',
+                                        icon: 'success',
+                                        confirmButtonText: 'OK'
+                                    });
+                                } else {
+                                    Swal.fire({
+                                        title: 'Failed',
+                                        text: 'Could not archive report.',
+                                        icon: 'error',
+                                        confirmButtonText: 'OK'
+                                    });
+                                }
+                            },
+                            error: function() {
+                                Swal.fire({
+                                    title: 'Error',
+                                    text: 'An error occurred.',
+                                    icon: 'error',
+                                    confirmButtonText: 'OK'
+                                });
+                            }
+                        });
+                    }
+                });
+            });
+
+            // Unarchive report: move from archived back to solved, remove row from list
+            $(document).on('click', '.unarchive-report', function(e) {
+                e.preventDefault();
+                let reportId = $(this).data('report-id');
+                let $row = $(this).closest('tr');
+                Swal.fire({
+                    title: 'Undo archive?',
+                    text: 'This report will be moved back to Solved.',
+                    icon: 'question',
+                    showCancelButton: true,
+                    confirmButtonText: 'Yes, undo',
+                    cancelButtonText: 'Cancel',
+                    reverseButtons: true
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        $.ajax({
+                            url: "{{ route('reports.unarchive') }}",
+                            method: 'POST',
+                            data: {
+                                _token: "{{ csrf_token() }}",
+                                report_id: reportId
+                            },
+                            success: function(response) {
+                                if (response.success) {
+                                    $row.remove();
+                                    Swal.fire({
+                                        title: 'Undone',
+                                        text: 'Report has been moved back to Solved.',
+                                        icon: 'success',
+                                        confirmButtonText: 'OK'
+                                    });
+                                } else {
+                                    Swal.fire({
+                                        title: 'Failed',
+                                        text: 'Could not undo archive.',
+                                        icon: 'error',
+                                        confirmButtonText: 'OK'
+                                    });
+                                }
+                            },
+                            error: function() {
+                                Swal.fire({
+                                    title: 'Error',
+                                    text: 'An error occurred.',
+                                    icon: 'error',
+                                    confirmButtonText: 'OK'
+                                });
+                            }
+                        });
+                    }
+                });
+            });
+
+            // Unreport: remove report entirely, remove row from list
+            $(document).on('click', '.unreport-report', function(e) {
+                e.preventDefault();
+                let reportId = $(this).data('report-id');
+                let $row = $(this).closest('tr');
+                Swal.fire({
+                    title: 'Unreport?',
+                    text: 'This report will be removed. The order will no longer appear in reports.',
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonText: 'Yes, unreport',
+                    cancelButtonText: 'Cancel',
+                    reverseButtons: true
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        $.ajax({
+                            url: "{{ route('reports.unreport') }}",
+                            method: 'POST',
+                            data: {
+                                _token: "{{ csrf_token() }}",
+                                report_id: reportId
+                            },
+                            success: function(response) {
+                                if (response.success) {
+                                    $row.remove();
+                                    Swal.fire({
+                                        title: 'Unreported',
+                                        text: 'Report has been removed.',
+                                        icon: 'success',
+                                        confirmButtonText: 'OK'
+                                    });
+                                } else {
+                                    Swal.fire({
+                                        title: 'Failed',
+                                        text: 'Could not unreport.',
+                                        icon: 'error',
+                                        confirmButtonText: 'OK'
+                                    });
+                                }
+                            },
+                            error: function() {
+                                Swal.fire({
+                                    title: 'Error',
+                                    text: 'An error occurred.',
+                                    icon: 'error',
+                                    confirmButtonText: 'OK'
+                                });
+                            }
+                        });
+                    }
+                });
+            });
+
             // Define the search button click handler FIRST
             $('#customSearchBtn').on('click', function() {
                 let query = $('#searchOrder').val();
@@ -305,6 +533,7 @@
                 let endDate = $('#endDate').val();
                 let storeProfileId = $('#storeId').val();
                 let status = $('#currentReportStatus').length > 0 ? $('#currentReportStatus').val() : 'all';
+                let showAll = $('#showAllCheckbox').is(':checked') ? 1 : 0;
 
                 $.ajax({
                     url: "{{ route('manager.orders.search') }}",
@@ -315,6 +544,7 @@
                         end_date: endDate,
                         status: status,
                         store_profile_id: storeProfileId,
+                        show_all: showAll,
                     },
                     success: function(response) {
                         if (!response.rows || response.rows.trim() === '') {
@@ -327,11 +557,7 @@
                         } else {
                             $('#orderTableBody').html(response.rows);
                             $('#orderPagination').html(response.pagination);
-                            $('.orders-responsive-table').mobileTableToggle({
-                                maxVisibleCols: 3,
-                                maxVisibleColsDesktop: 5,
-                                enableOnDesktop: true
-                            });
+                            refreshOrdersMobileTable();
                         }
                     },
                     error: function(xhr) {
@@ -355,12 +581,14 @@
                 let endDate    = $('#endDate').val();
                 let storeId    = $('#storeId').val();
                 let status     = $('#currentReportStatus').length > 0 ? $('#currentReportStatus').val() : 'all';
+                let showAll    = $('#showAllCheckbox').is(':checked') ? 1 : 0;
                 // Add any manually selected filters
                 queryParams.set('search', search);
                 queryParams.set('start_date', startDate);
                 queryParams.set('end_date', endDate);
                 queryParams.set('store_profile_id', storeId);
                 queryParams.set('status', status);
+                queryParams.set('show_all', showAll);
 
                 $.ajax({
                     url: url.split('?')[0] + '?' + queryParams.toString(),
@@ -368,11 +596,7 @@
                     success: function(response) {
                         $('#orderTableBody').html(response.rows);
                         $('#orderPagination').html(response.pagination);
-                        $('.orders-responsive-table').mobileTableToggle({
-                            maxVisibleCols: 3,
-                            maxVisibleColsDesktop: 5,
-                            enableOnDesktop: true
-                        });
+                        refreshOrdersMobileTable();
                     },
                     error: function() {
                         Swal.fire('Error', 'Could not load page', 'error');
@@ -475,11 +699,100 @@
     </script>
     <script>
         // JavaScript to handle "Check All" functionality
+        // Only select checkboxes that are in the same form context
         document.getElementById('select_all').addEventListener('change', function() {
-            var checkboxes = document.querySelectorAll('input[name="order_ids[]"]');
-            checkboxes.forEach(function(checkbox) {
+            // Get the form that contains the select_all checkbox
+            const form = this.closest('form');
+            if (form) {
+                // Only select checkboxes within this form
+                var checkboxes = form.querySelectorAll('input[name="order_ids[]"]');
+                checkboxes.forEach(function(checkbox) {
+                    checkbox.checked = document.getElementById('select_all').checked;
+                });
+            }
+            
+            // Also handle unsend checkboxes separately (they're in the same table but different form)
+            var unsendCheckboxes = document.querySelectorAll('input[name="unsend_order_ids[]"]');
+            unsendCheckboxes.forEach(function(checkbox) {
                 checkbox.checked = document.getElementById('select_all').checked;
             });
+        });
+
+        // Handle Send to POS form submission - validate that order_ids are selected
+        jQuery(document).ready(function($) {
+            $('#sendToPosForm').on('submit', function(e) {
+                const checkedOrderIds = $('input[name="order_ids[]"]:checked');
+                
+                console.log('Send to POS form submitted, checked order_ids:', checkedOrderIds.length);
+                
+                if (checkedOrderIds.length === 0) {
+                    e.preventDefault();
+                    Swal.fire({
+                        title: 'No Orders Selected',
+                        text: 'Please select at least one order that has not been sent to POS. Orders that have already been sent to POS cannot be sent again.',
+                        icon: 'warning',
+                        confirmButtonText: 'OK'
+                    });
+                    return false;
+                }
+                
+                // Log the order IDs being sent
+                const orderIds = checkedOrderIds.map(function() {
+                    return $(this).val();
+                }).get();
+                console.log('Sending order IDs to POS:', orderIds);
+            });
+        });
+
+        // Handle unsend checkboxes - show/hide unsend form
+        jQuery(document).ready(function($) {
+            function updateUnsendForm() {
+                const checkedUnsendBoxes = $('input[name="unsend_order_ids[]"]:checked');
+                const unsendForm = $('#unsendPosForm');
+                
+                if (checkedUnsendBoxes.length > 0) {
+                    // Populate hidden inputs with checked order IDs
+                    const unsendOrderIdsDiv = $('#unsendOrderIds');
+                    unsendOrderIdsDiv.empty();
+                    checkedUnsendBoxes.each(function() {
+                        unsendOrderIdsDiv.append('<input type="hidden" name="order_ids[]" value="' + $(this).val() + '" />');
+                    });
+                    unsendForm.show();
+                } else {
+                    unsendForm.hide();
+                }
+            }
+
+            // Listen for changes on unsend checkboxes
+            $(document).on('change', 'input[name="unsend_order_ids[]"]', function() {
+                updateUnsendForm();
+            });
+
+            // Handle unsend form submission with confirmation
+            $('#unsendPosForm').on('submit', function(e) {
+                e.preventDefault();
+                
+                const checkedCount = $('input[name="unsend_order_ids[]"]:checked').length;
+                
+                Swal.fire({
+                    title: 'Are you sure?',
+                    text: `Do you want to unsend ${checkedCount} order(s) from POS? This will set their pos_order_id to null.`,
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#d33',
+                    cancelButtonColor: '#3085d6',
+                    confirmButtonText: 'Yes, unsend them!',
+                    cancelButtonText: 'Cancel'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        // Submit the form
+                        this.submit();
+                    }
+                });
+            });
+
+            // Initialize form visibility
+            updateUnsendForm();
         });
     </script>
 @endpush

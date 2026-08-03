@@ -11,9 +11,23 @@ use Maatwebsite\Excel\Facades\Excel;
 use Illuminate\Support\Facades\Cache;
 use App\Services\CacheManager;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Gate;
 
 class AccountController extends Controller
 {
+    public function __construct()
+    {
+        $this->middleware(function ($request, $next) {
+            if (in_array($request->route()?->getActionMethod(), array('index', 'search'), true)) {
+                Gate::authorize('view-game-accounts');
+            } else {
+                Gate::authorize('manage-accounts');
+            }
+
+            return $next($request);
+        });
+    }
+
     // Display the accounts table
     public function index()
     {

@@ -51,4 +51,26 @@ class Role extends Model
     {
         return in_array($capability, $this->capabilities);
     }
+
+    /**
+     * Get all role names from the database.
+     * This method fetches roles dynamically instead of using static arrays.
+     *
+     * @return array
+     */
+    public static function getAllRoleNames(): array
+    {
+        return static::pluck('name')->toArray();
+    }
+
+    /**
+     * Check if a role name exists in the database.
+     *
+     * @param string $roleName
+     * @return bool
+     */
+    public static function roleExists(string $roleName): bool
+    {
+        return static::where('name', $roleName)->exists();
+    }
 }

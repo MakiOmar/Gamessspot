@@ -79,6 +79,59 @@ class DeviceRepair extends Model
     }
 
     /**
+     * Normalize a device serial number for consistent comparison.
+     */
+    public static function normalizeSerial(string $serialNumber): string
+    {
+        return strtoupper(trim($serialNumber));
+    }
+
+    /**
+     * Find a recently created duplicate repair (double-submit protection).
+     */
+    public static function findRecentDuplicate(
+        int $userId,
+        int $deviceModelId,
+        string $serialNumber,
+        ?int $storeProfileId = null,
+        int $withinSeconds = 120
+    ): ?self {
+        $query = self::query()
+            ->where('user_id', $userId)
+            ->where('device_model_id', $deviceModelId)
+            ->where('device_serial_number', self::normalizeSerial($serialNumber))
+            ->where('created_at', '>=', now()->subSeconds($withinSeconds));
+
+        if ($storeProfileId !== null) {
+            $query->where('store_profile_id', $storeProfileId);
+        }
+
+        return $query->latest()->first();
+    }
+
+    /**
+     * Find an active duplicate repair for the same device.
+     */
+    public static function findActiveDuplicate(
+        int $userId,
+        int $deviceModelId,
+        string $serialNumber,
+        ?int $storeProfileId = null
+    ): ?self {
+        $query = self::query()
+            ->where('user_id', $userId)
+            ->where('device_model_id', $deviceModelId)
+            ->where('device_serial_number', self::normalizeSerial($serialNumber))
+            ->active();
+
+        if ($storeProfileId !== null) {
+            $query->where('store_profile_id', $storeProfileId);
+        }
+
+        return $query->latest()->first();
+    }
+
+    /**
      * Generate a unique tracking code.
      */
     public static function generateTrackingCode(): string

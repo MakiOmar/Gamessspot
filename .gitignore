@@ -18,6 +18,7 @@ yarn-error.log
 public/assets/uploads/
 public/assets/ps4/
 public/assets/ps5/
+public/logos
 .htaccess
 .DS_Store
 Thumbs.db

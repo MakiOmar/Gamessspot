@@ -17,6 +17,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DeviceRepairController;
 use App\Http\Controllers\PublicDeviceController;
 use App\Http\Controllers\SettingsController;
+use App\Http\Controllers\RolePermissionController;
 
 Route::get('/', function () {
     return view('welcome');
@@ -601,12 +602,15 @@ Route::prefix('manager')->group(function () {
             });
         });
 
-        // Routes with 'can:manage-accounts' middleware for admin and account manager
-        Route::middleware(['checkRole:admin,account manager', 'can:manage-accounts'])->group(function () {
-            Route::prefix('accounts')->group(function () {
+        // Game accounts: view (read-only) vs full manage
+        Route::prefix('accounts')->group(function () {
+            Route::middleware('can:view-game-accounts')->group(function () {
                 Route::get('/', [AccountController::class, 'index'])->name('manager.accounts');
-                Route::post('/store', [AccountController::class, 'store'])->name('manager.accounts.store');
                 Route::get('/search', [AccountController::class, 'search'])->name('manager.accounts.search');
+            });
+
+            Route::middleware('can:manage-accounts')->group(function () {
+                Route::post('/store', [AccountController::class, 'store'])->name('manager.accounts.store');
                 Route::get('/export', [AccountController::class, 'export'])->name('manager.accounts.export');
                 Route::post('/import', [AccountController::class, 'import'])->name('manager.accounts.import');
                 Route::get('/template', [AccountController::class, 'template'])->name('manager.accounts.template');
@@ -617,20 +621,31 @@ Route::prefix('manager')->group(function () {
             });
         });
 
-        // Routes with 'can:view-sell-log' middleware
+        // Sell log: read access (includes call center — search/view order details only)
         Route::middleware('can:view-sell-log')->group(function () {
             Route::prefix('orders')->group(function () {
                 Route::get('/', [OrderController::class, 'index'])->name('manager.orders');
                 Route::get('/search', [OrderController::class, 'search'])->name('manager.orders.search');
-                Route::get('/quick-search', [OrderController::class, 'quickSearch'])->name('manager.orders.qsearch');
-                Route::get('/export', [OrderController::class, 'export'])->name('manager.orders.export');
-                Route::post('/store', [OrderController::class, 'store'])->name('orders.store');
-                Route::post('/sell-card', [OrderController::class, 'sellCard'])->name('manager.orders.sell.card');
-                Route::post('/send-to-pos', [OrderController::class, 'sendToPos'])->name('manager.orders.sendToPos');
-                
-                Route::get('/has-problem', [OrderController::class, 'ordersHasProblem'])->name('manager.orders.has_problem');
-                Route::get('/needs-return', [OrderController::class, 'ordersWithNeedsReturn'])->name('manager.orders.needs_return');
-                Route::get('/solved', [OrderController::class, 'solvedOrders'])->name('manager.orders.solved');
+                Route::get('/quick-search', [OrderController::class, 'quickSearch'])
+                    ->middleware('can:search-customer-orders')
+                    ->name('manager.orders.qsearch');
+
+                Route::middleware('can:manage-sell-log')->group(function () {
+                    Route::get('/export', [OrderController::class, 'export'])->name('manager.orders.export');
+                    Route::post('/store', [OrderController::class, 'store'])
+                        ->middleware('throttle:5,1')
+                        ->name('orders.store');
+                    Route::post('/sell-card', [OrderController::class, 'sellCard'])->name('manager.orders.sell.card');
+                    Route::post('/send-to-pos', [OrderController::class, 'sendToPos'])->name('manager.orders.sendToPos');
+                    Route::post('/unsend-from-pos', [OrderController::class, 'unsendFromPos'])->name('manager.orders.unsendFromPos');
+                });
+
+                Route::middleware('can:view-reports')->group(function () {
+                    Route::get('/has-problem', [OrderController::class, 'ordersHasProblem'])->name('manager.orders.has_problem');
+                    Route::get('/needs-return', [OrderController::class, 'ordersWithNeedsReturn'])->name('manager.orders.needs_return');
+                    Route::get('/solved', [OrderController::class, 'solvedOrders'])->name('manager.orders.solved');
+                    Route::get('/archived', [OrderController::class, 'archivedOrders'])->name('manager.orders.archived');
+                });
             });
         });
 
@@ -642,14 +657,18 @@ Route::prefix('manager')->group(function () {
             Route::get('/buyer-name', [UserController::class, 'searchUserHelper'])->name('manager.buyer.name');
         });
 
-        // Admin-only order routes
-        Route::middleware(['checkRole:admin', 'can:manage-options'])->group(function () {
+        Route::middleware('can:undo-orders')->group(function () {
             Route::post('/orders/undo', [OrderController::class, 'undo'])->name('manager.orders.undo');
         });
-        Route::post('/reports/store', [ReportsController::class, 'store'])->name('manager.reports.store');
+        Route::post('/reports/store', [ReportsController::class, 'store'])
+            ->middleware('can:create-order-reports')
+            ->name('manager.reports.store');
         // Routes with 'can:view-reports' middleware
         Route::middleware('can:view-reports')->group(function () {
             Route::post('/reports/solve-problem', [ReportsController::class, 'solveProblem'])->name('reports.solve_problem');
+            Route::post('/reports/archive', [ReportsController::class, 'archiveReport'])->name('reports.archive');
+            Route::post('/reports/unarchive', [ReportsController::class, 'unarchiveReport'])->name('reports.unarchive');
+            Route::post('/reports/unreport', [ReportsController::class, 'unreport'])->name('reports.unreport');
             Route::get('/reports/{order_id}', [ReportsController::class, 'getReportsForOrder']);
             
             Route::prefix('special-prices')->group(function () {
@@ -669,6 +688,7 @@ Route::prefix('manager')->group(function () {
                 Route::get('/accountants', [UserController::class, 'accountants'])->name('manager.users.accountants');
                 Route::get('/admins', [UserController::class, 'admins'])->name('manager.users.admins');
                 Route::get('/account-managers', [UserController::class, 'accountManagers'])->name('manager.users.acc.managers');
+                Route::get('/call-center', [UserController::class, 'callCenters'])->name('manager.users.call_center');
                 Route::get('/customers', [UserController::class, 'customers'])->name('manager.users.customers');
                 Route::get('/search/{role?}', [UserController::class, 'search'])->name('manager.users.search');
                 Route::get('/{id}/edit', [UserController::class, 'edit'])->name('manager.users.edit');
@@ -727,18 +747,36 @@ Route::prefix('manager')->group(function () {
                 Route::post('/reset', [SettingsController::class, 'reset'])->name('settings.reset');
                 Route::get('/get/{key}', [SettingsController::class, 'get'])->name('settings.get');
                 Route::post('/set/{key}', [SettingsController::class, 'set'])->name('settings.set');
+                Route::get('/export', [SettingsController::class, 'export'])->name('settings.export');
+                Route::post('/import', [SettingsController::class, 'import'])->name('settings.import');
+                Route::post('/clear', [SettingsController::class, 'clear'])->name('settings.clear');
             });
             
             // System Health Check Route (Admin only)
             Route::get('/health-check', [ManagerController::class, 'healthCheck'])->name('manager.health-check');
+
+            // Roles & Permissions management (Admin only)
+            Route::prefix('roles-permissions')->group(function () {
+                Route::get('/', [RolePermissionController::class, 'index'])->name('manager.roles-permissions.index');
+                Route::get('/data', [RolePermissionController::class, 'data'])->name('manager.roles-permissions.data');
+                Route::post('/', [RolePermissionController::class, 'store'])->name('manager.roles-permissions.store');
+                Route::get('/{role}', [RolePermissionController::class, 'show'])->name('manager.roles-permissions.show');
+                Route::put('/{role}', [RolePermissionController::class, 'update'])->name('manager.roles-permissions.update');
+                Route::delete('/{role}', [RolePermissionController::class, 'destroy'])->name('manager.roles-permissions.destroy');
+            });
         });
     });
 });
 
 // Public Device Repair Routes
 Route::prefix('device')->group(function () {
-    Route::get('/submit', [PublicDeviceController::class, 'showSubmissionForm'])->name('device.submit');
-    Route::post('/submit', [PublicDeviceController::class, 'submitDevice'])->name('device.submit.store');
+    // Device submission routes - require authentication (for admins to create for customers)
+    Route::middleware('auth')->group(function () {
+        Route::get('/submit', [PublicDeviceController::class, 'showSubmissionForm'])->name('device.submit');
+        Route::post('/submit', [PublicDeviceController::class, 'submitDevice'])->name('device.submit.store');
+    });
+    
+    // Public tracking routes
     Route::get('/track', [PublicDeviceController::class, 'trackDevice'])->name('device.tracking');
     Route::post('/search', [PublicDeviceController::class, 'searchByPhone'])->name('device.search');
     Route::get('/api/country-codes', [PublicDeviceController::class, 'getCountryCodes'])->name('device.country-codes');

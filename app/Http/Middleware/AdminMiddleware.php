@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\Role;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -22,10 +23,11 @@ class AdminMiddleware
             $user = Auth::user()->loadMissing('roles');
 
             // Check if user has one of the allowed roles by name
-            // Note: 'accountatnt' is the actual role name in database (typo)
+            // Get allowed roles dynamically from database
+            $allowedRoles = Role::getAllRoleNames();
             if (
-                $user->roles->contains(function ($role) {
-                    return in_array($role->name, array( 'admin', 'sales', 'accountatnt', 'account manager' ));
+                $user->roles->contains(function ($role) use ($allowedRoles) {
+                    return in_array($role->name, $allowedRoles);
                 })
             ) {
                 return $next($request);

@@ -22,6 +22,7 @@ use App\Services\SettingsService;
 use Rawilk\Settings\Facades\Settings;
 use App\Jobs\SendInventoryWebhookJob;
 use App\Services\CacheManager;
+use Illuminate\Support\Facades\Log;
 
 class OrderController extends Controller
 {
@@ -34,7 +35,7 @@ class OrderController extends Controller
         $this->pos_base = SettingsService::getPosBaseUrl();
         $username = SettingsService::getPosUsername();
         $password = SettingsService::getPosPassword();
-        
+
         // Check if a valid token is already stored in the cache
         $token = Cache::get('api_token');
 
@@ -69,6 +70,17 @@ class OrderController extends Controller
         // Return the existing token from the cache
         return $token;
     }
+
+    /**
+     * Clear the cached POS API token
+     *
+     * @return bool
+     */
+    public function clearToken()
+    {
+        Cache::forget('api_token');
+        return true;
+    }
     /**
      * Display a listing of the orders.
      *
@@ -78,6 +90,13 @@ class OrderController extends Controller
     {
         $user = Auth::guard('admin')->user(); // Assuming 'admin' guard is used
         $roles = $user->roles->pluck('name');
+
+        // Call center: sell log is search-only (no default order listing)
+        if ($roles->contains('call center')) {
+            $orders = Order::query()->whereRaw('1 = 0')->paginate($this->pagination);
+
+            return $this->renderOrders($orders, $user, true);
+        }
 
         // Get only today's orders
         $ordersQuery = Order::with([
@@ -183,12 +202,27 @@ class OrderController extends Controller
      * @param \App\Models\User $user
      * @return \Illuminate\Contracts\View\View
      */
-    protected function renderOrders($orders, $user)
+    protected function renderOrders($orders, $user, bool $searchOnly = false)
     {
         $status = request()->input('status', 'all');
-        return view('manager.orders', compact('orders', 'user', 'status'));
+
+        return view('manager.orders', compact('orders', 'user', 'status', 'searchOnly'));
     }
 
+    /**
+     * Render order table rows with column layout matching the current user's role.
+     */
+    protected function renderOrderRows($orders, string $status = 'all'): string
+    {
+        $user = Auth::user();
+        $readOnly = $user && ! $user->can('manage-sell-log');
+
+        return view('manager.partials.order_rows', [
+            'orders'   => $orders,
+            'status'   => $status,
+            'readOnly' => $readOnly,
+        ])->render();
+    }
 
     /**
      * Search for orders by buyer phone.
@@ -204,16 +238,23 @@ class OrderController extends Controller
         $endDate        = $request->input('end_date');
         $storeProfileId = $request->input('store_profile_id');
         $status         = $request->input('status', 'all'); // Default to 'all' if not provided
+        $showAll        = $request->input('show_all', 0); // Check if show all is selected
+        Log::info("Search Parameters - Query: $query, Start Date: $startDate, End Date: $endDate, Store Profile ID: $storeProfileId, Status: $status, Show All: $showAll");
+
+        $user = Auth::user();
+        $isCallCenter = $user->hasRole('call center');
+
+        if ($isCallCenter && empty(trim((string) $query))) {
+            return response()->json([
+                'rows' => '<tr><td colspan="13" class="text-center text-muted">Enter a customer phone number or account email to search orders.</td></tr>',
+                'pagination' => '<div id="search-pagination"></div>',
+            ], 422);
+        }
 
         // Build the query to filter orders
         $orders = Order::with(array( 'seller', 'account.game' ));
-        // Check if the user is an admin
-        $user = Auth::user();
-        $isAdmin = $user->roles->contains('name', 'admin');
-        $isAccountant = $user->roles->contains('name', 'accountant');
-
-        // If the user is not an admin, filter by seller_id
-        if (!$isAdmin && !$isAccountant) {
+        // Restrict to own sales unless the user can search all customer orders
+        if (! $user->can('search-customer-orders')) {
             $orders->where('seller_id', $user->id);
         }
 
@@ -271,17 +312,34 @@ class OrderController extends Controller
         }
         if ($storeProfileId != 0) {
             $orders->where('orders.store_profile_id', $storeProfileId)->orderBy('buyer_name', 'asc')->orderBy('created_at', 'desc');
+        } else {
+            // Default ordering when no store profile filter is applied
+            $orders->orderBy('created_at', 'desc');
         }
-        
-        // Execute the query and paginate or get the results
-        $orders = $orders->paginate(20)->appends($request->all());
-        
-        $showing = "<div class=\"mb-2 mb-md-0 mobile-results-count\">Showing {$orders->firstItem()} to {$orders->lastItem()} of {$orders->total()} results</div>";
-        // Return the updated rows for the table (assuming a partial view)
-        return response()->json([
-            'rows' => view('manager.partials.order_rows', compact('orders', 'status'))->render(),
-            'pagination' => '<div id="search-pagination">' . $showing . $orders->links('vendor.pagination.bootstrap-5')->render() . '</div>',
-        ]);
+
+        // Execute the query - paginate or get all results based on show_all checkbox
+        if ($showAll) {
+            // Get all results without pagination
+            $orders = $orders->get();
+            $total = $orders->count();
+            $showing = "<div class=\"mb-2 mb-md-0 mobile-results-count\">Showing all {$total} results</div>";
+            
+            // Return the updated rows for the table without pagination
+            return response()->json([
+                'rows'       => $this->renderOrderRows($orders, $status),
+                'pagination' => '<div id="search-pagination">' . $showing . '</div>',
+            ]);
+        } else {
+            // Paginate the results
+            $orders = $orders->paginate(20)->appends($request->all());
+            $showing = "<div class=\"mb-2 mb-md-0 mobile-results-count\">Showing {$orders->firstItem()} to {$orders->lastItem()} of {$orders->total()} results</div>";
+            
+            // Return the updated rows for the table (assuming a partial view)
+            return response()->json([
+                'rows'       => $this->renderOrderRows($orders, $status),
+                'pagination' => '<div id="search-pagination">' . $showing . $orders->links('vendor.pagination.bootstrap-5')->render() . '</div>',
+            ]);
+        }
     }
 
     public function searchCustomersHelper(Request $request)
@@ -323,18 +381,21 @@ class OrderController extends Controller
         // Get the search query input
         $query = $request->input('search');
         if (empty($query)) {
-            $query = $_GET['search'];
+            $query = $_GET['search'] ?? '';
         }
+
+        $user = Auth::user();
+
+        if ($user->hasRole('call center') && empty(trim((string) $query))) {
+            abort(422, 'Search query is required.');
+        }
+
         // Build the query to filter orders
         $orders = Order::with(['seller', 'account.game']);
 
-        // Check if the user is an admin
-        $user = Auth::user();
-        $isAdmin = $user->roles->contains('name', 'admin');
-
-        // If the user is not an admin, filter by seller_id
-        if (!$isAdmin) {
-            //$orders->where('seller_id', $user->id);
+        // Navbar quick search: users with search-customer-orders can search all customer orders
+        if (! $user->can('search-customer-orders')) {
+            $orders->where('seller_id', $user->id);
         }
         $buyer   = false;
         $account = false;
@@ -405,16 +466,16 @@ class OrderController extends Controller
                 $platform = null;
                 $type = null;
                 $newStock = null;
-                
+
                 if ($order->card_id) {
                     $this->updateCardStatus($order->card_id);
                 } else {
                     // Extract game details from the order before restocking
                     $account = Account::find($order->account_id);
-                    
+
                     if ($account) {
                         $gameId = $account->game_id;
-                        
+
                         // Parse platform and type from sold_item field
                         // Example: "ps4_primary_stock" -> platform: 4, type: primary
                         if (preg_match('/ps(\d+)_(\w+)_stock/', $order->sold_item, $matches)) {
@@ -422,10 +483,10 @@ class OrderController extends Controller
                             $type = $matches[2];      // e.g., "primary", "secondary", "offline"
                         }
                     }
-                    
+
                     // Increment the stock
                     $this->incrementAccountStock($order);
-                    
+
                     // Get the new stock count after increment
                     if ($account) {
                         $account->refresh(); // Reload from database
@@ -440,12 +501,12 @@ class OrderController extends Controller
                 $this->deleteOrderAndReports($order);
 
                 DB::commit();
-                
+
                 // Flush accounts and orders cache after undo (stock restored)
                 CacheManager::invalidateAccounts();
                 CacheManager::invalidateOrders();
                 CacheManager::invalidateGames(); // Games listings show aggregated account stock
-                
+
                 // ✅ NEW: Send webhook to WordPress when order is undone (stock restored)
                 if ($gameId && $platform && $type) {
                     try {
@@ -456,12 +517,11 @@ class OrderController extends Controller
                             $newStock,
                             'stock_updated'  // Different event type for restock
                         );
-                        
                     } catch (\Exception $e) {
                         // Don't fail the undo operation if webhook fails
                     }
                 }
-                
+
                 return response()->json(['success' => true]);
             }
 
@@ -491,7 +551,7 @@ class OrderController extends Controller
 
         if ($account) {
             $stockField = $this->getStockField($order->sold_item);
-            
+
             // If restoring a secondary stock, also restore the other platform's secondary stock
             // Check the state BEFORE incrementing to ensure we capture the current values
             $shouldRestoreBoth = false;
@@ -506,10 +566,10 @@ class OrderController extends Controller
                     $shouldRestoreBoth = true;
                 }
             }
-            
+
             // Increment the stock field that was decremented
             $account->$stockField += 1;
-            
+
             // If restoring a secondary stock and the other platform's secondary stock is 0,
             // restore it to 1 to maintain consistency (both should be 1 together)
             if ($shouldRestoreBoth) {
@@ -519,11 +579,11 @@ class OrderController extends Controller
                     $account->ps4_secondary_stock = 1;
                 }
             }
-            
+
             $account->save();
         }
     }
-    
+
     /**
      * Sync secondary stocks: When one platform's secondary stock reaches 0,
      * set the other platform's secondary stock to 0 as well
@@ -538,7 +598,7 @@ class OrderController extends Controller
         if ($soldItem === 'ps4_secondary_stock') {
             // Refresh to get the current value after decrement
             $account->refresh();
-            
+
             // If PS4 secondary stock is now 0, set PS5 secondary stock to 0
             if ($account->ps4_secondary_stock == 0) {
                 $account->ps5_secondary_stock = 0;
@@ -547,7 +607,7 @@ class OrderController extends Controller
         } elseif ($soldItem === 'ps5_secondary_stock') {
             // Refresh to get the current value after decrement
             $account->refresh();
-            
+
             // If PS5 secondary stock is now 0, set PS4 secondary stock to 0
             if ($account->ps5_secondary_stock == 0) {
                 $account->ps4_secondary_stock = 0;
@@ -585,14 +645,54 @@ class OrderController extends Controller
         $order->reports()->delete();
         $order->delete();
     }
+
+    /**
+     * Find an existing customer by phone or email, or create one for WooCommerce API orders.
+     */
+    private function resolveOrCreateApiCustomer(string $phone, string $email, string $name): User
+    {
+        $user = User::where('phone', $phone)->first()
+            ?? User::where('email', $email)->first();
+
+        if ($user) {
+            if ($user->phone !== $phone) {
+                $phoneTakenByOther = User::where('phone', $phone)
+                    ->where('id', '!=', $user->id)
+                    ->exists();
+
+                if (!$phoneTakenByOther) {
+                    $user->phone = $phone;
+                    $user->save();
+                }
+            }
+
+            return $user;
+        }
+
+        $user = User::create([
+            'name'     => $name,
+            'email'    => $email,
+            'phone'    => $phone,
+            'password' => bcrypt(Str::random(12)),
+        ]);
+
+        $defaultRole = Role::where('name', 'customer')->first();
+        if ($defaultRole) {
+            $user->roles()->attach($defaultRole->id);
+        }
+
+        return $user;
+    }
+
     public function storeApi(Request $request)
     {
         if ($request->has('card_category_id')) {
             return $this->sellCard($request);
         }
 
-        // Validate incoming data
-        $validatedData = $request->validate([
+        $isStorefront = $request->filled('storefront_order_id');
+
+        $rules = [
             'store_profile_id' => 'required|exists:stores_profile,id',
             'game_id'          => 'required|exists:games,id',
             'buyer_phone'      => 'required|string|max:15',
@@ -601,42 +701,65 @@ class OrderController extends Controller
             'price'            => 'required|numeric|min:0',
             'type'             => 'required|string|in:primary,secondary',
             'platform'         => 'required|string|max:255',
-        ]);
-        
-        // Check if the user already exists by phone number
-        $user = User::where('phone', $validatedData['buyer_phone'])->first();
+            'storefront_line_key' => 'nullable|string|max:191',
+        ];
 
-        // If the user does not exist, create a new one
-        if (!$user) {
-            $user = User::create([
-                'name'     => $validatedData['buyer_name'],
-                'email'    => $validatedData['buyer_email'] ?? (Str::random(10) . '@' . Str::random(4) . '.com'),
-                'phone'    => $validatedData['buyer_phone'],
-                'password' => bcrypt(Str::random(12)),
-            ]);
+        if ($isStorefront) {
+            $rules['storefront_order_id'] = 'required|string|max:191';
+            $rules['pos_transaction_id'] = 'required|numeric';
+            $rules['wc_order_id'] = 'nullable|numeric';
+        } else {
+            $rules['wc_order_id'] = 'required|numeric';
+        }
 
-            $defaultRole = Role::where('name', 'customer')->first();
-            if ($defaultRole) {
-                $user->roles()->attach($defaultRole->id);
+        $validatedData = $request->validate($rules);
+
+        $sold_item         = "ps{$validatedData['platform']}_{$validatedData['type']}_stock";
+        $lineKey = $validatedData['storefront_line_key']
+            ?? ($sold_item.'|game:'.$validatedData['game_id']);
+
+        // Idempotent replay for storefront: return existing secrets without re-allocating.
+        if ($isStorefront) {
+            $existing = Order::where('storefront_order_id', $validatedData['storefront_order_id'])
+                ->where('storefront_line_key', $lineKey)
+                ->first();
+            if ($existing) {
+                if (empty($existing->pos_order_id) && ! empty($validatedData['pos_transaction_id'])) {
+                    $existing->update(['pos_order_id' => (string) $validatedData['pos_transaction_id']]);
+                    $existing->refresh();
+                }
+                $account = Account::find($existing->account_id);
+
+                return response()->json([
+                    'message' => 'Order already allocated.',
+                    'order_id' => $existing->id,
+                    'pos_order_id' => $existing->pos_order_id,
+                    'duplicate' => true,
+                    'account_details' => [
+                        'email' => $account?->mail,
+                        'password' => $account?->password,
+                    ],
+                ], 200);
             }
         }
 
-        // Update buyer name to match user record
+        $user = $this->resolveOrCreateApiCustomer(
+            $validatedData['buyer_phone'],
+            $validatedData['buyer_email'],
+            $validatedData['buyer_name']
+        );
+
         $validatedData['buyer_name'] = $user->name;
-        
-        // Determine the sold item field dynamically
-        $sold_item         = "ps{$validatedData['platform']}_{$validatedData['type']}_stock";
+
         $sold_item_status  = "ps{$validatedData['platform']}_{$validatedData['type']}_status";
         $sold_offline_item = "ps{$validatedData['platform']}_offline_stock";
 
-        // Fetch one available account based on type, stock availability, and game status
         $accountQuery = Account::where('game_id', $validatedData['game_id'])
             ->join('games', 'accounts.game_id', '=', 'games.id')
             ->where("games.{$sold_item_status}", true)
             ->orderBy('accounts.created_at', 'asc')
             ->where($sold_item, '>', 0);
 
-        // Special conditions for primary and secondary
         if ($validatedData['platform'] !== '5') {
             $accountQuery->where($sold_offline_item, 0);
         }
@@ -644,55 +767,59 @@ class OrderController extends Controller
         try {
             DB::beginTransaction();
 
-            // Fetch a single account
-            $account = $accountQuery->select('accounts.*')->first();
+            $account = $accountQuery->select('accounts.*')->lockForUpdate()->first();
 
-            // Check if no account was found
-            if (!$account) {
+            if (! $account) {
+                DB::rollBack();
+
                 return response()->json([
                     'message' => 'No available account matches the specified criteria.',
                 ], 422);
             }
 
-            // Reduce the stock by 1
             $account->decrement($sold_item, 1);
-            
-            // Sync secondary stocks: If secondary stock reaches 0, set the other platform's secondary stock to 0
             $this->syncSecondaryStocks($account, $sold_item);
-            
-            // Create the order
+
             $order_data = [
-                'seller_id'        => null,
-                'store_profile_id' => $validatedData['store_profile_id'],
-                'account_id'       => $account->id,
-                'buyer_phone'      => $validatedData['buyer_phone'],
-                'buyer_name'       => $validatedData['buyer_name'],
-                'price'            => $validatedData['price'],
-                'notes'            => '',
-                'sold_item'        => $sold_item,
+                'seller_id'            => null,
+                'store_profile_id'     => $validatedData['store_profile_id'],
+                'account_id'           => $account->id,
+                'buyer_phone'          => $validatedData['buyer_phone'],
+                'buyer_name'           => $validatedData['buyer_name'],
+                'price'                => $validatedData['price'],
+                'notes'                => '',
+                'sold_item'            => $sold_item,
+                'woocommerce_order_id' => $validatedData['wc_order_id'] ?? null,
             ];
+
+            if ($isStorefront) {
+                $order_data['storefront_order_id'] = $validatedData['storefront_order_id'];
+                $order_data['storefront_line_key'] = $lineKey;
+                // Green POS badge in manager UI = pos_order_id set (same as manual Send to POS).
+                $order_data['pos_order_id'] = (string) $validatedData['pos_transaction_id'];
+            } elseif (! empty($validatedData['pos_transaction_id'])) {
+                $order_data['pos_order_id'] = (string) $validatedData['pos_transaction_id'];
+            }
 
             $order = Order::create($order_data);
 
             DB::commit();
-            // ✅ No need to manually clear cache - OrderObserver handles it automatically
 
-            // ✅ NEW: Dispatch webhook to WordPress to invalidate cache
             \App\Jobs\SendInventoryWebhookJob::dispatch(
                 $validatedData['game_id'],
                 $validatedData['platform'],
                 $validatedData['type'],
-                $account->$sold_item,  // remaining stock after decrement
+                $account->$sold_item,
                 'order_created'
             );
 
-            // Return a JSON response on success
             return response()->json([
                 'message'          => 'Order created successfully!',
                 'order_id'         => $order->id,
+                'pos_order_id'     => $order->pos_order_id,
                 'account_details'  => [
                     'email'    => $account->mail,
-                    'password' => $account->password
+                    'password' => $account->password,
                 ],
             ], 201);
         } catch (\Exception $e) {
@@ -777,6 +904,24 @@ class OrderController extends Controller
         try {
             DB::beginTransaction();
 
+            // Prevent creating duplicate orders for the same seller, buyer, game and sold item within a short time window
+            $recentDuplicateExists = Order::where('seller_id', Auth::id())
+                ->where('buyer_phone', $validatedData['buyer_phone'])
+                ->where('store_profile_id', $validatedData['store_profile_id'])
+                ->where('sold_item', $sold_item)
+                ->where('price', $validatedData['price'])
+                ->where('created_at', '>=', now()->subSeconds(5))
+                ->exists();
+
+            if ($recentDuplicateExists) {
+                DB::rollBack();
+
+                return response()->json([
+                    'message'  => 'A similar order was just created. Please avoid submitting the same order multiple times.',
+                    'duplicate'=> true,
+                ], 422);
+            }
+
             // Fetch the first matching account or fail
             $account = $accountQuery->select('accounts.*')->first();
 
@@ -789,7 +934,7 @@ class OrderController extends Controller
 
             // Reduce the corresponding stock by 1 for the account
             $account->decrement($sold_item, 1);
-            
+
             // Sync secondary stocks: If secondary stock reaches 0, set the other platform's secondary stock to 0
             $this->syncSecondaryStocks($account, $sold_item);
 
@@ -913,68 +1058,106 @@ class OrderController extends Controller
 
     public function sellCard(Request $request)
     {
-        // Validate incoming data
-        $validatedData = $request->validate([
-        'card_category_id' => 'required|exists:card_categories,id',
-        'store_profile_id' => 'required|exists:stores_profile,id',
-        'buyer_phone'      => 'required|string|max:15',
-        'buyer_name'       => 'required|string|max:100',
-        'price'            => 'required|numeric|min:0',
-        ]);
+        $isStorefront = $request->filled('storefront_order_id');
 
-        // Find an available card with status = true
-        $card = Card::where('card_category_id', $validatedData['card_category_id'])
-                ->where('status', true)
-                ->first();
-
-        if (!$card) {
-            return response()->json([
-            'success' => false,
-            'message' => 'No active code found for this category.'
-            ], 200);
+        $rules = [
+            'card_category_id' => 'required|exists:card_categories,id',
+            'store_profile_id' => 'required|exists:stores_profile,id',
+            'buyer_phone'      => 'required|string|max:15',
+            'buyer_name'       => 'required|string|max:100',
+            'price'            => 'required|numeric|min:0',
+            'buyer_email'      => 'nullable|email',
+            'storefront_line_key' => 'nullable|string|max:191',
+        ];
+        if ($isStorefront) {
+            $rules['storefront_order_id'] = 'required|string|max:191';
+            $rules['pos_transaction_id'] = 'required|numeric';
         }
 
-        // Prepare the order data
-        $orderData = [
-        'seller_id'        => Auth::id(),
-        'store_profile_id' => $validatedData['store_profile_id'],
-        'account_id'       => null,
-        'buyer_phone'      => $validatedData['buyer_phone'],
-        'buyer_name'       => $validatedData['buyer_name'],
-        'price'            => $validatedData['price'],
-        'notes'            => '',
-        'sold_item'        => 'card',
-        'card_id'          => $card->id,
-        ];
+        $validatedData = $request->validate($rules);
 
-        // Start a transaction
+        $lineKey = $validatedData['storefront_line_key']
+            ?? ('card|category:'.$validatedData['card_category_id']);
+
+        if ($isStorefront) {
+            $existing = Order::where('storefront_order_id', $validatedData['storefront_order_id'])
+                ->where('storefront_line_key', $lineKey)
+                ->first();
+            if ($existing) {
+                if (empty($existing->pos_order_id) && ! empty($validatedData['pos_transaction_id'])) {
+                    $existing->update(['pos_order_id' => (string) $validatedData['pos_transaction_id']]);
+                    $existing->refresh();
+                }
+                $card = Card::find($existing->card_id);
+
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Order already allocated.',
+                    'duplicate' => true,
+                    'code' => $card?->code,
+                    'card_details' => ['code' => $card?->code],
+                    'order_id' => $existing->id,
+                    'pos_order_id' => $existing->pos_order_id,
+                ], 200);
+            }
+        }
+
         DB::beginTransaction();
 
         try {
-            // Create the order
+            $card = Card::where('card_category_id', $validatedData['card_category_id'])
+                ->where('status', true)
+                ->lockForUpdate()
+                ->first();
+
+            if (! $card) {
+                DB::rollBack();
+
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No active code found for this category.',
+                ], 422);
+            }
+
+            $orderData = [
+                'seller_id'        => $isStorefront ? null : Auth::id(),
+                'store_profile_id' => $validatedData['store_profile_id'],
+                'account_id'       => null,
+                'buyer_phone'      => $validatedData['buyer_phone'],
+                'buyer_name'       => $validatedData['buyer_name'],
+                'price'            => $validatedData['price'],
+                'notes'            => '',
+                'sold_item'        => 'card',
+                'card_id'          => $card->id,
+            ];
+
+            if ($isStorefront) {
+                $orderData['storefront_order_id'] = $validatedData['storefront_order_id'];
+                $orderData['storefront_line_key'] = $lineKey;
+                $orderData['pos_order_id'] = (string) $validatedData['pos_transaction_id'];
+            } elseif (! empty($validatedData['pos_transaction_id'])) {
+                $orderData['pos_order_id'] = (string) $validatedData['pos_transaction_id'];
+            }
+
             $order = Order::create($orderData);
-
-            // Mark the card as sold
             $card->update(['status' => false]);
-
-            // Commit the transaction if both operations succeed
             DB::commit();
 
             return response()->json([
-            'success'  => true,
-            'message'  => 'Order created successfully!',
-            'code'     => $card->code,
-            'card_details' => [ 'code' => $card->code ],
-            'order_id' => $order->id,
-            ]);
+                'success'  => true,
+                'message'  => 'Order created successfully!',
+                'code'     => $card->code,
+                'card_details' => ['code' => $card->code],
+                'order_id' => $order->id,
+                'pos_order_id' => $order->pos_order_id,
+            ], 201);
         } catch (\Exception $e) {
-            // Rollback the transaction in case of an error
             DB::rollBack();
 
             return response()->json([
-            'success' => false,
-            'message' => 'Failed to create order. Please try again.',
-            'error'   => $e->getMessage()
+                'success' => false,
+                'message' => 'Failed to create order. Please try again.',
+                'error'   => $e->getMessage(),
             ], 500);
         }
     }
@@ -1008,12 +1191,30 @@ class OrderController extends Controller
     {
         return $this->ordersWithStatus('solved');
     }
+
+    /**
+     * List orders with archived reports.
+     *
+     * @return \Illuminate\View\View
+     */
+    public function archivedOrders()
+    {
+        return $this->ordersWithStatus('archived');
+    }
     public function sendToPos(Request $request)
     {
+        // Check if order_ids are provided
+        if (!$request->has('order_ids') || empty($request->input('order_ids'))) {
+            return redirect()->route('manager.orders')->with('error', 'Please select at least one order that has not been sent to POS.');
+        }
+
         // Validate that the order_ids are provided and are an array of valid IDs
         $validated = $request->validate([
-            'order_ids' => 'required|array',
+            'order_ids' => 'required|array|min:1',
             'order_ids.*' => 'exists:orders,id' // Ensure each order ID exists in the orders table
+        ], [
+            'order_ids.required' => 'Please select at least one order to send to POS.',
+            'order_ids.min' => 'Please select at least one order to send to POS.',
         ]);
 
         // Get POS settings from database
@@ -1030,6 +1231,9 @@ class OrderController extends Controller
         $order_key        = '';
         $line_items       = [];
         $buyer_phone      = false;
+        $groupedLineItems = [];
+        $groupGameTitles  = [];
+        $failedOrders     = [];
         // Filter orders that haven't been sent to POS (pos_order_id is null)
         $unsentOrderIds = Order::whereIn('id', $orderIds)
         ->whereNull('pos_order_id')
@@ -1052,6 +1256,7 @@ class OrderController extends Controller
         $referenceSellerId = null;
         foreach ($ordersWithSeller as $orderModel) {
             if (!$orderModel->seller) {
+                $pos_location = SettingsService::getDefaultPosLocationMap()['profile_17'];
                 continue;
             }
 
@@ -1093,9 +1298,10 @@ class OrderController extends Controller
                 if ($buyer_phone && $order->buyer_phone !== $buyer_phone) {
                     return redirect()->route('manager.orders')->with('error', 'Selected orders are not for the same client.');
                 }
-                $buyer_phone        = $order->buyer_phone;
-                $sold_item          = $order->sold_item;
-                $platform           = explode('_', $sold_item);
+                $buyer_phone          = $order->buyer_phone;
+                $woocommerce_order_id = $order->woocommerce_order_id;
+                $sold_item            = $order->sold_item;
+                $platform             = explode('_', $sold_item);
                 $user = User::where('phone', $order->buyer_phone)->first();
                 if (isset($platform[1])) {
                     $key = $platform[1];
@@ -1131,13 +1337,14 @@ class OrderController extends Controller
                 if (! $basic_details) {
                     $basic_details = array(
                         "id" => $order->id,
+                        "woocommerce_order_id" => $order->woocommerce_order_id,
                         "parent_id" => 0,
                         "status" => "on-hold",
                         "currency" => "EGP",
                         "version" => "9.7.1",
                         "prices_include_tax" => false,
-                        "date_created" => $order->created_at->toDateString(),
-                        "date_modified" => $order->updated_at->toDateString(),
+                        "date_created" => $order->created_at->toIso8601String(),
+                        "date_modified" => $order->updated_at->toIso8601String(),
                         "discount_total" => "0.00",
                         "discount_tax" => "0.00",
                         "shipping_total" => "0.00",
@@ -1162,66 +1369,98 @@ class OrderController extends Controller
                         "shipping_lines" => array(),
                     );
                 }
-                $line_items[] = array(
-                    "name" => $order->sold_item,
-                    "product_id" => $order->sold_item === 'card' ? $order->card_id : $order->account_id,
-                    "variation_id" => 0,
-                    "quantity" => 1,
-                    "tax_class" => "",
-                    "subtotal" => "$order->price",
-                    "subtotal_tax" => "0.00",
-                    "total" => "$order->price",
-                    "total_tax" => "0.00",
-                    "taxes" => array(),
-                    "meta_data" => array(
-                        array(
-                            "id" => 1207,
-                            "key" => "platform",
-                            "value" => "$platform[0]"
+
+                $groupKey = $type;
+
+                if (! isset($groupedLineItems[$groupKey])) {
+                    $groupedLineItems[$groupKey] = array(
+                        "name" => $order->sold_item,
+                        "product_id" => $order->sold_item === 'card' ? $order->card_id : $order->account_id,
+                        "variation_id" => 0,
+                        "quantity" => 1,
+                        "tax_class" => "",
+                        "subtotal" => (string) $order->price,
+                        "subtotal_tax" => "0.00",
+                        "total" => (string) $order->price,
+                        "total_tax" => "0.00",
+                        "taxes" => array(),
+                        "meta_data" => array(
+                            array(
+                                "id" => 1207,
+                                "key" => "platform",
+                                "value" => "$platform[0]"
+                            ),
+                            array(
+                                "id" => 1208,
+                                "key" => "game_title",
+                                "value" => "$game_title"
+                            ),
+                            array(
+                                "id" => 1217,
+                                "key" => "_account",
+                                "value" => $account_mail
+                            ),
+                            array(
+                                "id" => 1217,
+                                "key" => "type",
+                                "value" => $type
+                            ),
+                            array(
+                                "id" => 1218,
+                                "key" => "_password",
+                                "value" => $account_password
+                            ),
+                            array(
+                                "id" => 1219,
+                                "key" => "_pos_product_id",
+                                "value" => $pos_product_id
+                            ),
+                            array(
+                                "id" => 1220,
+                                "key" => "_card_code",
+                                "value" => $card_code
+                            ),
+                            array(
+                                "id" => 1221,
+                                "key" => "_card_category",
+                                "value" => $card_category
+                            )
                         ),
-                        array(
-                            "id" => 1208,
-                            "key" => "game_title",
-                            "value" => "$game_title"
+                        "sku" => "$sku",
+                        "price" => $order->price,
+                        "image" => array(
+                            "id" => "",
+                            "src" => ""
                         ),
-                        array(
-                            "id" => 1217,
-                            "key" => "_account",
-                            "value" => $account_mail
-                        ),array(
-                            "id" => 1217,
-                            "key" => "type",
-                            "value" => $type
-                        ),
-                        array(
-                            "id" => 1218,
-                            "key" => "_password",
-                            "value" => $account_password
-                        ),
-                        array(
-                            "id" => 1219,
-                            "key" => "_pos_product_id",
-                            "value" => $pos_product_id
-                        ),
-                        array(
-                            "id" => 1220,
-                            "key" => "_card_code",
-                            "value" => $card_code
-                        ),
-                        array(
-                            "id" => 1221,
-                            "key" => "_card_category",
-                            "value" => $card_category
-                        )
-                    ),
-                    "sku" => "$sku",
-                    "price" => $order->price,
-                    "image" => array(
-                        "id" => "",
-                        "src" => ""
-                    ),
-                    "parent_name" => null
-                );
+                        "parent_name" => null
+                    );
+
+                    $groupGameTitles[$groupKey] = array();
+                    if ($game_title) {
+                        $groupGameTitles[$groupKey][] = $game_title;
+                    }
+                } else {
+                    $groupedLineItems[$groupKey]['quantity'] += 1;
+                    $groupedLineItems[$groupKey]['subtotal'] = (string) ((float) $groupedLineItems[$groupKey]['subtotal'] + (float) $order->price);
+                    $groupedLineItems[$groupKey]['total'] = (string) ((float) $groupedLineItems[$groupKey]['total'] + (float) $order->price);
+
+                    if ($game_title) {
+                        if (! in_array($game_title, $groupGameTitles[$groupKey], true)) {
+                            $groupGameTitles[$groupKey][] = $game_title;
+                        }
+
+                        if (count($groupGameTitles[$groupKey]) > 1) {
+                            foreach ($groupedLineItems[$groupKey]['meta_data'] as &$metaItem) {
+                                if (isset($metaItem['key']) && $metaItem['key'] === 'game_title') {
+                                    $metaItem['value'] = 'Multiple games';
+                                    break;
+                                }
+                            }
+                            unset($metaItem);
+                        }
+                    }
+                }
+
                 $order_total += $order->price;
                 $order_key .= $orderId;
             } catch (\Exception $e) {
@@ -1234,6 +1473,7 @@ class OrderController extends Controller
             $basic_details['shipping'] = $billing_details;
         }
         if ($basic_details) {
+            $line_items = array_values($groupedLineItems);
             $basic_details['line_items'] = $line_items;
             $basic_details['total'] = $order_total;
             $basic_details['order_key'] = $order_key;
@@ -1244,6 +1484,23 @@ class OrderController extends Controller
         if (!empty($failedOrders)) {
             return redirect()->route('manager.orders')->with('error', 'Some orders failed to be sent to POS: ' . implode(', ', $failedOrders));
         }
+
+        $logLineItems = array_map(function ($item) {
+            return array(
+                'name' => $item['name'] ?? null,
+                'quantity' => $item['quantity'] ?? null,
+                'subtotal' => $item['subtotal'] ?? null,
+                'total' => $item['total'] ?? null,
+                'sku' => $item['sku'] ?? null,
+            );
+        }, $line_items);
+
+        Log::info('Sending grouped orders to POS', [
+            'order_ids' => $unsentOrderIds,
+            'line_items' => $logLineItems,
+            'total' => $order_total,
+        ]);
+
         $token = $this->login();
         if (! $token) {
             return redirect()->route('manager.orders')->with('error', 'Failed to authenticate');
@@ -1251,13 +1508,27 @@ class OrderController extends Controller
         // API endpoint for creating an order
         $endpoint = $this->pos_base . '/api/accounts/orders/create/1';
 
+        // Prepare headers for logging
+        $headers = [
+            'Authorization' => 'Bearer ' . $token,
+            'Accept' => 'application/json',
+            'Content-Type' => 'application/json',
+        ];
+
+
+
         // Make a POST request with Bearer token and $basic_details array as JSON
         $response = Http::withToken($token)  // Set Bearer token
                     ->post($endpoint, $basic_details);  // Send POST request with data
-
         // Check if the request was successful
         if ($response->successful()) {
             $body = json_decode($response->body());
+
+            // Check if response body is valid and contains the expected structure
+            if (!$body || !isset($body->created) || !isset($body->created->id)) {
+                return redirect()->route('manager.orders')->with('error', 'Invalid response from POS system. Please try again or contact support.');
+            }
+
             $transaction_id = $body->created->id;
             // Loop through the order IDs and update each one
             foreach ($unsentOrderIds as $orderId) {
@@ -1268,8 +1539,145 @@ class OrderController extends Controller
             // Return a success message if all orders were sent successfully
             return redirect()->route('manager.orders')->with('success', 'Orders successfully sent to POS');
         } else {
-            // Handle errors from the API
-            return redirect()->route('manager.orders')->with('error', 'Failed to create order');
+            return redirect()->route('manager.orders')->with('error', 'Failed to create order in POS system. Status: ' . $response->status());
+        }
+    }
+
+    public function receiveFromPos(Request $request)
+    {
+        try {
+            $validated = $request->validate([
+                'woocommerce_order_id' => 'nullable|integer',
+                'storefront_order_id' => 'nullable|string|max:191',
+                'order_id' => 'nullable|integer',
+                'created' => 'required',
+            ]);
+
+            $posOrderId = $validated['created'];
+            $woocommerceOrderId = $validated['woocommerce_order_id'] ?? null;
+            $storefrontOrderId = $validated['storefront_order_id'] ?? null;
+            $accountsOrderId = $validated['order_id'] ?? null;
+
+            if (empty($woocommerceOrderId) && empty($storefrontOrderId) && empty($accountsOrderId)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'order_id, storefront_order_id, or woocommerce_order_id is required.',
+                ], 422);
+            }
+
+            $query = Order::query()->whereNull('pos_order_id');
+            if (! empty($accountsOrderId)) {
+                $query->where('id', $accountsOrderId);
+            } elseif (! empty($storefrontOrderId)) {
+                $query->where('storefront_order_id', $storefrontOrderId);
+            } else {
+                $query->where('woocommerce_order_id', $woocommerceOrderId);
+            }
+
+            $orders = $query->get();
+
+            // Fallback: storefront id missing on row but POS tx id was stored as woocommerce_order_id.
+            if ($orders->isEmpty() && ! empty($storefrontOrderId) && ! empty($woocommerceOrderId) && empty($accountsOrderId)) {
+                $orders = Order::query()
+                    ->whereNull('pos_order_id')
+                    ->where('woocommerce_order_id', $woocommerceOrderId)
+                    ->get();
+            }
+
+            if ($orders->isEmpty()) {
+                $alreadyQuery = Order::query()->whereNotNull('pos_order_id');
+                if (! empty($accountsOrderId)) {
+                    $alreadyQuery->where('id', $accountsOrderId);
+                } elseif (! empty($storefrontOrderId)) {
+                    $alreadyQuery->where('storefront_order_id', $storefrontOrderId);
+                } else {
+                    $alreadyQuery->where('woocommerce_order_id', $woocommerceOrderId);
+                }
+
+                if ($alreadyQuery->exists()) {
+                    return response()->json([
+                        'success' => true,
+                        'already_synced' => true,
+                        'message' => 'Orders already synced with POS.',
+                        'data' => [
+                            'woocommerce_order_id' => $woocommerceOrderId,
+                            'storefront_order_id' => $storefrontOrderId,
+                            'order_id' => $accountsOrderId,
+                            'pos_order_id' => $posOrderId,
+                            'orders_updated' => 0,
+                        ],
+                    ], 200);
+                }
+
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No matching orders found.',
+                ], 404);
+            }
+
+            $ids = $orders->pluck('id')->all();
+            $updatedCount = Order::query()
+                ->whereIn('id', $ids)
+                ->whereNull('pos_order_id')
+                ->update([
+                    'pos_order_id' => $posOrderId,
+                    'updated_at' => now(),
+                ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => "Successfully updated {$updatedCount} order(s) with POS order ID.",
+                'data' => [
+                    'woocommerce_order_id' => $woocommerceOrderId,
+                    'storefront_order_id' => $storefrontOrderId,
+                    'order_id' => $accountsOrderId,
+                    'pos_order_id' => $posOrderId,
+                    'orders_updated' => $updatedCount,
+                ],
+            ], 200);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed.',
+                'errors' => $e->errors(),
+            ], 422);
+        } catch (\Exception $e) {
+            \Log::error('POS receive error: '.$e->getMessage(), [
+                'request_data' => $request->all(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'An error occurred while processing the POS data.',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+    public function unsendFromPos(Request $request)
+    {
+        // Validate that the order_ids are provided and are an array of valid IDs
+        $validated = $request->validate([
+            'order_ids' => 'required|array',
+            'order_ids.*' => 'exists:orders,id' // Ensure each order ID exists in the orders table
+        ]);
+
+        $orderIds = $validated['order_ids'];
+        $updatedCount = 0;
+
+        // Update each order to set pos_order_id to null
+        foreach ($orderIds as $orderId) {
+            $order = Order::find($orderId);
+            if ($order && $order->pos_order_id) {
+                $order->update(['pos_order_id' => null]);
+                $updatedCount++;
+            }
+        }
+
+        if ($updatedCount > 0) {
+            return redirect()->route('manager.orders')->with('success', $updatedCount . ' order(s) successfully unsent from POS');
+        } else {
+            return redirect()->route('manager.orders')->with('info', 'No orders were unsent. Selected orders may not have been sent to POS.');
         }
     }
 }
