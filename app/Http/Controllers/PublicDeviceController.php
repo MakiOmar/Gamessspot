@@ -177,18 +177,18 @@ class PublicDeviceController extends Controller
             $phoneNumber = substr($phoneNumber, strlen($matches[0]));
         }
 
+        // Include every status (received, processing, ready, and delivered)
         $deviceRepairs = DeviceRepair::with(['user', 'deviceModel'])
             ->whereHas('user', function($query) use ($phoneNumber, $countryCode) {
                 $query->where('phone', $countryCode . $phoneNumber)
                       ->orWhere('phone', $phoneNumber);
             })
-            ->active()
             ->orderBy('created_at', 'desc')
             ->get();
 
         if ($deviceRepairs->isEmpty()) {
             return redirect()->back()
-                ->with('error', 'No active services found for this phone number.');
+                ->with('error', 'No services found for this phone number.');
         }
 
         return view('public.device-tracking', [

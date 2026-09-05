@@ -546,9 +546,10 @@
             <!-- Multiple Devices Result -->
             @if(isset($deviceRepairs) && $deviceRepairs->count() > 0)
                 <div class="tracking-card">
+                    {{-- List every matching repair, including delivered --}}
                     <h4 class="text-center mb-4" style="color: #00d4ff;">
                         <i class="fas fa-list gaming-icon"></i>
-                        Your Active Repairs
+                        Your Service Records
                     </h4>
                     
                     @foreach($deviceRepairs as $repair)
@@ -591,8 +592,8 @@
                 <div class="tracking-card">
                     <div class="no-results">
                         <i class="fas fa-search"></i>
-                        <h4>No Active Services Found</h4>
-                        <p>No active service orders found for this phone number.</p>
+                        <h4>No Services Found</h4>
+                        <p>No service orders found for this phone number.</p>
                         {{--
                         <a href="{{ route('device.submit') }}" class="btn btn-primary">
                             <i class="fas fa-plus"></i>
