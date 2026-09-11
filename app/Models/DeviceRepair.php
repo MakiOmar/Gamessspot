@@ -132,8 +132,50 @@ class DeviceRepair extends Model
     }
 
     /**
+     * ITU calling codes, longest first so +966 is not parsed as +96.
+     */
+    public static function callingCodesLongestFirst(): array
+    {
+        static $sorted = null;
+
+        if ($sorted !== null) {
+            return $sorted;
+        }
+
+        $sorted = explode(',', '358,359,370,371,372,373,374,375,376,377,378,380,381,382,383,385,386,387,389,420,421,423,500,501,502,503,504,505,506,507,508,509,590,591,592,593,594,595,596,597,598,599,670,672,673,674,675,676,677,678,679,680,681,682,683,685,686,687,688,689,690,691,692,850,852,853,855,856,880,886,960,961,962,963,964,965,966,967,968,970,971,972,973,974,975,976,977,992,993,994,995,996,998,211,212,213,216,218,220,221,222,223,224,225,226,227,228,229,230,231,232,233,234,235,236,237,238,239,240,241,242,243,244,245,246,248,249,250,251,252,253,254,255,256,257,258,260,261,262,263,264,265,266,267,268,269,290,291,297,298,299,350,351,352,353,354,355,356,357,20,27,30,31,32,33,34,36,39,40,41,43,44,45,46,47,48,49,51,52,53,54,55,56,57,58,60,61,62,63,64,65,66,81,82,84,86,90,91,92,93,94,95,98,7,1');
+        usort($sorted, fn ($a, $b) => strlen($b) <=> strlen($a));
+
+        return $sorted;
+    }
+
+    /**
+     * Match a calling code at the start of a digit string.
+     *
+     * @return array{0: string, 1: string}|null
+     */
+    public static function matchCallingCode(string $digits, bool $allowNanp = false): ?array
+    {
+        foreach (self::callingCodesLongestFirst() as $code) {
+            if ($code === '1' && !$allowNanp) {
+                continue;
+            }
+
+            if (!str_starts_with($digits, $code)) {
+                continue;
+            }
+
+            $national = substr($digits, strlen($code));
+            if (strlen($national) >= 8) {
+                return ['+' . $code, $national];
+            }
+        }
+
+        return null;
+    }
+
+    /**
      * Split a submitted phone into country code and national number.
-     * Accepts +20..., 20..., 0..., or national digits. Defaults to Egypt (+20).
+     * Works with any calling code, with or without + / 00 / a leading 0.
      *
      * @return array{0: string, 1: string}
      */
@@ -141,27 +183,21 @@ class DeviceRepair extends Model
     {
         $normalized = preg_replace('/[\s\-()]/', '', trim($phoneNumber)) ?? '';
         $digits = preg_replace('/\D+/', '', $normalized) ?? '';
+        $hadInternationalPrefix = str_starts_with($normalized, '+') || str_starts_with($digits, '00');
 
         if (str_starts_with($digits, '00')) {
             $digits = substr($digits, 2);
         }
 
-        $countryDigits = '20';
-        $national = $digits;
-        $egyptInternational = str_starts_with($digits, '20') && strlen($digits) >= 11;
-
-        if ($egyptInternational) {
-            $national = substr($digits, 2);
-        } elseif (preg_match('/^\+(\d{1,4})/', $normalized, $matches)) {
-            $countryDigits = $matches[1];
-            $national = substr($digits, strlen($countryDigits));
-        }
+        $allowNanp = $hadInternationalPrefix || (strlen($digits) === 11 && str_starts_with($digits, '1'));
+        $matched = self::matchCallingCode($digits, $allowNanp);
+        [$countryCode, $national] = $matched ?? ['+20', $digits];
 
         if (str_starts_with($national, '0')) {
             $national = substr($national, 1);
         }
 
-        return ['+' . $countryDigits, $national];
+        return [$countryCode, $national];
     }
 
     /**
@@ -195,14 +231,17 @@ class DeviceRepair extends Model
     {
         $variants = self::phoneSearchVariants($rawPhone);
         [, $national] = self::parsePhoneSearch($rawPhone);
+        $digits = preg_replace('/\D+/', '', $rawPhone) ?? '';
 
         return self::with(['user', 'deviceModel', 'storeProfile'])
-            ->whereHas('user', function ($query) use ($variants, $national) {
-                $query->where(function ($phoneQuery) use ($variants, $national) {
+            ->whereHas('user', function ($query) use ($variants, $national, $digits) {
+                $query->where(function ($phoneQuery) use ($variants, $national, $digits) {
                     $phoneQuery->whereIn('phone', $variants);
 
-                    if (strlen($national) >= 8) {
-                        $phoneQuery->orWhere('phone', 'like', '%' . $national);
+                    foreach (array_unique([$national, $digits]) as $suffix) {
+                        if (strlen($suffix) >= 8) {
+                            $phoneQuery->orWhere('phone', 'like', '%' . $suffix);
+                        }
                     }
                 });
             })
