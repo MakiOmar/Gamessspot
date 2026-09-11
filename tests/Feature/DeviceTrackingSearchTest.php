@@ -181,4 +181,48 @@ class DeviceTrackingSearchTest extends TestCase
         $response->assertStatus(422)
             ->assertJsonValidationErrors(['phone_number']);
     }
+
+    /**
+     * Public API must find a +20 stored phone when the request omits the country code.
+     */
+    public function test_api_phone_track_matches_without_country_code(): void
+    {
+        $national = '122' . random_int(1000000, 9999999);
+        $storedPhone = '+20' . $national;
+
+        $user = User::factory()->create([
+            'phone' => $storedPhone,
+            'is_active' => true,
+        ]);
+
+        $deviceModel = DeviceModel::create([
+            'name' => 'PS4 Slim',
+            'brand' => 'Sony',
+            'is_active' => true,
+        ]);
+
+        $trackingCode = 'DR' . strtoupper(substr(md5(uniqid('nocc', true)), 0, 8));
+
+        DeviceRepair::create([
+            'user_id' => $user->id,
+            'device_model_id' => $deviceModel->id,
+            'device_serial_number' => '4455',
+            'tracking_code' => $trackingCode,
+            'status' => 'received',
+            'submitted_at' => now(),
+            'status_updated_at' => now(),
+        ]);
+
+        $this->postJson('/api/device/track', ['phone_number' => $national])
+            ->assertOk()
+            ->assertJsonPath('data.0.tracking_code', $trackingCode);
+
+        $this->postJson('/api/device/track', ['phone_number' => '20' . $national])
+            ->assertOk()
+            ->assertJsonPath('data.0.tracking_code', $trackingCode);
+
+        $this->postJson('/api/device/track', ['phone_number' => '0' . $national])
+            ->assertOk()
+            ->assertJsonPath('data.0.tracking_code', $trackingCode);
+    }
 }

@@ -133,21 +133,59 @@ class DeviceRepair extends Model
 
     /**
      * Split a submitted phone into country code and national number.
-     * Defaults to Egypt (+20) when no international prefix is present.
+     * Accepts +20..., 20..., 0..., or national digits. Defaults to Egypt (+20).
      *
      * @return array{0: string, 1: string}
      */
     public static function parsePhoneSearch(string $phoneNumber): array
     {
-        $phoneNumber = preg_replace('/\s+/', '', trim($phoneNumber)) ?? '';
-        $countryCode = '+20';
+        $normalized = preg_replace('/[\s\-()]/', '', trim($phoneNumber)) ?? '';
+        $digits = preg_replace('/\D+/', '', $normalized) ?? '';
 
-        if (preg_match('/^\+(\d{1,4})/', $phoneNumber, $matches)) {
-            $countryCode = '+' . $matches[1];
-            $phoneNumber = substr($phoneNumber, strlen($matches[0]));
+        if (str_starts_with($digits, '00')) {
+            $digits = substr($digits, 2);
         }
 
-        return [$countryCode, $phoneNumber];
+        $countryDigits = '20';
+        $national = $digits;
+        $egyptInternational = str_starts_with($digits, '20') && strlen($digits) >= 11;
+
+        if ($egyptInternational) {
+            $national = substr($digits, 2);
+        } elseif (preg_match('/^\+(\d{1,4})/', $normalized, $matches)) {
+            $countryDigits = $matches[1];
+            $national = substr($digits, strlen($countryDigits));
+        }
+
+        if (str_starts_with($national, '0')) {
+            $national = substr($national, 1);
+        }
+
+        return ['+' . $countryDigits, $national];
+    }
+
+    /**
+     * Stored-phone variants so search works with or without the country code.
+     */
+    public static function phoneSearchVariants(string $rawPhone): array
+    {
+        $trimmed = trim($rawPhone);
+        $stripped = preg_replace('/[\s\-()]/', '', $trimmed) ?? '';
+        $digits = preg_replace('/\D+/', '', $trimmed) ?? '';
+        [$countryCode, $national] = self::parsePhoneSearch($trimmed);
+        $countryDigits = ltrim($countryCode, '+');
+
+        return array_values(array_unique(array_filter([
+            $trimmed,
+            $stripped,
+            $digits,
+            $national,
+            $national !== '' ? '0' . $national : null,
+            $countryDigits . $national,
+            $countryCode . $national,
+            '00' . $countryDigits . $national,
+            $digits !== '' ? '+' . $digits : null,
+        ], fn ($value) => $value !== null && $value !== '')));
     }
 
     /**
@@ -155,13 +193,17 @@ class DeviceRepair extends Model
      */
     public static function findByPhone(string $rawPhone)
     {
-        [$countryCode, $phoneNumber] = self::parsePhoneSearch($rawPhone);
+        $variants = self::phoneSearchVariants($rawPhone);
+        [, $national] = self::parsePhoneSearch($rawPhone);
 
         return self::with(['user', 'deviceModel', 'storeProfile'])
-            ->whereHas('user', function ($query) use ($phoneNumber, $countryCode) {
-                $query->where(function ($phoneQuery) use ($phoneNumber, $countryCode) {
-                    $phoneQuery->where('phone', $countryCode . $phoneNumber)
-                        ->orWhere('phone', $phoneNumber);
+            ->whereHas('user', function ($query) use ($variants, $national) {
+                $query->where(function ($phoneQuery) use ($variants, $national) {
+                    $phoneQuery->whereIn('phone', $variants);
+
+                    if (strlen($national) >= 8) {
+                        $phoneQuery->orWhere('phone', 'like', '%' . $national);
+                    }
                 });
             })
             ->orderBy('created_at', 'desc')

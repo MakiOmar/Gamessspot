@@ -23,7 +23,14 @@ Full URL example: `http://localhost/gamessspot/api/device/track`
 
 ## Request
 
-Send the customer phone in international format when possible (`+` and country code). If no `+` prefix is sent, Egypt (`+20`) is assumed.
+Send the customer phone with or without the country code. These all match the same stored number (`+201226446623`):
+
+- `+201226446623`
+- `201226446623`
+- `1226446623`
+- `01226446623`
+
+If no country code is present, Egypt (`+20`) is assumed.
 
 Accepted fields (use one):
 
@@ -90,7 +97,7 @@ curl -G "{BASE_URL}/api/device/track" \
   --data-urlencode "phone_number=+201226446623"
 ```
 
-Phone matching also accepts the national number stored without the country code (for example `1226446623` when the account phone is `+201226446623`).
+Stored phones are matched in both directions: a request with `+20...` finds a national-only record, and a request with only the local number finds a `+20...` record.
 
 ## Success response (`200`)
 
