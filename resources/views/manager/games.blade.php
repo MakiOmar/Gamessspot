@@ -1,12 +1,23 @@
 @extends('layouts.admin')
 
 @section('title', 'Manager - Games')
+@section('plugins.Summernote', true)
 @push('css')
 <style>
     @media screen and ( min-width:1200px ){
         .games-reponsive-table{
             min-width: 1200px;
         }
+    }
+    /* Wider add/edit modal so the description editor is usable */
+    #editGameModal .modal-dialog {
+        max-width: min(1140px, 96vw);
+    }
+    #editGameModal .note-editor {
+        background: #fff;
+    }
+    #editGameModal .note-editable {
+        min-height: 220px;
     }
 </style>
 @endpush
@@ -36,7 +47,7 @@
 
     <!-- Edit Game Modal -->
     <div class="modal fade" id="editGameModal" tabindex="-1" aria-labelledby="editGameModalLabel" aria-hidden="true">
-        <div class="modal-dialog">
+        <div class="modal-dialog modal-xl modal-dialog-scrollable">
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title" id="editGameModalLabel">Edit Game</h5>
@@ -54,6 +65,10 @@
                         <!-- Game Code -->
                         <label for="gameCode" class="mt-3">Game Code</label>
                         <input type="text" id="gameCode" name="code" class="form-control" style="border-radius: 10px;" required>
+
+                        <!-- Game Description (WYSIWYG) -->
+                        <label for="description" class="mt-3">Description</label>
+                        <textarea id="description" name="description" class="form-control" rows="8" placeholder="Write the game description..."></textarea>
 
                         <!-- Full Price -->
                         <label for="fullPrice" class="mt-3">Full Price</label>
@@ -167,6 +182,42 @@
             }
         });
 
+        // WYSIWYG editor for the game description field
+        function ensureGameDescriptionEditor() {
+            if (typeof $.fn.summernote !== 'function') {
+                return;
+            }
+
+            if (!$('#description').data('summernote')) {
+                $('#description').summernote({
+                    height: 240,
+                    dialogsInBody: true,
+                    placeholder: 'Write the game description...',
+                    toolbar: [
+                        ['style', ['style']],
+                        ['font', ['bold', 'italic', 'underline', 'clear']],
+                        ['para', ['ul', 'ol', 'paragraph']],
+                        ['insert', ['link']],
+                        ['view', ['codeview']]
+                    ]
+                });
+            }
+        }
+
+        function setGameDescription(html) {
+            if (typeof $.fn.summernote === 'function') {
+                ensureGameDescriptionEditor();
+                $('#description').summernote('code', html || '');
+                return;
+            }
+
+            $('#description').val(html || '');
+        }
+
+        $('#editGameModal').on('shown.bs.modal', function () {
+            ensureGameDescriptionEditor();
+        });
+
         $('#search-box').on('keyup', function () {
             console.log($(this).val());
             let query = $(this).val();
@@ -199,6 +250,7 @@
 
             // Remove any game ID for the new game
             $('#gameId').val('');
+            setGameDescription('');
         });
 
         // When the "Edit" button is clicked
@@ -210,6 +262,7 @@
             $('#editGameForm').find('.is-invalid').removeClass('is-invalid'); // Remove previous validation errors
             $('#editGameForm').find('.invalid-feedback').remove(); // Remove previous error messages
             $('#editGameModalLabel').text('Edit Game'); // Update modal title
+            setGameDescription('');
 
             // Use AJAX to fetch the game data
             $.ajax({
@@ -233,6 +286,7 @@
                     $('#ps5OfflineStatus').val(response.ps5_offline_status);
                     $('#ps5SecondaryPrice').val(response.ps5_secondary_price);
                     $('#ps5SecondaryStatus').val(response.ps5_secondary_status);
+                    setGameDescription(response.description);
 
                     // Generate preview for the PS4 image
                     if (response.ps4_image_url) {
@@ -260,6 +314,9 @@
             e.preventDefault();
 
             var gameId = $('#gameId').val();
+            if ($('#description').data('summernote')) {
+                $('#description').val($('#description').summernote('code'));
+            }
             var formData = new FormData(this);
 
             // If creating a new game, do not append the PUT method

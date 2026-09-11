@@ -72,6 +72,7 @@ class ManagerController extends Controller
                 'games.id',
                 'games.title',
                 'games.code',
+                'games.description',
                 'games.full_price',
                 'games.ps4_image_url',
                 'games.ps5_image_url',
@@ -98,6 +99,7 @@ class ManagerController extends Controller
                 'games.id',
                 'games.title',
                 'games.code',
+                'games.description',
                 'games.full_price',
                 'games.ps4_image_url',
                 'games.ps5_image_url',
@@ -171,9 +173,11 @@ class ManagerController extends Controller
         'ps5_primary_status'   => 'required|boolean',
         'ps5_secondary_status' => 'required|boolean',
         'ps5_offline_status'   => 'required|boolean',
+        'description'          => 'nullable|string',
         ]);
 
         $data = $request->except('_token', 'ps4_image', 'ps5_image'); // Exclude image files from mass assignment
+        $data['description'] = Game::sanitizeDescription($request->input('description'));
         // Handle PS4 image update
         if ($request->hasFile('ps4_image')) {
             $ps4_image = $request->file('ps4_image');
@@ -304,7 +308,9 @@ class ManagerController extends Controller
         'ps5_primary_status'   => 'required|boolean',
         'ps5_secondary_status' => 'required|boolean',
         'ps5_offline_status'   => 'required|boolean',
+        'description'          => 'nullable|string',
         ]);
+        $validatedData['description'] = Game::sanitizeDescription($request->input('description'));
 
         // Handle PS4 image upload
         if ($request->hasFile('ps4_image')) {
