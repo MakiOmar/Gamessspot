@@ -7,6 +7,7 @@ use App\Http\Controllers\OrderController;
 use App\Http\Controllers\ManagerController;
 use App\Http\Controllers\CardCategoryController;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\PublicDeviceController;
 
 /*
 |--------------------------------------------------------------------------
@@ -57,3 +58,8 @@ Route::get('/card-ctegories/list', [CardCategoryController::class, 'sellApi']);
 
 // Customer Management API
 Route::middleware('auth:sanctum')->post('/customers', [UserController::class, 'createCustomerApi'])->name('api.customers.create');
+
+// Public device tracking by phone (all statuses, including delivered)
+Route::match(['get', 'post'], '/device/track', [PublicDeviceController::class, 'trackByPhoneApi'])
+    ->middleware('throttle:30,1')
+    ->name('api.device.track');

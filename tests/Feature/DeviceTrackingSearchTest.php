@@ -109,4 +109,76 @@ class DeviceTrackingSearchTest extends TestCase
         $response->assertSee($receivedCode);
         $response->assertSee($deliveredCode);
     }
+
+    /**
+     * Public API must return delivered repairs when searching by phone.
+     */
+    public function test_api_phone_track_returns_delivered_repairs(): void
+    {
+        $phone = '+20122' . random_int(1000000, 9999999);
+
+        $user = User::factory()->create([
+            'phone' => $phone,
+            'is_active' => true,
+        ]);
+
+        $deviceModel = DeviceModel::create([
+            'name' => 'PS5 Slim Digital',
+            'brand' => 'Sony',
+            'is_active' => true,
+        ]);
+
+        $trackingCode = 'DR' . strtoupper(substr(md5(uniqid('api', true)), 0, 8));
+
+        DeviceRepair::create([
+            'user_id' => $user->id,
+            'device_model_id' => $deviceModel->id,
+            'device_serial_number' => '0000',
+            'tracking_code' => $trackingCode,
+            'status' => 'delivered',
+            'submitted_at' => now(),
+            'status_updated_at' => now(),
+        ]);
+
+        $response = $this->postJson('/api/device/track', [
+            'phone_number' => $phone,
+        ]);
+
+        $response->assertOk()
+            ->assertJson([
+                'success' => true,
+                'count' => 1,
+            ])
+            ->assertJsonPath('data.0.tracking_code', $trackingCode)
+            ->assertJsonPath('data.0.status', 'delivered')
+            ->assertJsonPath('data.0.phone', $phone);
+    }
+
+    /**
+     * Public API returns 404 when the phone has no repairs.
+     */
+    public function test_api_phone_track_returns_not_found_for_unknown_phone(): void
+    {
+        $response = $this->postJson('/api/device/track', [
+            'phone_number' => '+20129' . random_int(1000000, 9999999),
+        ]);
+
+        $response->assertNotFound()
+            ->assertJson([
+                'success' => false,
+                'count' => 0,
+                'data' => [],
+            ]);
+    }
+
+    /**
+     * Public API requires a phone number.
+     */
+    public function test_api_phone_track_requires_phone_number(): void
+    {
+        $response = $this->postJson('/api/device/track', []);
+
+        $response->assertStatus(422)
+            ->assertJsonValidationErrors(['phone_number']);
+    }
 }

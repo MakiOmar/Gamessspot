@@ -132,6 +132,72 @@ class DeviceRepair extends Model
     }
 
     /**
+     * Split a submitted phone into country code and national number.
+     * Defaults to Egypt (+20) when no international prefix is present.
+     *
+     * @return array{0: string, 1: string}
+     */
+    public static function parsePhoneSearch(string $phoneNumber): array
+    {
+        $phoneNumber = preg_replace('/\s+/', '', trim($phoneNumber)) ?? '';
+        $countryCode = '+20';
+
+        if (preg_match('/^\+(\d{1,4})/', $phoneNumber, $matches)) {
+            $countryCode = '+' . $matches[1];
+            $phoneNumber = substr($phoneNumber, strlen($matches[0]));
+        }
+
+        return [$countryCode, $phoneNumber];
+    }
+
+    /**
+     * Find repairs for a phone across all statuses, newest first.
+     */
+    public static function findByPhone(string $rawPhone)
+    {
+        [$countryCode, $phoneNumber] = self::parsePhoneSearch($rawPhone);
+
+        return self::with(['user', 'deviceModel', 'storeProfile'])
+            ->whereHas('user', function ($query) use ($phoneNumber, $countryCode) {
+                $query->where(function ($phoneQuery) use ($phoneNumber, $countryCode) {
+                    $phoneQuery->where('phone', $countryCode . $phoneNumber)
+                        ->orWhere('phone', $phoneNumber);
+                });
+            })
+            ->orderBy('created_at', 'desc')
+            ->get();
+    }
+
+    /**
+     * Public tracking payload for API clients.
+     */
+    public function toTrackingArray(): array
+    {
+        return [
+            'id' => $this->id,
+            'tracking_code' => $this->tracking_code,
+            'status' => $this->status,
+            'status_display' => $this->status_display,
+            'device_serial_number' => $this->device_serial_number,
+            'notes' => $this->notes,
+            'submitted_at' => optional($this->submitted_at)->toIso8601String(),
+            'status_updated_at' => optional($this->status_updated_at)->toIso8601String(),
+            'client_name' => $this->client_name,
+            'phone' => $this->full_phone_number,
+            'device_model' => $this->deviceModel ? [
+                'id' => $this->deviceModel->id,
+                'name' => $this->deviceModel->name,
+                'brand' => $this->deviceModel->brand,
+                'full_name' => $this->deviceModel->full_name,
+            ] : null,
+            'store_profile' => $this->storeProfile ? [
+                'id' => $this->storeProfile->id,
+                'name' => $this->storeProfile->name,
+            ] : null,
+        ];
+    }
+
+    /**
      * Generate a unique tracking code.
      */
     public static function generateTrackingCode(): string

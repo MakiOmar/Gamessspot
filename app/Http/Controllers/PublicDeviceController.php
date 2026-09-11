@@ -167,24 +167,8 @@ class PublicDeviceController extends Controller
             'phone_number' => 'required|string|max:20'
         ]);
 
-        // Extract country code from phone number (intlTelInput format)
-        $phoneNumber = $validated['phone_number'];
-        $countryCode = '+20'; // Default to Egypt
-        
-        // Try to extract country code from phone number
-        if (preg_match('/^\+(\d{1,4})/', $phoneNumber, $matches)) {
-            $countryCode = '+' . $matches[1];
-            $phoneNumber = substr($phoneNumber, strlen($matches[0]));
-        }
-
-        // Include every status (received, processing, ready, and delivered)
-        $deviceRepairs = DeviceRepair::with(['user', 'deviceModel'])
-            ->whereHas('user', function($query) use ($phoneNumber, $countryCode) {
-                $query->where('phone', $countryCode . $phoneNumber)
-                      ->orWhere('phone', $phoneNumber);
-            })
-            ->orderBy('created_at', 'desc')
-            ->get();
+        [$countryCode, $phoneNumber] = DeviceRepair::parsePhoneSearch($validated['phone_number']);
+        $deviceRepairs = DeviceRepair::findByPhone($validated['phone_number']);
 
         if ($deviceRepairs->isEmpty()) {
             return redirect()->back()
@@ -198,6 +182,37 @@ class PublicDeviceController extends Controller
             'trackingCode' => null,
             'deviceRepair' => null,
             'appLogo' => Settings::get('app.logo'),
+        ]);
+    }
+
+    /**
+     * Public API: track device repairs by customer phone number.
+     */
+    public function trackByPhoneApi(Request $request)
+    {
+        $phone = $request->input('phone_number', $request->input('phone'));
+        $request->merge(['phone_number' => $phone]);
+
+        $validated = $request->validate([
+            'phone_number' => 'required|string|max:20',
+        ]);
+
+        $deviceRepairs = DeviceRepair::findByPhone($validated['phone_number']);
+
+        if ($deviceRepairs->isEmpty()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No services found for this phone number.',
+                'count' => 0,
+                'data' => [],
+            ], 404);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Services found.',
+            'count' => $deviceRepairs->count(),
+            'data' => $deviceRepairs->map->toTrackingArray()->values(),
         ]);
     }
 
