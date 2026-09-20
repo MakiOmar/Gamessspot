@@ -8,6 +8,7 @@ use App\Http\Controllers\ManagerController;
 use App\Http\Controllers\CardCategoryController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\PublicDeviceController;
+use App\Http\Controllers\PublicReviewController;
 
 /*
 |--------------------------------------------------------------------------
@@ -55,6 +56,7 @@ Route::middleware('auth:sanctum')->post('/pos/receive-order', [OrderController::
 Route::get('/games/platform/{platform}', [ManagerController::class, 'getGamesByPlatformApi']);
 Route::get('/games/{id}', [ManagerController::class, 'getGameById']);
 Route::get('/card-ctegories/list', [CardCategoryController::class, 'sellApi']);
+Route::get('/card-categories/{cardCategory}', [CardCategoryController::class, 'showApi']);
 
 // Customer Management API
 Route::middleware('auth:sanctum')->post('/customers', [UserController::class, 'createCustomerApi'])->name('api.customers.create');
@@ -63,3 +65,8 @@ Route::middleware('auth:sanctum')->post('/customers', [UserController::class, 'c
 Route::match(['get', 'post'], '/device/track', [PublicDeviceController::class, 'trackByPhoneApi'])
     ->middleware('throttle:30,1')
     ->name('api.device.track');
+
+// Public product reviews (pending until admin approval)
+Route::post('/reviews', [PublicReviewController::class, 'store'])
+    ->middleware('throttle:30,1')
+    ->name('api.reviews.store');

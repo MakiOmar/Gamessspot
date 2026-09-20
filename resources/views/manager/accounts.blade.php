@@ -201,8 +201,13 @@
                         <div class="form-group">
                             <label for="ps4Availability">PS4 Availability</label>
                             
-                            <!-- PS5 Only Checkbox -->
+                            <!-- Full Account + PS5 Only -->
                             <div class="mb-2">
+                                <!-- Full account sells all three stocks together -->
+                                <label class="checkbox me-3">
+                                    <input type="checkbox" id="is_full" name="is_full" value="1">
+                                    <span></span> <strong>Full account</strong>
+                                </label>
                                 <label class="checkbox">
                                     <input type="checkbox" id="ps5_only" name="ps5_only" value="1">
                                     <span></span> <strong>PS5 Only</strong>
@@ -301,6 +306,14 @@
                         <label for="ps5OfflineStock">PS5 Offline Stock</label>
                         <input type="number" min="0" class="form-control" id="ps5OfflineStock" name="ps5_offline_stock" required>
                     </div>
+
+                    <!-- Persist full-account flag when editing stock -->
+                    <div class="form-group mt-3 mb-0">
+                        <label class="checkbox">
+                            <input type="checkbox" id="stockIsFull" name="is_full" value="1">
+                            <span></span> <strong>Full account</strong>
+                        </label>
+                    </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
@@ -396,6 +409,8 @@
             $('#accountForm').attr('action', "{{ route('manager.accounts.store') }}").attr('method', 'POST');
             $('#accountForm')[0].reset(); // Reset the form
             $('#stock-availability').show();
+            $('.ps4-checkbox, .ps5-checkbox').prop('disabled', false);
+            $('#is_full, #ps5_only').prop('checked', false);
         });
 
         // Handle Edit Account Button
@@ -452,6 +467,7 @@
             $('#ps5PrimaryStock').val(ps5Primary);
             $('#ps5SecondaryStock').val(ps5Secondary);
             $('#ps5OfflineStock').val(ps5Offline);
+            $('#stockIsFull').prop('checked', (buttonToRead ? buttonToRead.getAttribute('data-is_full') : '0') === '1');
             
             console.log('Modal populated with values from native DOM getAttribute:', {
                 ps4Primary: ps4Primary,
@@ -673,7 +689,8 @@
                             // Update all buttons with this account ID
                             editStockButtons.each(function() {
                                 const buttonElement = this;
-                                
+                                const isFullFlag = $('#stockIsFull').is(':checked') ? '1' : '0';
+
                                 // Update HTML data-* attributes using native DOM setAttribute
                                 buttonElement.setAttribute('data-ps4_primary_stock', ps4PrimaryStock);
                                 buttonElement.setAttribute('data-ps4_secondary_stock', ps4SecondaryStock);
@@ -681,7 +698,8 @@
                                 buttonElement.setAttribute('data-ps5_primary_stock', ps5PrimaryStock);
                                 buttonElement.setAttribute('data-ps5_secondary_stock', ps5SecondaryStock);
                                 buttonElement.setAttribute('data-ps5_offline_stock', ps5OfflineStock);
-                                
+                                buttonElement.setAttribute('data-is_full', isFullFlag);
+
                                 // Also update via jQuery for consistency
                                 const $button = $(buttonElement);
                                 $button.attr('data-ps4_primary_stock', ps4PrimaryStock);
@@ -690,7 +708,8 @@
                                 $button.attr('data-ps5_primary_stock', ps5PrimaryStock);
                                 $button.attr('data-ps5_secondary_stock', ps5SecondaryStock);
                                 $button.attr('data-ps5_offline_stock', ps5OfflineStock);
-                                
+                                $button.attr('data-is_full', isFullFlag);
+
                                 // Remove from jQuery's internal data cache
                                 $button.removeData('ps4_primary_stock');
                                 $button.removeData('ps4_secondary_stock');
@@ -698,6 +717,7 @@
                                 $button.removeData('ps5_primary_stock');
                                 $button.removeData('ps5_secondary_stock');
                                 $button.removeData('ps5_offline_stock');
+                                $button.removeData('is_full');
                             });
                             
                             // Verify the attributes were actually set by reading directly from DOM
@@ -934,9 +954,20 @@
             if (isChecked) {
                 // When PS5 Only is checked, check all PS4 checkboxes and disable them
                 $('.ps4-checkbox').prop('checked', true).prop('disabled', true);
-            } else {
-                // When PS5 Only is unchecked, enable PS4 checkboxes
+            } else if (!$('#is_full').is(':checked')) {
+                // When PS5 Only is unchecked, enable PS4 checkboxes (unless full account)
                 $('.ps4-checkbox').prop('disabled', false);
+            }
+        });
+
+        // Full accounts ignore per-slot sold checkboxes; stocks are set on the server
+        $('#is_full').on('change', function() {
+            const isFull = $(this).is(':checked');
+            if (isFull) {
+                $('.ps4-checkbox, .ps5-checkbox').prop('checked', false).prop('disabled', true);
+            } else {
+                $('.ps4-checkbox, .ps5-checkbox').prop('disabled', false);
+                $('#ps5_only').trigger('change');
             }
         });
 

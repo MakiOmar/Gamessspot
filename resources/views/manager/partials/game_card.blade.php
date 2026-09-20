@@ -44,6 +44,23 @@
                         {!! $moneyIcon !!}{{ $game->$price }}
                     </a>
                 @endforeach
+                @php
+                    // Full account button: sellable full bundles for this platform
+                    $fullStockField = "ps{$platform}_full_stock";
+                    $fullStock = (int) ($game->$fullStockField ?? 0);
+                    $fullActive = $fullStock >= 1 ? 'open-modal' : 'disabled';
+                @endphp
+                <a title="Full"
+                   class="d-inline-flex justify-content-center align-items-center rounded text-light font-weight-bold {{ $fullActive }}"
+                   style="padding:5px;margin:3px;background-color: #8950fc;"
+                   data-game-id="{{ $game->id }}"
+                   data-game-title="{{ $game->title }}"
+                   data-type="full"
+                   data-platform="{{ $platform }}">
+                    {!! $up !!}{{ $fullStock }}
+                    <span>&nbsp;|&nbsp;</span>
+                    {!! $moneyIcon !!}{{ $game->full_price }}
+                </a>
             @else
                 <div class="alert alert-warning mt-2" role="alert">
                     You are not allowed to sell this game due to restrictions on your store profile.

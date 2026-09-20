@@ -477,8 +477,11 @@ class OrderController extends Controller
                         $gameId = $account->game_id;
 
                         // Parse platform and type from sold_item field
-                        // Example: "ps4_primary_stock" -> platform: 4, type: primary
-                        if (preg_match('/ps(\d+)_(\w+)_stock/', $order->sold_item, $matches)) {
+                        // Examples: "ps4_primary_stock", "ps5_full"
+                        if (preg_match('/^ps(\d+)_full$/', $order->sold_item, $matches)) {
+                            $platform = $matches[1];
+                            $type = 'full';
+                        } elseif (preg_match('/ps(\d+)_(\w+)_stock/', $order->sold_item, $matches)) {
                             $platform = $matches[1];  // e.g., "4" or "5"
                             $type = $matches[2];      // e.g., "primary", "secondary", "offline"
                         }
@@ -490,7 +493,15 @@ class OrderController extends Controller
                     // Get the new stock count after increment
                     if ($account) {
                         $account->refresh(); // Reload from database
-                        $newStock = $account->{$order->sold_item};
+                        if ($type === 'full' && $platform) {
+                            $newStock = min(
+                                (int) $account->{"ps{$platform}_primary_stock"},
+                                (int) $account->{"ps{$platform}_secondary_stock"},
+                                (int) $account->{"ps{$platform}_offline_stock"}
+                            );
+                        } else {
+                            $newStock = $account->{$order->sold_item} ?? null;
+                        }
                     }
                 }
 
@@ -549,39 +560,61 @@ class OrderController extends Controller
     {
         $account = Account::find($order->account_id);
 
-        if ($account) {
-            $stockField = $this->getStockField($order->sold_item);
-
-            // If restoring a secondary stock, also restore the other platform's secondary stock
-            // Check the state BEFORE incrementing to ensure we capture the current values
-            $shouldRestoreBoth = false;
-            if ($stockField === 'ps4_secondary_stock') {
-                // If PS5 secondary stock is 0, we'll restore it too
-                if ($account->ps5_secondary_stock == 0) {
-                    $shouldRestoreBoth = true;
-                }
-            } elseif ($stockField === 'ps5_secondary_stock') {
-                // If PS4 secondary stock is 0, we'll restore it too
-                if ($account->ps4_secondary_stock == 0) {
-                    $shouldRestoreBoth = true;
-                }
-            }
-
-            // Increment the stock field that was decremented
-            $account->$stockField += 1;
-
-            // If restoring a secondary stock and the other platform's secondary stock is 0,
-            // restore it to 1 to maintain consistency (both should be 1 together)
-            if ($shouldRestoreBoth) {
-                if ($stockField === 'ps4_secondary_stock') {
-                    $account->ps5_secondary_stock = 1;
-                } elseif ($stockField === 'ps5_secondary_stock') {
-                    $account->ps4_secondary_stock = 1;
-                }
-            }
-
-            $account->save();
+        if (!$account) {
+            return;
         }
+
+        // Full account sales restore all three stock types for the platform
+        if (preg_match('/^ps(\d+)_full$/', $order->sold_item, $matches)) {
+            $platform = $matches[1];
+            $fields = [
+                "ps{$platform}_primary_stock",
+                "ps{$platform}_secondary_stock",
+                "ps{$platform}_offline_stock",
+            ];
+            foreach ($fields as $field) {
+                $account->$field += 1;
+            }
+            if ($account->{"ps{$platform}_secondary_stock"} == 1) {
+                $other = $platform === '4' ? '5' : '4';
+                if ($account->{"ps{$other}_secondary_stock"} == 0 && !$account->is_full) {
+                    // Keep secondary pair consistent only for non-full restores of secondary alone
+                }
+                if ($account->{"ps{$other}_secondary_stock"} == 0) {
+                    $account->{"ps{$other}_secondary_stock"} = 1;
+                }
+            }
+            $account->save();
+            return;
+        }
+
+        $stockField = $this->getStockField($order->sold_item);
+        if (!$stockField) {
+            return;
+        }
+
+        $shouldRestoreBoth = false;
+        if ($stockField === 'ps4_secondary_stock') {
+            if ($account->ps5_secondary_stock == 0) {
+                $shouldRestoreBoth = true;
+            }
+        } elseif ($stockField === 'ps5_secondary_stock') {
+            if ($account->ps4_secondary_stock == 0) {
+                $shouldRestoreBoth = true;
+            }
+        }
+
+        $account->$stockField += 1;
+
+        if ($shouldRestoreBoth) {
+            if ($stockField === 'ps4_secondary_stock') {
+                $account->ps5_secondary_stock = 1;
+            } elseif ($stockField === 'ps5_secondary_stock') {
+                $account->ps4_secondary_stock = 1;
+            }
+        }
+
+        $account->save();
     }
 
     /**
@@ -594,25 +627,25 @@ class OrderController extends Controller
      */
     private function syncSecondaryStocks($account, $soldItem)
     {
-        // Only handle secondary stock fields
-        if ($soldItem === 'ps4_secondary_stock') {
-            // Refresh to get the current value after decrement
-            $account->refresh();
+        $secondaryField = null;
+        if ($soldItem === 'ps4_secondary_stock' || $soldItem === 'ps4_full') {
+            $secondaryField = 'ps4_secondary_stock';
+        } elseif ($soldItem === 'ps5_secondary_stock' || $soldItem === 'ps5_full') {
+            $secondaryField = 'ps5_secondary_stock';
+        }
 
-            // If PS4 secondary stock is now 0, set PS5 secondary stock to 0
-            if ($account->ps4_secondary_stock == 0) {
-                $account->ps5_secondary_stock = 0;
-                $account->save();
-            }
-        } elseif ($soldItem === 'ps5_secondary_stock') {
-            // Refresh to get the current value after decrement
-            $account->refresh();
+        if (!$secondaryField) {
+            return;
+        }
 
-            // If PS5 secondary stock is now 0, set PS4 secondary stock to 0
-            if ($account->ps5_secondary_stock == 0) {
-                $account->ps4_secondary_stock = 0;
-                $account->save();
-            }
+        $account->refresh();
+
+        if ($secondaryField === 'ps4_secondary_stock' && $account->ps4_secondary_stock == 0) {
+            $account->ps5_secondary_stock = 0;
+            $account->save();
+        } elseif ($secondaryField === 'ps5_secondary_stock' && $account->ps5_secondary_stock == 0) {
+            $account->ps4_secondary_stock = 0;
+            $account->save();
         }
     }
 
@@ -628,6 +661,23 @@ class OrderController extends Controller
             'ps5_secondary_stock' => 'ps5_secondary_stock',
             default => null,
         };
+    }
+
+    /**
+     * Decrement stocks for a sold item (single type or full bundle).
+     */
+    private function decrementSoldItemStock(Account $account, string $soldItem, string $type, string $platform): void
+    {
+        if ($type === 'full') {
+            $account->decrement("ps{$platform}_primary_stock", 1);
+            $account->decrement("ps{$platform}_secondary_stock", 1);
+            $account->decrement("ps{$platform}_offline_stock", 1);
+            $this->syncSecondaryStocks($account, "ps{$platform}_full");
+            return;
+        }
+
+        $account->decrement($soldItem, 1);
+        $this->syncSecondaryStocks($account, $soldItem);
     }
 
     // Helper method to update report status
@@ -699,7 +749,7 @@ class OrderController extends Controller
             'buyer_name'       => 'required|string|max:100',
             'buyer_email'      => 'required|email',
             'price'            => 'required|numeric|min:0',
-            'type'             => 'required|string|in:primary,secondary',
+            'type'             => 'required|string|in:primary,secondary,full',
             'platform'         => 'required|string|max:255',
             'storefront_line_key' => 'nullable|string|max:191',
         ];
@@ -714,7 +764,10 @@ class OrderController extends Controller
 
         $validatedData = $request->validate($rules);
 
-        $sold_item         = "ps{$validatedData['platform']}_{$validatedData['type']}_stock";
+        $isFull = $validatedData['type'] === 'full';
+        $sold_item = $isFull
+            ? "ps{$validatedData['platform']}_full"
+            : "ps{$validatedData['platform']}_{$validatedData['type']}_stock";
         $lineKey = $validatedData['storefront_line_key']
             ?? ($sold_item.'|game:'.$validatedData['game_id']);
 
@@ -751,17 +804,31 @@ class OrderController extends Controller
 
         $validatedData['buyer_name'] = $user->name;
 
-        $sold_item_status  = "ps{$validatedData['platform']}_{$validatedData['type']}_status";
-        $sold_offline_item = "ps{$validatedData['platform']}_offline_stock";
+        $platform = $validatedData['platform'];
+        $sold_offline_item = "ps{$platform}_offline_stock";
+        $sold_primary_item = "ps{$platform}_primary_stock";
+        $sold_secondary_item = "ps{$platform}_secondary_stock";
 
         $accountQuery = Account::where('game_id', $validatedData['game_id'])
             ->join('games', 'accounts.game_id', '=', 'games.id')
-            ->where("games.{$sold_item_status}", true)
-            ->orderBy('accounts.created_at', 'asc')
-            ->where($sold_item, '>', 0);
+            ->orderBy('accounts.created_at', 'asc');
 
-        if ($validatedData['platform'] !== '5') {
-            $accountQuery->where($sold_offline_item, 0);
+        if ($isFull) {
+            $accountQuery
+                ->where('accounts.is_full', true)
+                ->where($sold_primary_item, '>', 0)
+                ->where($sold_secondary_item, '>', 0)
+                ->where($sold_offline_item, '>', 0);
+        } else {
+            $sold_item_status = "ps{$platform}_{$validatedData['type']}_status";
+            $accountQuery
+                ->where('accounts.is_full', false)
+                ->where("games.{$sold_item_status}", true)
+                ->where($sold_item, '>', 0);
+
+            if ($platform !== '5') {
+                $accountQuery->where($sold_offline_item, 0);
+            }
         }
 
         try {
@@ -777,8 +844,8 @@ class OrderController extends Controller
                 ], 422);
             }
 
-            $account->decrement($sold_item, 1);
-            $this->syncSecondaryStocks($account, $sold_item);
+            $this->decrementSoldItemStock($account, $sold_item, $validatedData['type'], $platform);
+            $account->refresh();
 
             $order_data = [
                 'seller_id'            => null,
@@ -805,11 +872,19 @@ class OrderController extends Controller
 
             DB::commit();
 
+            $webhookStock = $isFull
+                ? min(
+                    (int) $account->$sold_primary_item,
+                    (int) $account->$sold_secondary_item,
+                    (int) $account->$sold_offline_item
+                )
+                : (int) $account->$sold_item;
+
             \App\Jobs\SendInventoryWebhookJob::dispatch(
                 $validatedData['game_id'],
                 $validatedData['platform'],
                 $validatedData['type'],
-                $account->$sold_item,
+                $webhookStock,
                 'order_created'
             );
 
@@ -841,7 +916,7 @@ class OrderController extends Controller
             'buyer_phone'      => 'required|string|max:15',
             'buyer_name'       => 'required|string|max:100',
             'price'            => 'required|numeric|min:0',
-            'type'             => 'required|string|max:255',
+            'type'             => 'required|string|in:offline,primary,secondary,full',
             'platform'         => 'required|string|max:255',
         ]);
 
@@ -874,29 +949,43 @@ class OrderController extends Controller
         // Update buyer name to match user record if necessary
         $validatedData['buyer_name'] = $user->name;
 
+        $isFull = $validatedData['type'] === 'full';
+        $platform = $validatedData['platform'];
+
         // Determine the sold item field dynamically
-        $sold_item         = "ps{$validatedData['platform']}_{$validatedData['type']}_stock";
-        $sold_item_status  = "ps{$validatedData['platform']}_{$validatedData['type']}_status";
-        $sold_offline_item = "ps{$validatedData['platform']}_offline_stock";
+        $sold_item = $isFull
+            ? "ps{$platform}_full"
+            : "ps{$platform}_{$validatedData['type']}_stock";
+        $sold_offline_item = "ps{$platform}_offline_stock";
+        $sold_primary_item = "ps{$platform}_primary_stock";
+        $sold_secondary_item = "ps{$platform}_secondary_stock";
 
         // Fetch the appropriate account based on type, stock availability, and game status
         $accountQuery = Account::where('game_id', $validatedData['game_id'])
             ->join('games', 'accounts.game_id', '=', 'games.id')
-            ->where("games.{$sold_item_status}", true)
             ->orderBy('accounts.created_at', 'asc');
 
-        if ($validatedData['type'] === 'offline') {
-            $accountQuery->where($sold_item, '>', 0);
-        } elseif ($validatedData['type'] === 'primary') {
-            if ($validatedData['platform'] === '5') {
+        if ($isFull) {
+            $accountQuery
+                ->where('accounts.is_full', true)
+                ->where($sold_primary_item, '>', 0)
+                ->where($sold_secondary_item, '>', 0)
+                ->where($sold_offline_item, '>', 0);
+        } else {
+            $sold_item_status = "ps{$platform}_{$validatedData['type']}_status";
+            $accountQuery
+                ->where('accounts.is_full', false)
+                ->where("games.{$sold_item_status}", true);
+
+            if ($validatedData['type'] === 'offline') {
                 $accountQuery->where($sold_item, '>', 0);
-            } else {
-                $accountQuery->where($sold_offline_item, 0)->where($sold_item, '>', 0);
-            }
-        } elseif ($validatedData['type'] === 'secondary') {
-            if ($validatedData['platform'] === '5') {
-                $accountQuery->where($sold_item, '>', 0);
-            } else {
+            } elseif ($validatedData['type'] === 'primary') {
+                if ($platform === '5') {
+                    $accountQuery->where($sold_item, '>', 0);
+                } else {
+                    $accountQuery->where($sold_offline_item, 0)->where($sold_item, '>', 0);
+                }
+            } elseif ($validatedData['type'] === 'secondary') {
                 $accountQuery->where($sold_item, '>', 0);
             }
         }
@@ -932,11 +1021,9 @@ class OrderController extends Controller
                 ], 422);
             }
 
-            // Reduce the corresponding stock by 1 for the account
-            $account->decrement($sold_item, 1);
-
-            // Sync secondary stocks: If secondary stock reaches 0, set the other platform's secondary stock to 0
-            $this->syncSecondaryStocks($account, $sold_item);
+            // Reduce the corresponding stock for the account
+            $this->decrementSoldItemStock($account, $sold_item, $validatedData['type'], $platform);
+            $account->refresh();
 
             // Check if this was an "offline" order with only 1 stock left before decrement
             $recentOrder = null;
@@ -986,12 +1073,20 @@ class OrderController extends Controller
             DB::commit();
             // ✅ No need to manually clear cache - OrderObserver handles it automatically
 
+            $webhookStock = $isFull
+                ? min(
+                    (int) $account->$sold_primary_item,
+                    (int) $account->$sold_secondary_item,
+                    (int) $account->$sold_offline_item
+                )
+                : (int) $account->$sold_item;
+
             // ✅ REPLACE WITH THIS (queued job):
             \App\Jobs\SendInventoryWebhookJob::dispatch(
                 $validatedData['game_id'],
                 $validatedData['platform'],
                 $validatedData['type'],
-                $account->$sold_item,
+                $webhookStock,
                 'order_created'
             );
 
@@ -1021,18 +1116,35 @@ class OrderController extends Controller
         $validatedData = $request->validate([
             'game_id'  => 'required|exists:games,id',
             'platform' => 'required|string|max:255',
-            'type'     => 'required|string|in:primary,secondary',
+            'type'     => 'required|string|in:primary,secondary,full',
         ]);
 
-        // Determine the sold item field dynamically
-        $sold_item        = "ps{$validatedData['platform']}_{$validatedData['type']}_stock";
-        $sold_item_status = "ps{$validatedData['platform']}_{$validatedData['type']}_status";
+        $platform = $validatedData['platform'];
 
-        // Fetch available stock
+        if ($validatedData['type'] === 'full') {
+            $availableStock = Account::where('game_id', $validatedData['game_id'])
+                ->where('is_full', true)
+                ->where("ps{$platform}_primary_stock", '>', 0)
+                ->where("ps{$platform}_secondary_stock", '>', 0)
+                ->where("ps{$platform}_offline_stock", '>', 0)
+                ->count();
+
+            return response()->json([
+                'stock'        => $availableStock,
+                'is_available' => $availableStock > 0,
+            ]);
+        }
+
+        // Determine the sold item field dynamically
+        $sold_item        = "ps{$platform}_{$validatedData['type']}_stock";
+        $sold_item_status = "ps{$platform}_{$validatedData['type']}_status";
+
+        // Fetch available stock (exclude full accounts)
         $availableStock = Account::where('game_id', $validatedData['game_id'])
             ->join('games', 'accounts.game_id', '=', 'games.id')
-            ->where("games.{$sold_item_status}", true) // Ensure the game's status is active
-            ->sum($sold_item); // Sum the available stock
+            ->where('accounts.is_full', false)
+            ->where("games.{$sold_item_status}", true)
+            ->sum($sold_item);
 
         // Return response
         return response()->json([
@@ -1305,8 +1417,8 @@ class OrderController extends Controller
                 $user = User::where('phone', $order->buyer_phone)->first();
                 if (isset($platform[1])) {
                     $key = $platform[1];
-                    $sku = $posSkus[$key];
-                    $pos_product_id = $posIds[$key];
+                    $sku = $posSkus[$key] ?? $posSkus['primary'];
+                    $pos_product_id = $posIds[$key] ?? $posIds['primary'];
                     $type = $key;
                 } else {
                     $sku = $posSkus['card'];

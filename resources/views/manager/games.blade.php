@@ -157,6 +157,11 @@
                         <label for="ps5Image" class="mt-3">PS5 Image</label>
                         <input type="file" id="ps5Image" name="ps5_image" class="form-control" style="border-radius: 10px;" accept="image/*">
 
+                        <!-- Gallery images (max 8) -->
+                        <label for="galleryImages" class="mt-3">Gallery Images</label>
+                        <input type="file" id="galleryImages" name="gallery_images[]" class="form-control" style="border-radius: 10px;" accept="image/*" multiple>
+                        <small class="text-muted">Up to 8 images. Existing images can be removed below.</small>
+                        <div id="existingGallery" class="d-flex flex-wrap gap-2 mt-2"></div>
 
                         <!-- Save Button -->
                         <button type="submit" class="btn btn-success mt-3">Save Changes</button>
@@ -214,6 +219,24 @@
             $('#description').val(html || '');
         }
 
+        // Render existing gallery thumbs with delete checkboxes
+        function renderExistingGallery(images) {
+            var $wrap = $('#existingGallery');
+            $wrap.empty();
+            (images || []).forEach(function (img) {
+                var url = img.url || ('/' + img.path);
+                $wrap.append(
+                    '<label class="border rounded p-1 text-center" style="width:100px;">' +
+                        '<img src="' + url + '" class="img-thumbnail mb-1" style="max-width:90px;max-height:90px;">' +
+                        '<div class="form-check">' +
+                            '<input class="form-check-input" type="checkbox" name="delete_gallery_ids[]" value="' + img.id + '">' +
+                            '<span class="small">Remove</span>' +
+                        '</div>' +
+                    '</label>'
+                );
+            });
+        }
+
         $('#editGameModal').on('shown.bs.modal', function () {
             ensureGameDescriptionEditor();
         });
@@ -251,6 +274,8 @@
             // Remove any game ID for the new game
             $('#gameId').val('');
             setGameDescription('');
+            renderExistingGallery([]);
+            $('#galleryImages').val('');
         });
 
         // When the "Edit" button is clicked
@@ -263,6 +288,8 @@
             $('#editGameForm').find('.invalid-feedback').remove(); // Remove previous error messages
             $('#editGameModalLabel').text('Edit Game'); // Update modal title
             setGameDescription('');
+            renderExistingGallery([]);
+            $('#galleryImages').val('');
 
             // Use AJAX to fetch the game data
             $.ajax({
@@ -287,6 +314,7 @@
                     $('#ps5SecondaryPrice').val(response.ps5_secondary_price);
                     $('#ps5SecondaryStatus').val(response.ps5_secondary_status);
                     setGameDescription(response.description);
+                    renderExistingGallery(response.gallery || []);
 
                     // Generate preview for the PS4 image
                     if (response.ps4_image_url) {

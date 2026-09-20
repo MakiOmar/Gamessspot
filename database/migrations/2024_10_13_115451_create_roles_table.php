@@ -29,23 +29,8 @@ return new class extends Migration
                 ['name' => 'accountatnt'],
             ]);
         }
-        
-        // Only create admin user if it doesn't exist
-        if (!User::where('email', 'admin@example.com')->exists()) {
-            // Create the admin user
-            $admin = User::create([
-                'name' => 'Admin User',
-                'email' => 'admin@example.com',
-                'phone' => '12345678910',
-                'password' => Hash::make('12345678'), // Replace with a strong password
-            ]);
 
-            // Find or create the admin role (assuming 'admin' role exists in the roles table)
-            $adminRole = Role::where('name', 'admin')->firstOrFail();
-
-            // Attach the admin role to the user
-            $admin->roles()->attach($adminRole);
-        }
+        // Admin user attachment runs after role_user pivot exists (later migration).
     }
 
     public function down()

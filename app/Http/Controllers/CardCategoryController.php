@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\CardCategory;
+use App\Models\GalleryImage;
+use App\Support\HtmlSanitizer;
 use Illuminate\Http\Request;
 use App\Services\ImageUploadService;
 use App\Models\StoresProfile;
@@ -18,47 +20,88 @@ class CardCategoryController extends Controller
 
     /**
      * Display a listing of the card categories.
-     *
-     * @return \Illuminate\Http\Response
      */
     public function index()
     {
-        $categories = CardCategory::all();
+        $categories = CardCategory::with('galleryImages')->get();
         return view('manager.card-categories', compact('categories'));
     }
+
     public function getCategories()
     {
         return CardCategory::whereHas('cards', function ($query) {
-            $query->where('status', true); // Only include categories with active cards
+            $query->where('status', true);
         })
-        ->with(['cards' => function ($query) {
-            $query->where('status', true); // Load only active cards
-        }])
-        ->get();
+        ->with([
+            'cards' => function ($query) {
+                $query->where('status', true);
+            },
+            'galleryImages',
+        ])
+        ->get()
+        ->map(function (CardCategory $category) {
+            $category->setAttribute('gallery', $category->galleryApiPayload());
+            $category->setAttribute('reviews', $category->reviewsApiPayload());
+            // Ensure description is present on list payloads
+            $category->makeVisible(['description']);
+            return $category;
+        });
     }
+
     public function sell()
     {
-        $categories    = $this->getCategories();
+        $categories = $this->getCategories();
         $storeProfiles = StoresProfile::all();
 
         return view('manager.sell-cards', compact('categories', 'storeProfiles'));
     }
+
     public function sellApi()
     {
         return response()->json([
             'status' => true,
-            'data' => $this->getCategories()
+            'data' => $this->getCategories(),
         ]);
     }
+
+    /**
+     * Public API: single card category with description, gallery, and approved reviews.
+     */
+    public function showApi(CardCategory $cardCategory)
+    {
+        $cardCategory->load(['galleryImages', 'cards' => function ($query) {
+            $query->where('status', true);
+        }]);
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'id' => $cardCategory->id,
+                'name' => $cardCategory->name,
+                'price' => $cardCategory->price,
+                'description' => $cardCategory->description,
+                'poster_image' => $cardCategory->poster_image
+                    ? asset($cardCategory->poster_image)
+                    : null,
+                'gallery' => $cardCategory->galleryApiPayload(),
+                'reviews' => $cardCategory->reviewsApiPayload(),
+                'cards_count' => $cardCategory->cards->count(),
+            ],
+        ]);
+    }
+
     public function searchCategories($search)
     {
         return CardCategory::whereHas('cards', function ($query) {
-            $query->where('status', true); // Only include categories with active cards
-        })
-        ->where('name', 'like', '%' . $search . '%') // ✅ شرط البحث بالاسم
-        ->with(['cards' => function ($query) {
             $query->where('status', true);
-        }])
+        })
+        ->where('name', 'like', '%' . $search . '%')
+        ->with([
+            'cards' => function ($query) {
+                $query->where('status', true);
+            },
+            'galleryImages',
+        ])
         ->get();
     }
 
@@ -69,151 +112,112 @@ class CardCategoryController extends Controller
         $storeProfiles = StoresProfile::all();
 
         return view('manager.sell-cards', [
-        'categories'    => $categories,
-        'storeProfiles' => $storeProfiles,
-        'query'         => $query,
+            'categories' => $categories,
+            'storeProfiles' => $storeProfiles,
+            'query' => $query,
         ]);
     }
 
-
-
-    /**
-     * Show the form for creating a new card category.
-     *
-     * @return \Illuminate\Http\Response
-     */
     public function create()
     {
         return view('card_categories.create');
     }
-    /**
-     * Store a newly created card category in storage.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @param  $id
-     * @return mixed
-     */
+
     protected function validatation(Request &$request, $id = null)
     {
         $name_validation = 'required|string|unique:card_categories,name';
-        $data = $request;
         return $request->validate([
             'name' => $id ? $name_validation . ',' . $id : $name_validation,
             'price' => 'required|numeric|min:0',
+            'description' => 'nullable|string',
             'poster_image' => 'nullable|image|mimes:webp,jpeg,png,jpg,gif|max:2048',
+            'gallery_images' => 'nullable|array|max:' . GalleryImage::MAX_PER_PRODUCT,
+            'gallery_images.*' => 'nullable|image|mimes:webp,jpeg,png,jpg,gif|max:2048',
+            'delete_gallery_ids' => 'nullable|array',
+            'delete_gallery_ids.*' => 'integer',
         ]);
     }
-    /**
-     * Store a newly created card category in storage.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\Response
-     */
+
     public function store(Request $request)
     {
         $this->validatation($request);
 
         $data = $request->only('name', 'price');
+        $data['description'] = HtmlSanitizer::sanitize($request->input('description'));
 
-        // Use ImageUploadService for poster image upload
         if ($request->hasFile('poster_image')) {
             $data['poster_image'] = $this->imageUploadService->upload($request->file('poster_image'), 'posters');
         }
 
         $category = CardCategory::create($data);
+        $category->syncGalleryFromRequest($request, $this->imageUploadService);
 
         return response()->json([
             'success' => true,
             'message' => 'Card Category created successfully.',
-            'data' => $category
+            'data' => $category->load('galleryImages'),
         ]);
     }
 
-
-
-    /**
-     * Show the specified card category.
-     *
-     * @param  \App\Models\CardCategory  $cardCategory
-     * @return \Illuminate\Http\Response
-     */
     public function show(CardCategory $cardCategory)
     {
         return view('card_categories.show', compact('cardCategory'));
     }
 
-    /**
-     * Show the form for editing the specified card category.
-     *
-     * @param  \App\Models\CardCategory  $cardCategory
-     * @return \Illuminate\Http\Response
-     */
     public function edit(CardCategory $cardCategory)
     {
+        $cardCategory->load('galleryImages');
+
         return response()->json([
             'id' => $cardCategory->id,
             'name' => $cardCategory->name,
             'price' => $cardCategory->price,
+            'description' => $cardCategory->description,
             'poster_image' => $cardCategory->poster_image,
+            'gallery' => $cardCategory->galleryApiPayload(),
         ]);
     }
 
-
-    /**
-     * Update the specified card category in storage.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @param  \App\Models\CardCategory  $cardCategory
-     * @return \Illuminate\Http\Response
-     */
     public function update(Request $request, CardCategory $cardCategory)
     {
         $this->validatation($request, $cardCategory->id);
 
         $data = $request->only('name', 'price');
+        $data['description'] = HtmlSanitizer::sanitize($request->input('description'));
 
-        // Use ImageUploadService for poster image upload
         if ($request->hasFile('poster_image')) {
-            // Optionally delete the old image if it exists
             if ($cardCategory->poster_image && file_exists(public_path($cardCategory->poster_image))) {
                 unlink(public_path($cardCategory->poster_image));
             }
-
-            // Upload the new poster image using ImageUploadService
             $data['poster_image'] = $this->imageUploadService->upload($request->file('poster_image'), 'posters');
         }
 
         $cardCategory->update($data);
+        $cardCategory->deleteGalleryIds($request->input('delete_gallery_ids', []));
+        $cardCategory->syncGalleryFromRequest($request, $this->imageUploadService);
 
         return response()->json([
-        'success' => true,
-        'message' => 'Card Category updated successfully.',
-        'data' => $cardCategory
+            'success' => true,
+            'message' => 'Card Category updated successfully.',
+            'data' => $cardCategory->fresh()->load('galleryImages'),
         ]);
     }
 
-
-
-    /**
-     * Remove the specified card category from storage.
-     *
-     * @param  \App\Models\CardCategory  $cardCategory
-     * @return \Illuminate\Http\Response
-     */
     public function destroy(CardCategory $cardCategory)
     {
         try {
+            $cardCategory->galleryImages()->get()->each->delete();
             $cardCategory->delete();
 
             return response()->json([
-            'success' => true,
-            'message' => 'Card Category deleted successfully.'
+                'success' => true,
+                'message' => 'Card Category deleted successfully.',
             ]);
         } catch (\Exception $e) {
             return response()->json([
-            'success' => false,
-            'message' => 'Failed to delete Card Category.',
-            'error' => $e->getMessage()
+                'success' => false,
+                'message' => 'Failed to delete Card Category.',
+                'error' => $e->getMessage(),
             ], 500);
         }
     }

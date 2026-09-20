@@ -33,6 +33,7 @@ class RolePermissionService
                 'manage-users',
                 'manage-store-profiles',
                 'manage-device-repairs',
+                'manage-reviews',
                 'delete-device-repairs',
                 'submit-device-request',
                 'track-device-status',
@@ -46,6 +47,7 @@ class RolePermissionService
                 'create-order-reports',
                 'search-customer-orders',
                 'manage-device-repairs',
+                'manage-reviews',
                 'submit-device-request',
                 'track-device-status',
             ),
@@ -59,6 +61,7 @@ class RolePermissionService
                 'view-reports',
                 'create-order-reports',
                 'manage-device-repairs',
+                'manage-reviews',
             ),
             'accountant' => array(
                 'access-dashboard',

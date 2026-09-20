@@ -157,6 +157,8 @@ class AccountController extends Controller
                 'ps4_offline2'  => 'nullable|boolean',
                 'ps5_offline'   => 'nullable|boolean',
                 'ps5_offline2'  => 'nullable|boolean',
+                'ps5_only'      => 'nullable|boolean',
+                'is_full'       => 'nullable|boolean',
             ],
             [
                 'mail.required' => 'The email field is required.',
@@ -165,61 +167,33 @@ class AccountController extends Controller
             ]
         );
 
-        // Default stock values
-        $ps4_primary_stock   = 1;
-        $ps4_secondary_stock = 1;
-        $ps5_primary_stock   = 1;
-        $ps5_secondary_stock = 1;
-        $ps4_offline_stock   = 2; // Default offline stock should be 2
-        $ps5_offline_stock   = 1;
+        $isFull = $request->boolean('is_full');
+        $ps5Only = $request->boolean('ps5_only') || $request->has('ps5_only');
 
-        // Special PS5 Only Logic: If "PS5 Only" is checked, set all PS4 stocks to 0
-        if ($request->has('ps5_only')) {
-            // If "PS5 Only" is checked, set all PS4 stocks to 0 and PS5 offline stock to 2
-            $ps4_primary_stock = 0;
-            $ps4_secondary_stock = 0;
-            $ps4_offline_stock = 0;
-            $ps5_offline_stock = 2;
-        } else {
-            // Normal logic: If any of the stocks are checked, set them to zero (except offline logic)
-            if ($request->has('ps4_primary')) {
-                $ps4_primary_stock = 0;
-            }
-            if ($request->has('ps4_secondary')) {
-                $ps4_secondary_stock = 0;
-            }
-            if ($request->has('ps5_primary')) {
-                $ps5_primary_stock = 0;
-            }
-            if ($request->has('ps5_secondary')) {
-                $ps5_secondary_stock = 0;
-            }
-
-            // Offline stock logic for PS4 (only when not in PS5 Only mode)
-            if ($request->has('ps4_offline1')) {
-                $ps4_offline_stock = 1; // Add 1 to the default stock if ps4_offline1 is checked
-            }
-            if ($request->has('ps4_offline2')) {
-                $ps4_offline_stock = 0; // Set stock to zero if ps4_offline2 is checked
-            }
-        }
+        $stocks = Account::resolveInitialStocks($isFull, $ps5Only, [
+            'ps4_primary' => $request->has('ps4_primary'),
+            'ps4_secondary' => $request->has('ps4_secondary'),
+            'ps5_primary' => $request->has('ps5_primary'),
+            'ps5_secondary' => $request->has('ps5_secondary'),
+            'ps4_offline1' => $request->has('ps4_offline1'),
+            'ps4_offline2' => $request->has('ps4_offline2'),
+            'ps5_offline' => $request->has('ps5_offline'),
+        ]);
 
         // Create the new account with adjusted stock values
         $account = Account::create(
-            array(
-                'mail'                => $request->mail,
-                'password'            => $request->password,
-                'game_id'             => $request->game_id,
-                'region'              => $request->region,
-                'cost'                => $request->cost,
-                'birthdate'           => $request->birthdate,
-                'login_code'          => $request->login_code,
-                'ps4_primary_stock'   => $ps4_primary_stock,
-                'ps4_secondary_stock' => $ps4_secondary_stock,
-                'ps4_offline_stock'   => $ps4_offline_stock,
-                'ps5_primary_stock'   => $ps5_primary_stock,
-                'ps5_secondary_stock' => $ps5_secondary_stock,
-                'ps5_offline_stock'   => $ps5_offline_stock,
+            array_merge(
+                [
+                    'mail'       => $request->mail,
+                    'password'   => $request->password,
+                    'game_id'    => $request->game_id,
+                    'region'     => $request->region,
+                    'cost'       => $request->cost,
+                    'birthdate'  => $request->birthdate,
+                    'login_code' => $request->login_code,
+                    'is_full'    => $isFull,
+                ],
+                $stocks
             )
         );
 
@@ -273,7 +247,10 @@ class AccountController extends Controller
             'ps5_primary_stock' => 'required|integer|min:0',
             'ps5_secondary_stock' => 'required|integer|min:0',
             'ps5_offline_stock' => 'required|integer|min:0',
+            'is_full' => 'nullable|boolean',
         ]);
+
+        $validated['is_full'] = $request->boolean('is_full');
 
         $account->update($validated);
 

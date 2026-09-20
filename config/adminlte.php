@@ -475,6 +475,14 @@ return [
             'can' => 'manage-store-profiles',
         ],
 
+        // Reviews
+        [
+            'text' => 'Reviews',
+            'route' => 'manager.reviews.index',
+            'icon' => 'bi bi-star',
+            'can' => 'manage-reviews',
+        ],
+
         // Device Services
         [
             'text' => 'Device Services',

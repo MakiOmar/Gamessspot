@@ -46,10 +46,12 @@ class SettingsController extends Controller
                 'offline_sku' => Settings::get('pos.offline_sku', '0140'),
                 'secondary_sku' => Settings::get('pos.secondary_sku', '0141'),
                 'primary_sku' => Settings::get('pos.primary_sku', '0139'),
+                'full_sku' => Settings::get('pos.full_sku', '0143'),
                 'card_sku' => Settings::get('pos.card_sku', '0142'),
                 'offline_id' => Settings::get('pos.offline_id', '140'),
                 'secondary_id' => Settings::get('pos.secondary_id', '141'),
                 'primary_id' => Settings::get('pos.primary_id', '139'),
+                'full_id' => Settings::get('pos.full_id', '143'),
                 'card_id' => Settings::get('pos.card_id', '142'),
                 'username' => Settings::get('pos.username', 'admin'),
                 'password' => Settings::get('pos.password', 'pos@123'),
@@ -116,10 +118,12 @@ class SettingsController extends Controller
             'pos.offline_sku' => 'required|string|max:10',
             'pos.secondary_sku' => 'required|string|max:10',
             'pos.primary_sku' => 'required|string|max:10',
+            'pos.full_sku' => 'required|string|max:10',
             'pos.card_sku' => 'required|string|max:10',
             'pos.offline_id' => 'required|string|max:10',
             'pos.secondary_id' => 'required|string|max:10',
             'pos.primary_id' => 'required|string|max:10',
+            'pos.full_id' => 'required|string|max:10',
             'pos.card_id' => 'required|string|max:10',
             'pos.username' => 'required|string|max:50',
             'pos.password' => 'required|string|max:100',
@@ -187,10 +191,12 @@ class SettingsController extends Controller
         Settings::set('pos.offline_sku', $request->input('pos.offline_sku'));
         Settings::set('pos.secondary_sku', $request->input('pos.secondary_sku'));
         Settings::set('pos.primary_sku', $request->input('pos.primary_sku'));
+        Settings::set('pos.full_sku', $request->input('pos.full_sku'));
         Settings::set('pos.card_sku', $request->input('pos.card_sku'));
         Settings::set('pos.offline_id', $request->input('pos.offline_id'));
         Settings::set('pos.secondary_id', $request->input('pos.secondary_id'));
         Settings::set('pos.primary_id', $request->input('pos.primary_id'));
+        Settings::set('pos.full_id', $request->input('pos.full_id'));
         Settings::set('pos.card_id', $request->input('pos.card_id'));
         Settings::set('pos.username', $request->input('pos.username'));
         Settings::set('pos.password', $request->input('pos.password'));
@@ -240,10 +246,12 @@ class SettingsController extends Controller
         Settings::forget('pos.offline_sku');
         Settings::forget('pos.secondary_sku');
         Settings::forget('pos.primary_sku');
+        Settings::forget('pos.full_sku');
         Settings::forget('pos.card_sku');
         Settings::forget('pos.offline_id');
         Settings::forget('pos.secondary_id');
         Settings::forget('pos.primary_id');
+        Settings::forget('pos.full_id');
         Settings::forget('pos.card_id');
         Settings::forget('pos.username');
         Settings::forget('pos.password');
@@ -306,10 +314,12 @@ class SettingsController extends Controller
                 'pos.offline_sku',
                 'pos.secondary_sku',
                 'pos.primary_sku',
+                'pos.full_sku',
                 'pos.card_sku',
                 'pos.offline_id',
                 'pos.secondary_id',
                 'pos.primary_id',
+                'pos.full_id',
                 'pos.card_id',
                 'pos.username',
                 'pos.password',

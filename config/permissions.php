@@ -78,6 +78,10 @@ return array(
             'label' => 'Manage Device Repairs',
             'group' => 'Device Services',
         ),
+        'manage-reviews' => array(
+            'label' => 'Manage Reviews',
+            'group' => 'Catalog',
+        ),
         'delete-device-repairs' => array(
             'label' => 'Delete Device Repairs',
             'group' => 'Device Services',

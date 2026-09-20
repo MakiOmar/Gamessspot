@@ -19,6 +19,22 @@ class AddGameIdToAccountsTable extends Migration
                 $table->foreignId('game_id')->constrained()->onDelete('cascade')->after('ps5_secondary_stock');
             }
         });
+
+        // Ensure FK exists when game_id was created without a constraint (migration order)
+        $fkExists = collect(\DB::select("
+            SELECT CONSTRAINT_NAME
+            FROM information_schema.KEY_COLUMN_USAGE
+            WHERE TABLE_SCHEMA = DATABASE()
+              AND TABLE_NAME = 'accounts'
+              AND COLUMN_NAME = 'game_id'
+              AND REFERENCED_TABLE_NAME = 'games'
+        "))->isNotEmpty();
+
+        if (!$fkExists && Schema::hasColumn('accounts', 'game_id') && Schema::hasTable('games')) {
+            Schema::table('accounts', function (Blueprint $table) {
+                $table->foreign('game_id')->references('id')->on('games')->onDelete('cascade');
+            });
+        }
     }
 
     /**

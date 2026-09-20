@@ -27,7 +27,7 @@ class CreateAccountsTable extends Migration
             $table->integer('ps5_offline_stock')->default(0);
             $table->integer('ps5_primary_stock')->default(0);
             $table->integer('ps5_secondary_stock')->default(0);
-            $table->foreignId('game_id')->constrained()->onDelete('cascade'); // Foreign key to games table
+            $table->unsignedBigInteger('game_id')->nullable(); // FK added after games table exists
             $table->timestamps();
             });
         }

@@ -175,6 +175,7 @@ class SettingsService
             'offline' => Settings::get('pos.offline_sku', '0140'),
             'secondary' => Settings::get('pos.secondary_sku', '0141'),
             'primary' => Settings::get('pos.primary_sku', '0139'),
+            'full' => Settings::get('pos.full_sku', '0143'),
             'card' => Settings::get('pos.card_sku', '0142'),
         ];
     }
@@ -188,6 +189,7 @@ class SettingsService
             'offline' => Settings::get('pos.offline_id', '140'),
             'secondary' => Settings::get('pos.secondary_id', '141'),
             'primary' => Settings::get('pos.primary_id', '139'),
+            'full' => Settings::get('pos.full_id', '143'),
             'card' => Settings::get('pos.card_id', '142'),
         ];
     }
@@ -263,6 +265,7 @@ class SettingsService
             'offline' => '0140',
             'secondary' => '0141',
             'primary' => '0139',
+            'full' => '0143',
             'card' => '0142',
             default => ''
         });
@@ -277,6 +280,7 @@ class SettingsService
             'offline' => '140',
             'secondary' => '141',
             'primary' => '139',
+            'full' => '143',
             'card' => '142',
             default => ''
         });

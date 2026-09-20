@@ -18,6 +18,7 @@ use App\Http\Controllers\DeviceRepairController;
 use App\Http\Controllers\PublicDeviceController;
 use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\RolePermissionController;
+use App\Http\Controllers\ReviewController;
 
 Route::get('/', function () {
     return view('welcome');
@@ -736,6 +737,16 @@ Route::prefix('manager')->group(function () {
                 Route::patch('/{deviceRepair}/status', [DeviceRepairController::class, 'updateStatus'])->name('device-repairs.update-status');
                 Route::get('/api/stats', [DeviceRepairController::class, 'getStats'])->name('device-repairs.stats');
                 Route::post('/check-user', [DeviceRepairController::class, 'checkUser'])->name('device-repairs.check-user');
+            });
+        });
+
+        // Reviews Management Routes
+        Route::middleware('can:manage-reviews')->group(function () {
+            Route::prefix('reviews')->group(function () {
+                Route::get('/', [ReviewController::class, 'index'])->name('manager.reviews.index');
+                Route::post('/{review}/approve', [ReviewController::class, 'approve'])->name('manager.reviews.approve');
+                Route::post('/{review}/reject', [ReviewController::class, 'reject'])->name('manager.reviews.reject');
+                Route::delete('/{review}', [ReviewController::class, 'destroy'])->name('manager.reviews.destroy');
             });
         });
 

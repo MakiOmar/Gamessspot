@@ -48,6 +48,7 @@
                 data-ps5_primary_stock="{{ $account->ps5_primary_stock }}"
                 data-ps5_secondary_stock="{{ $account->ps5_secondary_stock }}"
                 data-ps5_offline_stock="{{ $account->ps5_offline_stock }}"
+                data-is_full="{{ $account->is_full ? '1' : '0' }}"
                 data-update-url="{{ route('manager.accounts.updateStock', $account->id) }}"
                 data-bs-toggle="modal"
                 data-bs-target="#stockModal">

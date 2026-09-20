@@ -32,6 +32,7 @@ class AccountsImport implements ToModel, WithHeadingRow, WithValidation, SkipsOn
         $ps5_primary_stock = isset($row['ps5_primary_stock']) ? (int)$row['ps5_primary_stock'] : 1;
         $ps5_secondary_stock = isset($row['ps5_secondary_stock']) ? (int)$row['ps5_secondary_stock'] : 1;
         $ps5_offline_stock = isset($row['ps5_offline_stock']) ? (int)$row['ps5_offline_stock'] : 1;
+        $isFull = isset($row['is_full']) ? filter_var($row['is_full'], FILTER_VALIDATE_BOOLEAN) : false;
 
         return new Account([
             'mail' => $row['mail'],
@@ -41,6 +42,7 @@ class AccountsImport implements ToModel, WithHeadingRow, WithValidation, SkipsOn
             'cost' => $row['cost'],
             'birthdate' => $row['birthdate'],
             'login_code' => $row['login_code'],
+            'is_full' => $isFull,
             'ps4_primary_stock' => $ps4_primary_stock,
             'ps4_secondary_stock' => $ps4_secondary_stock,
             'ps4_offline_stock' => $ps4_offline_stock,
@@ -60,6 +62,7 @@ class AccountsImport implements ToModel, WithHeadingRow, WithValidation, SkipsOn
             '*.cost' => 'required|numeric',
             '*.birthdate' => 'required|date',
             '*.login_code' => 'required|string',
+            '*.is_full' => 'nullable',
             '*.ps4_primary_stock' => 'nullable|integer|min:0',
             '*.ps4_secondary_stock' => 'nullable|integer|min:0',
             '*.ps4_offline_stock' => 'nullable|integer|min:0',
