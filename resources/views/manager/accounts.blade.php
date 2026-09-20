@@ -200,62 +200,69 @@
                         <textarea class="form-control" id="login_code" name="login_code" rows="3"></textarea>
                     </div>
 
-                    <!-- PS4 and PS5 Stock Fields -->
+                    <!-- Account type applies to both platforms (not PS4-only) -->
                     <div id="stock-availability">
-                        <!-- PS4 Availability -->
                         <div class="form-group">
-                            <label for="ps4Availability">PS4 Availability</label>
-                            
-                            <!-- Full Account + PS5 Only -->
-                            <div class="mb-2">
-                                <!-- Full account sells all three stocks together -->
+                            <label>Account type</label>
+                            <div class="mb-1">
+                                <!-- Full account: sells primary+secondary+offline as one bundle on each enabled platform -->
                                 <label class="checkbox me-3">
                                     <input type="checkbox" id="is_full" name="is_full" value="1">
                                     <span></span> <strong>Full account</strong>
                                 </label>
+                                <!-- Optional: limit full (or normal) stock assignment to PS5 -->
                                 <label class="checkbox">
                                     <input type="checkbox" id="ps5_only" name="ps5_only" value="1">
                                     <span></span> <strong>PS5 Only</strong>
                                 </label>
                             </div>
-                            
-                            <div class="checkbox-inline">
-                                <label class="checkbox">
-                                    <input type="checkbox" name="ps4_primary" value="1" class="ps4-checkbox">
-                                    <span></span> Primary
-                                </label>
-                                <label class="checkbox">
-                                    <input type="checkbox" name="ps4_secondary" value="1" class="ps4-checkbox">
-                                    <span></span> Secondary
-                                </label>
-                                <label class="checkbox">
-                                    <input type="checkbox" name="ps4_offline1" value="1" class="ps4-checkbox">
-                                    <span></span> Offline 1
-                                </label>
-                                <label class="checkbox">
-                                    <input type="checkbox" name="ps4_offline2" value="1" class="ps4-checkbox">
-                                    <span></span> Offline 2
-                                </label>
-                            </div>
+                            <small class="text-muted d-block" id="full-account-hint">
+                                Full account works for PS4 and PS5. Slot options below are ignored while it is checked.
+                            </small>
                         </div>
 
-                        <!-- PS5 Availability -->
-                        <div class="form-group">
-                            <label for="ps5Availability">PS5 Availability</label>
-                            
-                            <div class="checkbox-inline">
-                                <label class="checkbox">
-                                    <input type="checkbox" name="ps5_primary" value="1" class="ps5-checkbox">
-                                    <span></span> Primary
-                                </label>
-                                <label class="checkbox">
-                                    <input type="checkbox" name="ps5_secondary" value="1" class="ps5-checkbox">
-                                    <span></span> Secondary
-                                </label>
-                                <label class="checkbox">
-                                    <input type="checkbox" name="ps5_offline" value="1" class="ps5-checkbox">
-                                    <span></span> Offline
-                                </label>
+                        <!-- Per-slot sold flags (ignored when Full account is checked) -->
+                        <div id="slot-availability" class="slot-availability">
+                            <!-- PS4 Availability -->
+                            <div class="form-group">
+                                <label for="ps4Availability">PS4 Availability</label>
+                                <div class="checkbox-inline">
+                                    <label class="checkbox">
+                                        <input type="checkbox" name="ps4_primary" value="1" class="ps4-checkbox slot-checkbox">
+                                        <span></span> Primary
+                                    </label>
+                                    <label class="checkbox">
+                                        <input type="checkbox" name="ps4_secondary" value="1" class="ps4-checkbox slot-checkbox">
+                                        <span></span> Secondary
+                                    </label>
+                                    <label class="checkbox">
+                                        <input type="checkbox" name="ps4_offline1" value="1" class="ps4-checkbox slot-checkbox">
+                                        <span></span> Offline 1
+                                    </label>
+                                    <label class="checkbox">
+                                        <input type="checkbox" name="ps4_offline2" value="1" class="ps4-checkbox slot-checkbox">
+                                        <span></span> Offline 2
+                                    </label>
+                                </div>
+                            </div>
+
+                            <!-- PS5 Availability -->
+                            <div class="form-group">
+                                <label for="ps5Availability">PS5 Availability</label>
+                                <div class="checkbox-inline">
+                                    <label class="checkbox">
+                                        <input type="checkbox" name="ps5_primary" value="1" class="ps5-checkbox slot-checkbox">
+                                        <span></span> Primary
+                                    </label>
+                                    <label class="checkbox">
+                                        <input type="checkbox" name="ps5_secondary" value="1" class="ps5-checkbox slot-checkbox">
+                                        <span></span> Secondary
+                                    </label>
+                                    <label class="checkbox">
+                                        <input type="checkbox" name="ps5_offline" value="1" class="ps5-checkbox slot-checkbox">
+                                        <span></span> Offline
+                                    </label>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -408,14 +415,43 @@
     }
 
     jQuery(document).ready(function($) {
+        // Re-apply disabled state for slot checkboxes based on Full / PS5 Only
+        function syncAccountTypeAvailability() {
+            const isFull = $('#is_full').is(':checked');
+            const ps5Only = $('#ps5_only').is(':checked');
+
+            if (isFull) {
+                // Full account: server sets stocks; disable all per-slot sold options
+                $('.slot-checkbox').prop('checked', false).prop('disabled', true);
+                $('#slot-availability').addClass('opacity-50').css('pointer-events', 'none');
+                $('#full-account-hint').text(
+                    ps5Only
+                        ? 'Full account (PS5 only): PS5 primary+secondary+offline sell as one bundle.'
+                        : 'Full account: PS4 and PS5 primary+secondary+offline sell as one bundle each. Slot options are disabled.'
+                );
+                return;
+            }
+
+            $('#slot-availability').removeClass('opacity-50').css('pointer-events', '');
+            $('#full-account-hint').text('Full account works for PS4 and PS5. Slot options below are ignored while it is checked.');
+
+            if (ps5Only) {
+                // PS5 Only (non-full): mark PS4 slots sold and lock them
+                $('.ps4-checkbox').prop('checked', true).prop('disabled', true);
+                $('.ps5-checkbox').prop('disabled', false);
+            } else {
+                $('.slot-checkbox').prop('disabled', false);
+            }
+        }
+
         // Handle Add Account Button
         $(document).on('click','#addAccountButton',function() {
             $('#accountModalLabel').text('Add New Account');
             $('#accountForm').attr('action', "{{ route('manager.accounts.store') }}").attr('method', 'POST');
             $('#accountForm')[0].reset(); // Reset the form
             $('#stock-availability').show();
-            $('.ps4-checkbox, .ps5-checkbox').prop('disabled', false);
             $('#is_full, #ps5_only').prop('checked', false);
+            syncAccountTypeAvailability();
         });
 
         // Handle Edit Account Button
@@ -952,36 +988,9 @@
             });
         });
 
-        // Handle PS5 Only Checkbox
-        $('#ps5_only').on('change', function() {
-            const isChecked = $(this).is(':checked');
-            
-            if (isChecked) {
-                // When PS5 Only is checked, check all PS4 checkboxes and disable them
-                $('.ps4-checkbox').prop('checked', true).prop('disabled', true);
-            } else if (!$('#is_full').is(':checked')) {
-                // When PS5 Only is unchecked, enable PS4 checkboxes (unless full account)
-                $('.ps4-checkbox').prop('disabled', false);
-            }
-        });
-
-        // Full accounts ignore per-slot sold checkboxes; stocks are set on the server
-        $('#is_full').on('change', function() {
-            const isFull = $(this).is(':checked');
-            if (isFull) {
-                $('.ps4-checkbox, .ps5-checkbox').prop('checked', false).prop('disabled', true);
-            } else {
-                $('.ps4-checkbox, .ps5-checkbox').prop('disabled', false);
-                $('#ps5_only').trigger('change');
-            }
-        });
-
-        // Handle individual PS4 checkbox changes (only when not disabled)
-        $('.ps4-checkbox').on('change', function() {
-            // Only process if the checkbox is not disabled
-            if (!$(this).prop('disabled')) {
-                // No master checkbox logic needed anymore
-            }
+        // Full account / PS5 Only control which slot options stay editable
+        $('#is_full, #ps5_only').on('change', function() {
+            syncAccountTypeAvailability();
         });
 
         // Handle account deletion
