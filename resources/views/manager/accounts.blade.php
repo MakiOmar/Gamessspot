@@ -162,7 +162,12 @@
                         <select class="form-control" id="game" name="game_id" required>
                             <option value="">Select a game</option>
                             @foreach($games as $game)
-                                <option value="{{ $game->id }}">{{ $game->title }}</option>
+                                <option value="{{ $game->id }}">
+                                    {{ $game->title }}
+                                    @if(($game->product_type ?? 'game') === 'subscription')
+                                        (Subscription)
+                                    @endif
+                                </option>
                             @endforeach
                         </select>
                     </div>

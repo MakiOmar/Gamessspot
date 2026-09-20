@@ -37,6 +37,7 @@ class GameFactory extends Factory
         return [
             'title' => $this->faker->randomElement($games),
             'code' => strtoupper($this->faker->unique()->bothify('GAME-#####')),
+            'product_type' => Game::TYPE_GAME,
             'full_price' => $this->faker->randomFloat(2, 30, 100),
             'ps4_primary_price' => $this->faker->randomFloat(2, 20, 80),
             'ps4_primary_status' => true,
@@ -53,5 +54,13 @@ class GameFactory extends Factory
             'ps4_image_url' => 'assets/uploads/default-game.webp',
             'ps5_image_url' => 'assets/uploads/default-game.webp',
         ];
+    }
+
+    public function subscription(): static
+    {
+        return $this->state(fn () => [
+            'product_type' => Game::TYPE_SUBSCRIPTION,
+            'title' => 'PlayStation Plus ' . $this->faker->randomElement(['Essential', 'Extra', 'Premium']),
+        ]);
     }
 }

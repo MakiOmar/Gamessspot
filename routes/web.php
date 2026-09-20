@@ -591,6 +591,15 @@ Route::prefix('manager')->group(function () {
                 Route::get('/search/ps5', [ManagerController::class, 'searchPS5Games'])->name('manager.games.search.ps5');
                 Route::get('/search', [ManagerController::class, 'searchGamesByTitle'])->name('manager.games.search');
             });
+
+            Route::prefix('subscriptions')->group(function () {
+                Route::get('/', [ManagerController::class, 'showSubscriptions'])->name('manager.subscriptions');
+                Route::get('/ps4', [ManagerController::class, 'showPS4Subscriptions'])->name('manager.subscriptions.ps4');
+                Route::get('/ps5', [ManagerController::class, 'showPS5Subscriptions'])->name('manager.subscriptions.ps5');
+                Route::get('/search/ps4', [ManagerController::class, 'searchPS4Subscriptions'])->name('manager.subscriptions.search.ps4');
+                Route::get('/search/ps5', [ManagerController::class, 'searchPS5Subscriptions'])->name('manager.subscriptions.search.ps5');
+                Route::get('/search', [ManagerController::class, 'searchSubscriptionsByTitle'])->name('manager.subscriptions.search');
+            });
         });
 
         // Routes with 'can:edit-games' middleware for admin only

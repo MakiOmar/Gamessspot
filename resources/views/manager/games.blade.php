@@ -1,6 +1,15 @@
 @extends('layouts.admin')
 
-@section('title', 'Manager - Games')
+@php
+    $pageTitle = $pageTitle ?? 'Manager - Games';
+    $pageHeading = $pageHeading ?? 'Games Management';
+    $createButtonLabel = $createButtonLabel ?? 'Create Game';
+    $defaultProductType = $defaultProductType ?? \App\Models\Game::TYPE_GAME;
+    $searchRoute = $searchRoute ?? route('manager.games.search');
+    $isSubscriptionCatalog = $isSubscriptionCatalog ?? false;
+@endphp
+
+@section('title', $pageTitle)
 @section('plugins.Summernote', true)
 @push('css')
 <style>
@@ -23,16 +32,16 @@
 @endpush
 @section('content')
     <div class="container mt-5">
-        <h1 class="text-center mb-4">Games Management</h1>
+        <h1 class="text-center mb-4">{{ $pageHeading }}</h1>
         
         {{-- Cache Indicator --}}
         @include('components.cache-indicator')
         
         <!-- Search Box -->
-        <input type="text" id="search-box" class="form-control mb-3" placeholder="Search games by title...">
+        <input type="text" id="search-box" class="form-control mb-3" placeholder="Search by title...">
         <div class="d-flex justify-content-end mb-4">
             <button class="btn btn-success" id="createGameBtn" data-bs-toggle="modal" data-bs-target="#editGameModal">
-                Create Game
+                {{ $createButtonLabel }}
             </button>
             
         </div>
@@ -65,6 +74,13 @@
                         <!-- Game Code -->
                         <label for="gameCode" class="mt-3">Game Code</label>
                         <input type="text" id="gameCode" name="code" class="form-control" style="border-radius: 10px;" required>
+
+                        <!-- Product type: game vs subscription (PS Plus, etc.) -->
+                        <label for="productType" class="mt-3">Product Type</label>
+                        <select id="productType" name="product_type" class="form-control" style="border-radius: 10px;" required>
+                            <option value="game">Game</option>
+                            <option value="subscription">Subscription</option>
+                        </select>
 
                         <!-- Game Description (WYSIWYG) -->
                         <label for="description" class="mt-3">Description</label>
@@ -246,9 +262,9 @@
             let query = $(this).val();
             if ( query.length >= 3 ) {
                     $.ajax({
-                    url: "{{ route('manager.games.search') }}",
+                    url: @json($searchRoute),
                     type: "GET",
-                    data: { query: query },
+                    data: { query: query, product_type: @json($defaultProductType) },
                     success: function (data) {
                         $('#games-table').html(data);
                     }
@@ -262,10 +278,11 @@
         $('#createGameBtn').on('click', function() {
             // Reset the form fields for creating a new game
             $('#editGameForm').find('input').val(''); // Reset all input fields
-            $('#editGameForm').find('select').val('1'); // Reset all input fields
+            $('#editGameForm').find('select').not('#productType').val('1'); // Status selects default Available
+            $('#productType').val(@json($defaultProductType));
             $('#editGameForm').find('.is-invalid').removeClass('is-invalid'); // Remove validation classes
             $('#editGameForm').find('.invalid-feedback').remove(); // Remove previous error messages
-            $('#editGameModalLabel').text('Create New Game'); // Update modal title
+            $('#editGameModalLabel').text(@json($isSubscriptionCatalog ? 'Create New Subscription' : 'Create New Game'));
 
             // Hide image previews for new game
             $('#ps4ImagePreview, #ps4ImageLink').hide();
@@ -286,7 +303,7 @@
             $('#editGameForm').find('input, select').val(''); // Reset all input fields to blank
             $('#editGameForm').find('.is-invalid').removeClass('is-invalid'); // Remove previous validation errors
             $('#editGameForm').find('.invalid-feedback').remove(); // Remove previous error messages
-            $('#editGameModalLabel').text('Edit Game'); // Update modal title
+            $('#editGameModalLabel').text(@json($isSubscriptionCatalog ? 'Edit Subscription' : 'Edit Game'));
             setGameDescription('');
             renderExistingGallery([]);
             $('#galleryImages').val('');
@@ -300,6 +317,7 @@
                     $('#gameId').val(response.id);
                     $('#gameName').val(response.title);
                     $('#gameCode').val(response.code);
+                    $('#productType').val(response.product_type || 'game');
                     $('#fullPrice').val(response.full_price);
                     $('#ps4PrimaryPrice').val(response.ps4_primary_price);
                     $('#ps4PrimaryStatus').val(response.ps4_primary_status);

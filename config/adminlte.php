@@ -352,6 +352,31 @@ return [
             ],
         ],
 
+        // Subscriptions (PS Plus, etc. — same sell flow as games)
+        [
+            'text' => 'Subscriptions',
+            'icon' => 'bi bi-calendar-check',
+            'can' => 'manage-games',
+            'submenu' => [
+                [
+                    'text' => 'Edit/Add Subscriptions',
+                    'route' => 'manager.subscriptions',
+                    'icon' => 'bi bi-circle',
+                    'can' => 'edit-games',
+                ],
+                [
+                    'text' => 'PS4 Subscriptions',
+                    'route' => 'manager.subscriptions.ps4',
+                    'icon' => 'bi bi-circle',
+                ],
+                [
+                    'text' => 'PS5 Subscriptions',
+                    'route' => 'manager.subscriptions.ps5',
+                    'icon' => 'bi bi-circle',
+                ],
+            ],
+        ],
+
         // Gift Cards
         [
             'text' => 'Gift Cards',
@@ -575,6 +600,31 @@ return [
                 [
                     'text' => 'PS5 Games',
                     'route' => 'manager.games.ps5',
+                    'icon' => 'bi bi-circle',
+                ],
+            ],
+        ],
+
+        // Subscriptions (navbar)
+        [
+            'text' => 'Subscriptions',
+            'icon' => 'bi bi-calendar-check',
+            'can' => 'manage-games',
+            'submenu' => [
+                [
+                    'text' => 'Edit/Add Subscriptions',
+                    'route' => 'manager.subscriptions',
+                    'icon' => 'bi bi-circle',
+                    'can' => 'edit-games',
+                ],
+                [
+                    'text' => 'PS4 Subscriptions',
+                    'route' => 'manager.subscriptions.ps4',
+                    'icon' => 'bi bi-circle',
+                ],
+                [
+                    'text' => 'PS5 Subscriptions',
+                    'route' => 'manager.subscriptions.ps5',
                     'icon' => 'bi bi-circle',
                 ],
             ],

@@ -5,6 +5,7 @@
     $pageHeading = $pageHeading ?? null;
     $pageDescription = $pageDescription ?? null;
     $showSearch = $showSearch ?? true;
+    $searchRoute = $searchRoute ?? (($n ?? 4) == 4 ? route('manager.games.search.ps4') : route('manager.games.search.ps5'));
 @endphp
 
 @push('css')
@@ -230,8 +231,7 @@
             });
     
             function performSearch(query) {
-                const platform = '{{ $n }}'; // Get the current platform dynamically (4 for PS4 or 5 for PS5)
-                const url = platform === '4' ? '{{ route('manager.games.search.ps4') }}' : '{{ route('manager.games.search.ps5') }}';
+                const url = @json($searchRoute);
     
                 $.ajax({
                     url: url,

@@ -12,7 +12,12 @@
         @foreach($games as $game)
             <tr>
                 <td>{{ $game->id }}</td>
-                <td><span class="wraptext" style="max-width:90%;">{{ $game->title }}<span></td>
+                <td>
+                    <span class="wraptext" style="max-width:90%;">{{ $game->title }}</span>
+                    @if(($game->product_type ?? 'game') === 'subscription')
+                        <span class="badge bg-info text-dark ms-1">Subscription</span>
+                    @endif
+                </td>
                 <td>{{ $game->code }}</td>
                 <td><a href="#">View Reports</a></td>
                 <td>

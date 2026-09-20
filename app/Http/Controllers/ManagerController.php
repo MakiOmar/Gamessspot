@@ -30,23 +30,56 @@ class ManagerController extends Controller
      */
     public function showGames()
     {
-        // Get current page from request
+        return $this->showCatalogList(Game::TYPE_GAME);
+    }
+
+    /**
+     * Subscriptions edit/add listing (same blade as games).
+     */
+    public function showSubscriptions()
+    {
+        return $this->showCatalogList(Game::TYPE_SUBSCRIPTION);
+    }
+
+    /**
+     * Paginated catalog admin list filtered by product type.
+     */
+    private function showCatalogList(string $productType)
+    {
+        $productType = Game::normalizeProductType($productType);
         $page = request()->input('page', 1);
-        
-        // Get cache key for this listing (no store profile - global view)
-        $cacheKey = CacheManager::getGameListingKey('all', $page, null);
-        
-        // ✅ Cache game listings with pagination
-        $games = CacheManager::getGameListing('all', $page, function () {
-            return Game::paginate(100);
+        $listKey = $productType === Game::TYPE_SUBSCRIPTION ? 'subscriptions' : 'all';
+
+        $cacheKey = CacheManager::getGameListingKey($listKey, $page, null);
+
+        $games = CacheManager::getGameListing($listKey, $page, function () use ($productType) {
+            return Game::ofProductType($productType)->orderBy('title')->paginate(100);
         }, null);
-        
-        // Get cache metadata
+
         $cacheMetadata = CacheManager::getCacheMetadata($cacheKey);
         $fromCache = CacheManager::wasCacheHit($cacheKey);
+        $isSubscriptionCatalog = $productType === Game::TYPE_SUBSCRIPTION;
+        $pageTitle = $isSubscriptionCatalog ? 'Manager - Subscriptions' : 'Manager - Games';
+        $pageHeading = $isSubscriptionCatalog ? 'Subscriptions Management' : 'Games Management';
+        $createButtonLabel = $isSubscriptionCatalog ? 'Create Subscription' : 'Create Game';
+        $defaultProductType = $productType;
+        $searchRoute = $isSubscriptionCatalog
+            ? route('manager.subscriptions.search')
+            : route('manager.games.search');
 
-        // Return the view with the games data
-        return view('manager.games', compact('games', 'cacheKey', 'cacheMetadata', 'fromCache'));
+        return view('manager.games', compact(
+            'games',
+            'cacheKey',
+            'cacheMetadata',
+            'fromCache',
+            'productType',
+            'isSubscriptionCatalog',
+            'pageTitle',
+            'pageHeading',
+            'createButtonLabel',
+            'defaultProductType',
+            'searchRoute'
+        ));
     }
     // Show the game data for editing
     public function edit($id)
@@ -77,6 +110,7 @@ class ManagerController extends Controller
                 'games.title',
                 'games.code',
                 'games.description',
+                'games.product_type',
                 'games.full_price',
                 'games.ps4_image_url',
                 'games.ps5_image_url',
@@ -106,6 +140,7 @@ class ManagerController extends Controller
                 'games.title',
                 'games.code',
                 'games.description',
+                'games.product_type',
                 'games.full_price',
                 'games.ps4_image_url',
                 'games.ps5_image_url',
@@ -173,6 +208,7 @@ class ManagerController extends Controller
         $request->validate([
         'title'                => 'required|string|max:255',
         'code'                 => 'required|string|max:255',
+        'product_type'         => 'required|in:' . implode(',', Game::PRODUCT_TYPES),
         'full_price'           => 'required|numeric|min:0',
         'ps4_primary_price'    => 'nullable|numeric|min:0',
         'ps4_secondary_price'  => 'nullable|numeric|min:0',
@@ -315,6 +351,7 @@ class ManagerController extends Controller
         $validatedData = $request->validate([
         'title'                => 'required|string|max:255',
         'code'                 => 'required|string|max:255',
+        'product_type'         => 'required|in:' . implode(',', Game::PRODUCT_TYPES),
         'full_price'           => 'required|numeric|min:0',
         'ps4_primary_price'    => 'nullable|numeric|min:0',
         'ps4_secondary_price'  => 'nullable|numeric|min:0',
@@ -391,48 +428,72 @@ class ManagerController extends Controller
      * @param int $n
      * @return \Illuminate\View\View
      */
-    public function getGamesByPlatform($n)
+    public function getGamesByPlatform($n, string $productType = Game::TYPE_GAME)
     {
-        // Get current page from request
+        $productType = Game::normalizeProductType($productType);
         $page = request()->input('page', 1);
-        
-        // Get current user's store profile ID
+
         $user = Auth::user();
         $storeProfileId = $user->store_profile_id;
-        
-        // Get cache key for this platform listing (store-specific)
+
         $platform = $n == 4 ? 'ps4' : 'ps5';
-        $cacheKey = CacheManager::getGameListingKey($platform, $page, $storeProfileId);
-        
-        // ✅ Cache platform game listings (per store profile)
-        $psGames = CacheManager::getGameListing($platform, $page, function () use ($n) {
-            return $this->fetchGamesByPlatform($n);
+        $cachePlatform = $productType === Game::TYPE_SUBSCRIPTION
+            ? "{$platform}_subscription"
+            : $platform;
+        $cacheKey = CacheManager::getGameListingKey($cachePlatform, $page, $storeProfileId);
+
+        $psGames = CacheManager::getGameListing($cachePlatform, $page, function () use ($n, $productType) {
+            return $this->fetchGamesByPlatform($n, $productType);
         }, $storeProfileId);
 
-        // Determine if the primary stock is active
         $offline_stock   = "ps{$n}_offline_stock";
         $primary_stock   = "ps{$n}_primary_stock";
         $this->isPrimaryActive($psGames, $primary_stock, $offline_stock, $n);
 
-        // Fetch store profiles (needed by view)
         $storeProfiles = StoresProfile::all();
 
-        // Get cache metadata
         $cacheMetadata = CacheManager::getCacheMetadata($cacheKey);
         $fromCache = CacheManager::wasCacheHit($cacheKey);
 
-        // Return view with games, $n parameter, store profiles, and cache data
-        return view('manager.games_listings', compact('psGames', 'n', 'storeProfiles', 'cacheKey', 'cacheMetadata', 'fromCache'));
+        $isSubscription = $productType === Game::TYPE_SUBSCRIPTION;
+        $pageTitle = $isSubscription
+            ? "Manager - PS{$n} Subscriptions"
+            : "Manager - Games";
+        $pageHeading = $isSubscription
+            ? "PS{$n} Subscriptions"
+            : null;
+        $pageDescription = $isSubscription
+            ? 'Sell PlayStation Plus and other subscription account shares.'
+            : null;
+        $searchRoute = $isSubscription
+            ? ($n == 4 ? route('manager.subscriptions.search.ps4') : route('manager.subscriptions.search.ps5'))
+            : ($n == 4 ? route('manager.games.search.ps4') : route('manager.games.search.ps5'));
+
+        return view('manager.games_listings', compact(
+            'psGames',
+            'n',
+            'storeProfiles',
+            'cacheKey',
+            'cacheMetadata',
+            'fromCache',
+            'pageTitle',
+            'pageHeading',
+            'pageDescription',
+            'searchRoute',
+            'productType'
+        ));
     }
     
     /**
      * Fetch games by platform (extracted for caching)
      *
      * @param int $n
-     * @return \Illuminate\Pagination\LengthAwarePaginator
+     * @param string $productType
+     * @return \Illuminate\Support\Collection
      */
-    private function fetchGamesByPlatform($n)
+    private function fetchGamesByPlatform($n, string $productType = Game::TYPE_GAME)
     {
+        $productType = Game::normalizeProductType($productType);
         // Get the current user
         $user = Auth::user();
         $storeProfileId = $user->store_profile_id;
@@ -458,6 +519,7 @@ class ManagerController extends Controller
                 'games.id',
                 'games.title',
                 'games.code',
+                'games.product_type',
                 'games.full_price',
                 "games.{$image_url}",
                 "games.{$offline_status}",
@@ -477,10 +539,12 @@ class ManagerController extends Controller
                 $join->on('games.id', '=', 'special_prices.game_id')
                     ->where('special_prices.store_profile_id', '=', $storeProfileId);
             })
+            ->where('games.product_type', $productType)
             ->groupBy(
                 'games.id',
                 'games.title',
                 'games.code',
+                'games.product_type',
                 'games.full_price',
                 "games.{$image_url}",
                 "games.{$offline_status}",
@@ -529,6 +593,7 @@ class ManagerController extends Controller
                     $join->where('special_prices.store_profile_id', '=', $storeProfileId);
                 }
             })
+            ->where('games.product_type', Game::TYPE_GAME)
             ->where('accounts.is_full', false)
             ->where('accounts.ps4_offline_stock', '=', 0)
             ->where('accounts.ps4_primary_stock', '>', 0)
@@ -593,6 +658,8 @@ class ManagerController extends Controller
             return response()->json( array( 'error' => 'Invalid platform. Use 4 for PS4 or 5 for PS5.' ), 400 );
         }
 
+        $productType = Game::normalizeProductType(request()->input('product_type', Game::TYPE_GAME));
+
         $image_url        = "ps{$platform}_image_url";
         $offline_price    = "ps{$platform}_offline_price";
         $primary_price    = "ps{$platform}_primary_price";
@@ -611,6 +678,7 @@ class ManagerController extends Controller
                 'games.id',
                 'games.title',
                 'games.code',
+                'games.product_type',
                 "games.{$image_url} as image_url",
                 // Use special prices if available, fallback to games table prices
                 DB::raw( "COALESCE(special_prices.{$offline_price}, games.{$offline_price}) as offline_price" ),
@@ -630,13 +698,15 @@ class ManagerController extends Controller
                 $join->on('games.id', '=', 'special_prices.game_id')
                      ->where('special_prices.store_profile_id', '=', $storeProfileId)
                      ->where('special_prices.is_available', '=', 1);
-            });
+            })
+            ->where('games.product_type', $productType);
 
         $psGames = $psGamesQuery
             ->groupBy(
                 'games.id',
                 'games.title',
                 'games.code',
+                'games.product_type',
                 'games.full_price',
                 "games.{$image_url}",
                 "special_prices.{$offline_price}",
@@ -683,11 +753,12 @@ class ManagerController extends Controller
                 );
 
                 return array(
-                    'id'        => $game->id,
-                    'title'     => $game->title,
-                    'code'      => $game->code,
-                    'image_url' => $game->image_url,
-                    'types'     => $types,
+                    'id'           => $game->id,
+                    'title'        => $game->title,
+                    'code'         => $game->code,
+                    'product_type' => $game->product_type,
+                    'image_url'    => $game->image_url,
+                    'types'        => $types,
                 );
             }
         );
@@ -822,7 +893,12 @@ class ManagerController extends Controller
      */
     public function showPS4Games()
     {
-        return $this->getGamesByPlatform(4);
+        return $this->getGamesByPlatform(4, Game::TYPE_GAME);
+    }
+
+    public function showPS4Subscriptions()
+    {
+        return $this->getGamesByPlatform(4, Game::TYPE_SUBSCRIPTION);
     }
 
     /**
@@ -854,6 +930,8 @@ class ManagerController extends Controller
         $pageHeading = 'WooCommerce eligible PS4';
         $pageDescription = 'Games with primary accounts that can sync to WooCommerce (offline stock is zero).';
         $showSearch = false;
+        $searchRoute = route('manager.games.search.ps4');
+        $productType = Game::TYPE_GAME;
 
         return view('manager.games_listings', compact(
             'psGames',
@@ -865,14 +943,21 @@ class ManagerController extends Controller
             'pageTitle',
             'pageHeading',
             'pageDescription',
-            'showSearch'
+            'showSearch',
+            'searchRoute',
+            'productType'
         ));
     }
 
 
     public function showPS5Games()
     {
-        return $this->getGamesByPlatform(5);
+        return $this->getGamesByPlatform(5, Game::TYPE_GAME);
+    }
+
+    public function showPS5Subscriptions()
+    {
+        return $this->getGamesByPlatform(5, Game::TYPE_SUBSCRIPTION);
     }
 
     public function getGamesWithAccountStocks()
@@ -897,43 +982,58 @@ class ManagerController extends Controller
     }
     public function searchPS4Games(Request $request)
     {
-        $query = $request->input('query', '');
-        $n = 4; // Define the platform as PS4
-        $psGames = $this->filterGames($n, $query);
-        $offline_stock   = "ps{$n}_offline_stock";
-        $primary_stock   = "ps{$n}_primary_stock";
-        // Determine if the primary stock is active
-        $this->isPrimaryActive($psGames, $primary_stock, $offline_stock, $n);
-        $image_url       = "ps{$n}_image_url";
-        return view('manager.partials.games_list', compact('psGames', 'n'))->render();
+        return $this->searchPlatformListings($request, 4, Game::TYPE_GAME);
+    }
+
+    public function searchPS4Subscriptions(Request $request)
+    {
+        return $this->searchPlatformListings($request, 4, Game::TYPE_SUBSCRIPTION);
     }
 
     public function searchPS5Games(Request $request)
     {
+        return $this->searchPlatformListings($request, 5, Game::TYPE_GAME);
+    }
+
+    public function searchPS5Subscriptions(Request $request)
+    {
+        return $this->searchPlatformListings($request, 5, Game::TYPE_SUBSCRIPTION);
+    }
+
+    private function searchPlatformListings(Request $request, int $n, string $productType)
+    {
         $query = $request->input('query', '');
-        $n = 5; // Define the platform as PS5
-        $psGames = $this->filterGames($n, $query);
+        $psGames = $this->filterGames($n, $query, $productType);
         $offline_stock   = "ps{$n}_offline_stock";
         $primary_stock   = "ps{$n}_primary_stock";
-        // Determine if the primary stock is active
         $this->isPrimaryActive($psGames, $primary_stock, $offline_stock, $n);
-        $image_url       = "ps{$n}_image_url";
 
         return view('manager.partials.games_list', compact('psGames', 'n'))->render();
     }
+
     public function searchGamesByTitle(Request $request)
     {
         $query = $request->input('query', '');
+        $productType = Game::normalizeProductType($request->input('product_type', Game::TYPE_GAME));
 
-    // Fetch games matching the title
-        $games = Game::where('title', 'LIKE', "%{$query}%")->paginate(10); // Paginate results
+        $games = Game::ofProductType($productType)
+            ->where('title', 'LIKE', "%{$query}%")
+            ->paginate(10);
 
-        return view('manager.partials.games_row', compact('games'))->render(); // Return partial view
+        return view('manager.partials.games_row', compact('games'))->render();
+    }
+
+    public function searchSubscriptionsByTitle(Request $request)
+    {
+        $request->merge(['product_type' => Game::TYPE_SUBSCRIPTION]);
+
+        return $this->searchGamesByTitle($request);
     }
 
 
-    private function filterGames($platform, $query)
+    private function filterGames($platform, $query, string $productType = Game::TYPE_GAME)
     {
+        $productType = Game::normalizeProductType($productType);
         $user = Auth::user();
         $storeProfileId = $user->store_profile_id;
 
@@ -956,6 +1056,7 @@ class ManagerController extends Controller
                 'games.id',
                 'games.title',
                 'games.code',
+                'games.product_type',
                 'games.full_price',
                 "games.{$image_url}",
                 "games.{$offline_status}",
@@ -974,6 +1075,7 @@ class ManagerController extends Controller
                 $join->on('games.id', '=', 'special_prices.game_id')
                     ->where('special_prices.store_profile_id', '=', $storeProfileId);
             })
+            ->where('games.product_type', $productType)
             ->where(function ($queryBuilder) use ($query) {
                 // Apply search filter
                 $queryBuilder->where('games.title', 'LIKE', "%{$query}%")
@@ -983,6 +1085,7 @@ class ManagerController extends Controller
                 'games.id',
                 'games.title',
                 'games.code',
+                'games.product_type',
                 'games.full_price',
                 "games.{$image_url}",
                 "games.{$offline_status}",
