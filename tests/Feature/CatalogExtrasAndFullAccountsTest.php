@@ -70,10 +70,10 @@ class CatalogExtrasAndFullAccountsTest extends TestCase
             ->assertJsonPath('data.reviews.items.0.reviewer_name', 'Reviewer One');
     }
 
-    public function test_full_sell_decrements_three_stocks_and_undo_restores(): void
+    public function test_full_sell_keeps_ps4_primary_and_clears_feature(): void
     {
         $game = Game::factory()->create();
-        $account = Account::create([
+        $account = Account::create(array_merge([
             'mail' => 'full_' . uniqid() . '@example.com',
             'password' => 'secret',
             'game_id' => $game->id,
@@ -82,31 +82,94 @@ class CatalogExtrasAndFullAccountsTest extends TestCase
             'birthdate' => '1990-01-01',
             'login_code' => '1234',
             'is_full' => true,
-            'ps4_primary_stock' => 1,
-            'ps4_secondary_stock' => 1,
-            'ps4_offline_stock' => 1,
-            'ps5_primary_stock' => 1,
-            'ps5_secondary_stock' => 1,
-            'ps5_offline_stock' => 1,
-        ]);
+        ], Account::resolveInitialStocks(false, false)));
 
-        $this->assertTrue($account->hasSellableFullBundle(4));
+        $this->assertTrue($account->canSellAsFull());
+        $this->assertTrue($account->isPristineForFullFeature());
 
-        $account->decrement('ps4_primary_stock', 1);
-        $account->decrement('ps4_secondary_stock', 1);
-        $account->decrement('ps4_offline_stock', 1);
+        $account->applyFullSale();
         $account->refresh();
 
-        $this->assertFalse($account->hasSellableFullBundle(4));
-        $this->assertSame(0, (int) $account->ps4_primary_stock);
+        $this->assertFalse($account->is_full);
+        $this->assertFalse($account->canSellAsFull());
+        $this->assertSame(1, (int) $account->ps4_primary_stock);
         $this->assertSame(0, (int) $account->ps4_secondary_stock);
         $this->assertSame(0, (int) $account->ps4_offline_stock);
+        $this->assertSame(0, (int) $account->ps5_primary_stock);
+        $this->assertSame(0, (int) $account->ps5_secondary_stock);
+        $this->assertSame(0, (int) $account->ps5_offline_stock);
 
-        $account->increment('ps4_primary_stock', 1);
-        $account->increment('ps4_secondary_stock', 1);
-        $account->increment('ps4_offline_stock', 1);
+        $account->restoreFullSaleBundle();
         $account->refresh();
 
-        $this->assertTrue($account->hasSellableFullBundle(4));
+        $this->assertTrue($account->isPristineForFullFeature());
+        $this->assertTrue($account->is_full);
+        $this->assertTrue($account->canSellAsFull());
+    }
+
+    public function test_ps5_only_full_sell_clears_ps5_stocks(): void
+    {
+        $game = Game::factory()->create();
+        $account = Account::create(array_merge([
+            'mail' => 'full5_' . uniqid() . '@example.com',
+            'password' => 'secret',
+            'game_id' => $game->id,
+            'region' => 'US',
+            'cost' => 10,
+            'birthdate' => '1990-01-01',
+            'login_code' => '1234',
+            'is_full' => true,
+        ], Account::resolveInitialStocks(false, true)));
+
+        $this->assertTrue($account->isPs5OnlyAccount());
+        $this->assertTrue($account->canSellAsFull());
+
+        $account->applyFullSale();
+        $account->refresh();
+
+        $this->assertFalse($account->is_full);
+        $this->assertSame(0, (int) $account->ps5_primary_stock);
+        $this->assertSame(0, (int) $account->ps5_secondary_stock);
+        $this->assertSame(0, (int) $account->ps5_offline_stock);
+    }
+
+    public function test_individual_sale_disables_full_feature(): void
+    {
+        $game = Game::factory()->create();
+        $account = Account::create(array_merge([
+            'mail' => 'indiv_' . uniqid() . '@example.com',
+            'password' => 'secret',
+            'game_id' => $game->id,
+            'region' => 'US',
+            'cost' => 10,
+            'birthdate' => '1990-01-01',
+            'login_code' => '1234',
+            'is_full' => true,
+        ], Account::resolveInitialStocks(false, false)));
+
+        $account->decrement('ps5_primary_stock', 1);
+        $account->refresh();
+        $account->disableFullFeatureIfNeeded();
+        $account->refresh();
+
+        $this->assertFalse($account->is_full);
+        $this->assertFalse($account->canSellAsFull());
+    }
+
+    public function test_cannot_enable_full_on_non_pristine_stocks(): void
+    {
+        $game = Game::factory()->create();
+        $account = Account::create(array_merge([
+            'mail' => 'nopristine_' . uniqid() . '@example.com',
+            'password' => 'secret',
+            'game_id' => $game->id,
+            'region' => 'US',
+            'cost' => 10,
+            'birthdate' => '1990-01-01',
+            'login_code' => '1234',
+            'is_full' => false,
+        ], Account::resolveInitialStocks(false, false, ['ps4_primary' => true])));
+
+        $this->assertFalse($account->isPristineForFullFeature());
     }
 }

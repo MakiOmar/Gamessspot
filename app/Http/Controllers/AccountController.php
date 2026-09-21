@@ -85,12 +85,12 @@ class AccountController extends Controller
     {
         $templateData = [
             [
-                'Mail', 'Password', 'Game', 'Region', 'Cost', 'Birthdate', 'Login Code',
+                'Mail', 'Password', 'Game', 'Region', 'Cost', 'Birthdate', 'Login Code', 'Is Full',
                 'PS4 Primary Stock', 'PS4 Secondary Stock', 'PS4 Offline Stock',
                 'PS5 Primary Stock', 'PS5 Secondary Stock', 'PS5 Offline Stock'
             ],
             [
-                'example@email.com', 'password123', 'Game Title', 'US', '25.00', '1990-01-01', 'ABC123',
+                'example@email.com', 'password123', 'Game Title', 'US', '25.00', '1990-01-01', 'ABC123', '0',
                 '1', '1', '2', '1', '1', '1'
             ]
         ];
@@ -170,7 +170,7 @@ class AccountController extends Controller
         $isFull = $request->boolean('is_full');
         $ps5Only = $request->boolean('ps5_only') || $request->has('ps5_only');
 
-        $stocks = Account::resolveInitialStocks($isFull, $ps5Only, [
+        $soldFlags = [
             'ps4_primary' => $request->has('ps4_primary'),
             'ps4_secondary' => $request->has('ps4_secondary'),
             'ps5_primary' => $request->has('ps5_primary'),
@@ -178,7 +178,16 @@ class AccountController extends Controller
             'ps4_offline1' => $request->has('ps4_offline1'),
             'ps4_offline2' => $request->has('ps4_offline2'),
             'ps5_offline' => $request->has('ps5_offline'),
-        ]);
+        ];
+
+        // Full is a feature flag — stocks always use the normal / PS5-only path
+        $stocks = Account::resolveInitialStocks(false, $ps5Only, $soldFlags);
+
+        if ($isFull && !Account::stocksArePristine($stocks)) {
+            return response()->json([
+                'error' => 'Full sell feature can only be enabled when no account types are already marked sold.',
+            ], 422);
+        }
 
         // Create the new account with adjusted stock values
         $account = Account::create(
@@ -251,6 +260,12 @@ class AccountController extends Controller
         ]);
 
         $validated['is_full'] = $request->boolean('is_full');
+
+        if ($validated['is_full'] && !Account::stocksArePristine($validated)) {
+            return response()->json([
+                'error' => 'Full sell feature can only be enabled when stocks match an unsold account (dual 1/1/2 + 1/1/1 or PS5-only 0/0/0 + 1/1/2).',
+            ], 422);
+        }
 
         $account->update($validated);
 

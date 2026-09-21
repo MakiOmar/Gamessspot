@@ -200,28 +200,28 @@
                         <textarea class="form-control" id="login_code" name="login_code" rows="3"></textarea>
                     </div>
 
-                    <!-- Account type applies to both platforms (not PS4-only) -->
+                    <!-- Full sell is a feature (not a stock profile) -->
                     <div id="stock-availability">
                         <div class="form-group">
-                            <label>Account type</label>
+                            <label>Full sell feature</label>
                             <div class="mb-1">
-                                <!-- Full account: sells primary+secondary+offline as one bundle on each enabled platform -->
+                                <!-- Enables selling offline+secondary+PS5 as one bundle; keeps PS4 primary -->
                                 <label class="checkbox me-3">
                                     <input type="checkbox" id="is_full" name="is_full" value="1">
-                                    <span></span> <strong>Full account</strong>
+                                    <span></span> <strong>Full account sell</strong>
                                 </label>
-                                <!-- Optional: limit full (or normal) stock assignment to PS5 -->
+                                <!-- Optional: PS5-only stock profile (zeros PS4) -->
                                 <label class="checkbox">
                                     <input type="checkbox" id="ps5_only" name="ps5_only" value="1">
                                     <span></span> <strong>PS5 Only</strong>
                                 </label>
                             </div>
                             <small class="text-muted d-block" id="full-account-hint">
-                                Full account works for PS4 and PS5. Slot options below are ignored while it is checked.
+                                When enabled, this account can be sold as a full bundle (PS4 secondary+offline and all PS5). PS4 primary is kept. Cannot enable if any slot below is already sold.
                             </small>
                         </div>
 
-                        <!-- Per-slot sold flags (ignored when Full account is checked) -->
+                        <!-- Per-slot sold flags (disable full feature when any is checked) -->
                         <div id="slot-availability" class="slot-availability">
                             <!-- PS4 Availability -->
                             <div class="form-group">
@@ -319,12 +319,15 @@
                         <input type="number" min="0" class="form-control" id="ps5OfflineStock" name="ps5_offline_stock" required>
                     </div>
 
-                    <!-- Persist full-account flag when editing stock -->
+                    <!-- Persist full-sell feature flag when editing stock -->
                     <div class="form-group mt-3 mb-0">
                         <label class="checkbox">
                             <input type="checkbox" id="stockIsFull" name="is_full" value="1">
-                            <span></span> <strong>Full account</strong>
+                            <span></span> <strong>Full account sell</strong>
                         </label>
+                        <small class="text-muted d-block" id="stockFullHint">
+                            Only allowed when stocks are pristine (unsold dual or PS5-only defaults).
+                        </small>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -415,32 +418,40 @@
     }
 
     jQuery(document).ready(function($) {
-        // Re-apply disabled state for slot checkboxes based on Full / PS5 Only
+        // Sync Full sell feature vs sold-slot checkboxes and PS5 Only
         function syncAccountTypeAvailability() {
-            const isFull = $('#is_full').is(':checked');
             const ps5Only = $('#ps5_only').is(':checked');
 
-            if (isFull) {
-                // Full account: server sets stocks; disable all per-slot sold options
-                $('.slot-checkbox').prop('checked', false).prop('disabled', true);
-                $('#slot-availability').addClass('opacity-50').css('pointer-events', 'none');
-                $('#full-account-hint').text(
-                    ps5Only
-                        ? 'Full account (PS5 only): PS5 primary+secondary+offline sell as one bundle.'
-                        : 'Full account: PS4 and PS5 primary+secondary+offline sell as one bundle each. Slot options are disabled.'
-                );
+            $('#slot-availability').removeClass('opacity-50').css('pointer-events', '');
+
+            if (ps5Only) {
+                // PS5 Only: lock PS4 as sold flags (server uses ps5_only path, not those flags)
+                $('.ps4-checkbox').prop('checked', true).prop('disabled', true);
+                $('.ps5-checkbox').prop('disabled', false);
+
+                const ps5Sold = $('.ps5-checkbox:checked').length > 0;
+                $('#is_full').prop('disabled', ps5Sold);
+                if (ps5Sold) {
+                    $('#is_full').prop('checked', false);
+                    $('#full-account-hint').text('Full sell feature is disabled because a PS5 slot is marked sold.');
+                } else {
+                    $('#full-account-hint').text(
+                        'PS5 Only + Full sell: normal PS5-only stocks; can sell as a full PS5 bundle.'
+                    );
+                }
                 return;
             }
 
-            $('#slot-availability').removeClass('opacity-50').css('pointer-events', '');
-            $('#full-account-hint').text('Full account works for PS4 and PS5. Slot options below are ignored while it is checked.');
-
-            if (ps5Only) {
-                // PS5 Only (non-full): mark PS4 slots sold and lock them
-                $('.ps4-checkbox').prop('checked', true).prop('disabled', true);
-                $('.ps5-checkbox').prop('disabled', false);
+            $('.slot-checkbox').prop('disabled', false);
+            const anySlotSold = $('.slot-checkbox:checked').length > 0;
+            $('#is_full').prop('disabled', anySlotSold);
+            if (anySlotSold) {
+                $('#is_full').prop('checked', false);
+                $('#full-account-hint').text('Full sell feature is disabled because one or more slots are marked sold.');
             } else {
-                $('.slot-checkbox').prop('disabled', false);
+                $('#full-account-hint').text(
+                    'When enabled, this account can be sold as a full bundle (PS4 secondary+offline and all PS5). PS4 primary is kept.'
+                );
             }
         }
 
@@ -450,7 +461,8 @@
             $('#accountForm').attr('action', "{{ route('manager.accounts.store') }}").attr('method', 'POST');
             $('#accountForm')[0].reset(); // Reset the form
             $('#stock-availability').show();
-            $('#is_full, #ps5_only').prop('checked', false);
+            $('#is_full, #ps5_only').prop('checked', false).prop('disabled', false);
+            $('.slot-checkbox').prop('checked', false).prop('disabled', false);
             syncAccountTypeAvailability();
         });
 
@@ -509,6 +521,7 @@
             $('#ps5SecondaryStock').val(ps5Secondary);
             $('#ps5OfflineStock').val(ps5Offline);
             $('#stockIsFull').prop('checked', (buttonToRead ? buttonToRead.getAttribute('data-is_full') : '0') === '1');
+            syncStockFullFeatureAvailability();
             
             console.log('Modal populated with values from native DOM getAttribute:', {
                 ps4Primary: ps4Primary,
@@ -988,8 +1001,39 @@
             });
         });
 
-        // Full account / PS5 Only control which slot options stay editable
+        // Stock modal: only allow enabling full sell when stocks match pristine defaults
+        function stocksLookPristine(s) {
+            const dual = s.p4p === 1 && s.p4s === 1 && s.p4o === 2 && s.p5p === 1 && s.p5s === 1 && s.p5o === 1;
+            const ps5Only = s.p4p === 0 && s.p4s === 0 && s.p4o === 0 && s.p5p === 1 && s.p5s === 1 && s.p5o === 2;
+            return dual || ps5Only;
+        }
+
+        function syncStockFullFeatureAvailability() {
+            const s = {
+                p4p: parseInt($('#ps4PrimaryStock').val(), 10) || 0,
+                p4s: parseInt($('#ps4SecondaryStock').val(), 10) || 0,
+                p4o: parseInt($('#ps4OfflineStock').val(), 10) || 0,
+                p5p: parseInt($('#ps5PrimaryStock').val(), 10) || 0,
+                p5s: parseInt($('#ps5SecondaryStock').val(), 10) || 0,
+                p5o: parseInt($('#ps5OfflineStock').val(), 10) || 0,
+            };
+            const pristine = stocksLookPristine(s);
+            if (!pristine) {
+                $('#stockIsFull').prop('checked', false).prop('disabled', true);
+                $('#stockFullHint').text('Full sell cannot be enabled: stocks are not pristine (something already sold or custom values).');
+            } else {
+                $('#stockIsFull').prop('disabled', false);
+                $('#stockFullHint').text('Only allowed when stocks are pristine (unsold dual or PS5-only defaults).');
+            }
+        }
+
+        $('#stockModal').on('input change', 'input[type=number]', syncStockFullFeatureAvailability);
+
+        // Full sell feature / PS5 Only / sold-slot checkboxes
         $('#is_full, #ps5_only').on('change', function() {
+            syncAccountTypeAvailability();
+        });
+        $(document).on('change', '.slot-checkbox', function() {
             syncAccountTypeAvailability();
         });
 

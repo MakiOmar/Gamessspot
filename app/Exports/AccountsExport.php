@@ -34,12 +34,13 @@ class AccountsExport implements FromCollection, WithHeadings, WithMapping
             'Cost',
             'Birthdate',
             'Login Code',
+            'Is Full',
             'PS4 Primary Stock',
             'PS4 Secondary Stock',
             'PS4 Offline Stock',
             'PS5 Primary Stock',
             'PS5 Secondary Stock',
-            'PS5 Offline Stock'
+            'PS5 Offline Stock',
         ];
     }
 
@@ -59,12 +60,13 @@ class AccountsExport implements FromCollection, WithHeadings, WithMapping
             $account->cost,
             $account->birthdate,
             $account->login_code,
+            $account->is_full ? '1' : '0',
             $account->ps4_primary_stock,
             $account->ps4_secondary_stock,
             $account->ps4_offline_stock,
             $account->ps5_primary_stock,
             $account->ps5_secondary_stock,
-            $account->ps5_offline_stock
+            $account->ps5_offline_stock,
         ];
     }
 }

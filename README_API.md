@@ -206,7 +206,8 @@ Works for both games and subscriptions (same table).
 
 Notes:
 
-- Stock fields for offline/primary/secondary exclude full-account bundles; `ps*_full_stock` counts sellable full accounts.
+- Stock fields for offline/primary/secondary include all accounts (including those with the full-sell feature enabled). `ps*_full_stock` counts accounts that currently can be sold as full (feature on + required bundle stocks).
+- A **full** sale clears PS4 secondary+offline and all PS5 stocks, **keeps `ps4_primary_stock`**, then disables the full-sell feature on that account.
 - `reviews` includes **approved** reviews only (no phone numbers).
 
 **Error `404`** game not found.
@@ -367,7 +368,7 @@ If phone already exists, returns existing customer (`200`). Duplicate email for 
 }
 ```
 
-For `full`, `stock` is the count of sellable full accounts (all three stocks &gt; 0).
+For `full`, `stock` is the count of accounts with the full-sell feature enabled that still have the required cross-platform bundle stocks.
 
 ### `POST /api/orders/check_card_stock`
 
@@ -430,7 +431,7 @@ Allocates stock and creates an order. Use **either** a game/subscription sale **
 
 **Error `422`** no matching account stock.
 
-`full` decrements primary + secondary + offline together on an `is_full` account and records `sold_item` as `ps4_full` / `ps5_full`.
+`full` sells the account as a cross-platform bundle: zeros PS4 secondary+offline and all PS5 stocks, **keeps PS4 primary**, clears `is_full`, and records `sold_item` as `ps4_full` / `ps5_full` (platform from the request). Individual slot sales on a full-capable account also clear `is_full`.
 
 #### Gift-card sale
 

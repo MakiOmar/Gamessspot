@@ -126,14 +126,14 @@ class ManagerController extends Controller
                 DB::raw("COALESCE(special_prices.ps5_primary_price, games.ps5_primary_price) as ps5_primary_price"),
                 DB::raw("COALESCE(special_prices.ps5_secondary_price, games.ps5_secondary_price) as ps5_secondary_price"),
                 DB::raw("COALESCE(special_prices.ps5_offline_price, games.ps5_offline_price) as ps5_offline_price"),
-                DB::raw('COALESCE(SUM(CASE WHEN accounts.is_full = 0 THEN accounts.ps4_primary_stock ELSE 0 END), 0) as ps4_primary_stock'),
-                DB::raw('COALESCE(SUM(CASE WHEN accounts.is_full = 0 THEN accounts.ps4_secondary_stock ELSE 0 END), 0) as ps4_secondary_stock'),
-                DB::raw('COALESCE(SUM(CASE WHEN accounts.is_full = 0 THEN accounts.ps4_offline_stock ELSE 0 END), 0) as ps4_offline_stock'),
-                DB::raw('COALESCE(SUM(CASE WHEN accounts.is_full = 0 THEN accounts.ps5_primary_stock ELSE 0 END), 0) as ps5_primary_stock'),
-                DB::raw('COALESCE(SUM(CASE WHEN accounts.is_full = 0 THEN accounts.ps5_secondary_stock ELSE 0 END), 0) as ps5_secondary_stock'),
-                DB::raw('COALESCE(SUM(CASE WHEN accounts.is_full = 0 THEN accounts.ps5_offline_stock ELSE 0 END), 0) as ps5_offline_stock'),
-                DB::raw('COALESCE(SUM(CASE WHEN accounts.is_full = 1 AND accounts.ps4_primary_stock > 0 AND accounts.ps4_secondary_stock > 0 AND accounts.ps4_offline_stock > 0 THEN 1 ELSE 0 END), 0) as ps4_full_stock'),
-                DB::raw('COALESCE(SUM(CASE WHEN accounts.is_full = 1 AND accounts.ps5_primary_stock > 0 AND accounts.ps5_secondary_stock > 0 AND accounts.ps5_offline_stock > 0 THEN 1 ELSE 0 END), 0) as ps5_full_stock')
+                DB::raw('COALESCE(SUM(accounts.ps4_primary_stock), 0) as ps4_primary_stock'),
+                DB::raw('COALESCE(SUM(accounts.ps4_secondary_stock), 0) as ps4_secondary_stock'),
+                DB::raw('COALESCE(SUM(accounts.ps4_offline_stock), 0) as ps4_offline_stock'),
+                DB::raw('COALESCE(SUM(accounts.ps5_primary_stock), 0) as ps5_primary_stock'),
+                DB::raw('COALESCE(SUM(accounts.ps5_secondary_stock), 0) as ps5_secondary_stock'),
+                DB::raw('COALESCE(SUM(accounts.ps5_offline_stock), 0) as ps5_offline_stock'),
+                DB::raw('COALESCE(SUM(CASE WHEN (' . Account::fullSellEligibleSql() . ') THEN 1 ELSE 0 END), 0) as ps4_full_stock'),
+                DB::raw('COALESCE(SUM(CASE WHEN (' . Account::fullSellEligibleSql() . ') THEN 1 ELSE 0 END), 0) as ps5_full_stock')
             )
             ->groupBy(
                 'games.id',
@@ -528,11 +528,11 @@ class ManagerController extends Controller
                 DB::raw("COALESCE(special_prices.ps{$n}_primary_price, games.ps{$n}_primary_price) as ps{$n}_primary_price"),
                 DB::raw("COALESCE(special_prices.ps{$n}_secondary_price, games.ps{$n}_secondary_price) as ps{$n}_secondary_price"),
                 DB::raw("COALESCE(special_prices.ps{$n}_offline_price, games.ps{$n}_offline_price) as ps{$n}_offline_price"),
-                // Exclude full accounts from per-type stock sums
-                DB::raw("SUM(CASE WHEN accounts.is_full = 0 THEN accounts.{$offline_stock} ELSE 0 END) as {$offline_stock}"),
-                DB::raw("SUM(CASE WHEN accounts.is_full = 0 THEN accounts.{$primary_stock} ELSE 0 END) as {$primary_stock}"),
-                DB::raw("SUM(CASE WHEN accounts.is_full = 0 THEN accounts.{$secondary_stock} ELSE 0 END) as {$secondary_stock}"),
-                DB::raw("SUM(CASE WHEN accounts.is_full = 1 AND accounts.{$primary_stock} > 0 AND accounts.{$secondary_stock} > 0 AND accounts.{$offline_stock} > 0 THEN 1 ELSE 0 END) as ps{$n}_full_stock")
+                // Full-feature accounts still contribute to per-slot inventory
+                DB::raw("SUM(accounts.{$offline_stock}) as {$offline_stock}"),
+                DB::raw("SUM(accounts.{$primary_stock}) as {$primary_stock}"),
+                DB::raw("SUM(accounts.{$secondary_stock}) as {$secondary_stock}"),
+                DB::raw("SUM(CASE WHEN (" . Account::fullSellEligibleSql() . ") THEN 1 ELSE 0 END) as ps{$n}_full_stock")
             )
             ->join('games', 'accounts.game_id', '=', 'games.id')
             ->leftJoin('special_prices', function ($join) use ($storeProfileId) {
@@ -557,7 +557,7 @@ class ManagerController extends Controller
                 "special_prices.ps{$n}_secondary_price",
                 "special_prices.ps{$n}_offline_price",
             )
-            ->havingRaw("SUM(CASE WHEN accounts.is_full = 0 THEN accounts.{$offline_stock} ELSE 0 END) > 0 OR SUM(CASE WHEN accounts.is_full = 0 THEN accounts.{$primary_stock} ELSE 0 END) > 0 OR SUM(CASE WHEN accounts.is_full = 0 THEN accounts.{$secondary_stock} ELSE 0 END) > 0 OR SUM(CASE WHEN accounts.is_full = 1 AND accounts.{$primary_stock} > 0 AND accounts.{$secondary_stock} > 0 AND accounts.{$offline_stock} > 0 THEN 1 ELSE 0 END) > 0")
+            ->havingRaw("SUM(accounts.{$offline_stock}) > 0 OR SUM(accounts.{$primary_stock}) > 0 OR SUM(accounts.{$secondary_stock}) > 0 OR SUM(CASE WHEN (" . Account::fullSellEligibleSql() . ") THEN 1 ELSE 0 END) > 0")
             ->get();
     }
 
@@ -594,7 +594,6 @@ class ManagerController extends Controller
                 }
             })
             ->where('games.product_type', Game::TYPE_GAME)
-            ->where('accounts.is_full', false)
             ->where('accounts.ps4_offline_stock', '=', 0)
             ->where('accounts.ps4_primary_stock', '>', 0)
             ->groupBy(
@@ -632,7 +631,6 @@ class ManagerController extends Controller
         $oldestAccounts = DB::table('accounts')
             ->select('game_id', DB::raw('MIN(created_at) as oldest_created_at'))
             ->whereIn('game_id', $gameIds)
-            ->where('is_full', false)
             ->where($offline_stock, 0)
             ->where($primary_stock, '>', 0)
             ->groupBy('game_id')
@@ -688,10 +686,10 @@ class ManagerController extends Controller
                 "games.{$offline_status} as offline_status",
                 "games.{$primary_status} as primary_status",
                 "games.{$secondary_status} as secondary_status",
-                DB::raw( "SUM(CASE WHEN accounts.is_full = 0 THEN accounts.ps{$platform}_offline_stock ELSE 0 END) as total_offline_stock" ),
-                DB::raw( "SUM(CASE WHEN accounts.is_full = 0 THEN accounts.ps{$platform}_primary_stock ELSE 0 END) as total_primary_stock" ),
-                DB::raw( "SUM(CASE WHEN accounts.is_full = 0 THEN accounts.ps{$platform}_secondary_stock ELSE 0 END) as total_secondary_stock" ),
-                DB::raw( "SUM(CASE WHEN accounts.is_full = 1 AND accounts.ps{$platform}_primary_stock > 0 AND accounts.ps{$platform}_secondary_stock > 0 AND accounts.ps{$platform}_offline_stock > 0 THEN 1 ELSE 0 END) as total_full_stock" )
+                DB::raw( "SUM(accounts.ps{$platform}_offline_stock) as total_offline_stock" ),
+                DB::raw( "SUM(accounts.ps{$platform}_primary_stock) as total_primary_stock" ),
+                DB::raw( "SUM(accounts.ps{$platform}_secondary_stock) as total_secondary_stock" ),
+                DB::raw( "SUM(CASE WHEN (" . Account::fullSellEligibleSql() . ") THEN 1 ELSE 0 END) as total_full_stock" )
             )
             ->join( 'games', 'accounts.game_id', '=', 'games.id' )
             ->leftJoin( 'special_prices', function($join) use ($storeProfileId) {
@@ -719,7 +717,7 @@ class ManagerController extends Controller
                 "games.{$primary_status}",
                 "games.{$secondary_status}"
             )
-            ->havingRaw( "SUM(CASE WHEN accounts.is_full = 0 THEN accounts.ps{$platform}_offline_stock ELSE 0 END) > 0 OR SUM(CASE WHEN accounts.is_full = 0 THEN accounts.ps{$platform}_primary_stock ELSE 0 END) > 0 OR SUM(CASE WHEN accounts.is_full = 0 THEN accounts.ps{$platform}_secondary_stock ELSE 0 END) > 0 OR SUM(CASE WHEN accounts.is_full = 1 AND accounts.ps{$platform}_primary_stock > 0 AND accounts.ps{$platform}_secondary_stock > 0 AND accounts.ps{$platform}_offline_stock > 0 THEN 1 ELSE 0 END) > 0" )
+            ->havingRaw( "SUM(accounts.ps{$platform}_offline_stock) > 0 OR SUM(accounts.ps{$platform}_primary_stock) > 0 OR SUM(accounts.ps{$platform}_secondary_stock) > 0 OR SUM(CASE WHEN (" . Account::fullSellEligibleSql() . ") THEN 1 ELSE 0 END) > 0" )
             ->paginate( 20 );
 
         // Optimize: Get all game IDs for batch processing
@@ -731,7 +729,6 @@ class ManagerController extends Controller
             $ps4PrimaryAvailableGames = DB::table('accounts')
                 ->select('game_id')
                 ->whereIn('game_id', $gameIds)
-                ->where('is_full', false)
                 ->where('ps4_offline_stock', 0)
                 ->where('ps4_primary_stock', '>', 0)
                 ->groupBy('game_id')
@@ -1065,10 +1062,10 @@ class ManagerController extends Controller
                 DB::raw("COALESCE(special_prices.ps{$platform}_primary_price, games.ps{$platform}_primary_price) as ps{$platform}_primary_price"),
                 DB::raw("COALESCE(special_prices.ps{$platform}_secondary_price, games.ps{$platform}_secondary_price) as ps{$platform}_secondary_price"),
                 DB::raw("COALESCE(special_prices.ps{$platform}_offline_price, games.ps{$platform}_offline_price) as ps{$platform}_offline_price"),
-                DB::raw("SUM(CASE WHEN accounts.is_full = 0 THEN accounts.{$offline_stock} ELSE 0 END) as {$offline_stock}"),
-                DB::raw("SUM(CASE WHEN accounts.is_full = 0 THEN accounts.{$primary_stock} ELSE 0 END) as {$primary_stock}"),
-                DB::raw("SUM(CASE WHEN accounts.is_full = 0 THEN accounts.{$secondary_stock} ELSE 0 END) as {$secondary_stock}"),
-                DB::raw("SUM(CASE WHEN accounts.is_full = 1 AND accounts.{$primary_stock} > 0 AND accounts.{$secondary_stock} > 0 AND accounts.{$offline_stock} > 0 THEN 1 ELSE 0 END) as ps{$platform}_full_stock")
+                DB::raw("SUM(accounts.{$offline_stock}) as {$offline_stock}"),
+                DB::raw("SUM(accounts.{$primary_stock}) as {$primary_stock}"),
+                DB::raw("SUM(accounts.{$secondary_stock}) as {$secondary_stock}"),
+                DB::raw("SUM(CASE WHEN (" . Account::fullSellEligibleSql() . ") THEN 1 ELSE 0 END) as ps{$platform}_full_stock")
             )
             ->join('games', 'accounts.game_id', '=', 'games.id')
             ->leftJoin('special_prices', function ($join) use ($storeProfileId) {
@@ -1098,7 +1095,7 @@ class ManagerController extends Controller
                 "special_prices.ps{$platform}_secondary_price",
                 "special_prices.ps{$platform}_offline_price",
             )
-            ->havingRaw("SUM(CASE WHEN accounts.is_full = 0 THEN accounts.{$offline_stock} ELSE 0 END) > 0 OR SUM(CASE WHEN accounts.is_full = 0 THEN accounts.{$primary_stock} ELSE 0 END) > 0 OR SUM(CASE WHEN accounts.is_full = 0 THEN accounts.{$secondary_stock} ELSE 0 END) > 0 OR SUM(CASE WHEN accounts.is_full = 1 AND accounts.{$primary_stock} > 0 AND accounts.{$secondary_stock} > 0 AND accounts.{$offline_stock} > 0 THEN 1 ELSE 0 END) > 0")
+            ->havingRaw("SUM(accounts.{$offline_stock}) > 0 OR SUM(accounts.{$primary_stock}) > 0 OR SUM(accounts.{$secondary_stock}) > 0 OR SUM(CASE WHEN (" . Account::fullSellEligibleSql() . ") THEN 1 ELSE 0 END) > 0")
             ->paginate(10);  // Paginate 10 results per page
 
         // Optimize: Determine if the primary stock is active using single query
