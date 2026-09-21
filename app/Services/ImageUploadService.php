@@ -161,28 +161,149 @@ class ImageUploadService
         return $this->encodeBinaryAsWebp($binary, $destinationAbsolute);
     }
 
+    /**
+     * Encode image binary as WebP. Interlaced PNGs are decoded in a child process
+     * with stderr discarded so libpng does not print noisy CLI warnings.
+     */
     protected function encodeBinaryAsWebp(string $binary, string $destinationAbsolute): bool
+    {
+        $dir = dirname($destinationAbsolute);
+        if (!is_dir($dir) && !mkdir($dir, 0775, true) && !is_dir($dir)) {
+            return false;
+        }
+
+        // Interlaced PNGs trigger: "libpng warning: Interlace handling should be turned on..."
+        if ($this->isInterlacedPng($binary)) {
+            return $this->encodeInterlacedPngAsWebpSilenced($binary, $destinationAbsolute);
+        }
+
+        return $this->encodeBinaryAsWebpInProcess($binary, $destinationAbsolute);
+    }
+
+    /**
+     * PNG signature + IHDR interlace flag (byte offset 28) === 1.
+     */
+    protected function isInterlacedPng(string $binary): bool
+    {
+        if (strlen($binary) < 29) {
+            return false;
+        }
+
+        if (!str_starts_with($binary, "\x89PNG\r\n\x1a\n")) {
+            return false;
+        }
+
+        return ord($binary[28]) === 1;
+    }
+
+    protected function encodeBinaryAsWebpInProcess(string $binary, string $destinationAbsolute): bool
     {
         $image = @imagecreatefromstring($binary);
         if ($image === false) {
             return false;
         }
 
-        // Preserve transparency for PNG/GIF sources
+        return $this->writeGdImageAsWebp($image, $destinationAbsolute);
+    }
+
+    /**
+     * @param  \GdImage|resource  $image
+     */
+    protected function writeGdImageAsWebp($image, string $destinationAbsolute): bool
+    {
+        // Ensure non-interlaced raster and keep alpha
+        if (function_exists('imageinterlace')) {
+            imageinterlace($image, false);
+        }
         imagepalettetotruecolor($image);
         imagealphablending($image, true);
         imagesavealpha($image, true);
-
-        $dir = dirname($destinationAbsolute);
-        if (!is_dir($dir) && !mkdir($dir, 0775, true) && !is_dir($dir)) {
-            imagedestroy($image);
-
-            return false;
-        }
 
         $ok = imagewebp($image, $destinationAbsolute, self::WEBP_QUALITY);
         imagedestroy($image);
 
         return (bool) $ok && is_file($destinationAbsolute);
+    }
+
+    /**
+     * Decode interlaced PNG in a PHP child with stderr → NUL/dev/null, then write WebP.
+     */
+    protected function encodeInterlacedPngAsWebpSilenced(string $binary, string $destinationAbsolute): bool
+    {
+        $tmpSrc = tempnam(sys_get_temp_dir(), 'png_i_');
+        $tmpPhp = tempnam(sys_get_temp_dir(), 'webp_w_');
+        if ($tmpSrc === false || $tmpPhp === false) {
+            return $this->encodeBinaryAsWebpInProcess($binary, $destinationAbsolute);
+        }
+
+        $tmpSrcPng = $tmpSrc . '.png';
+        @unlink($tmpSrc);
+        $tmpPhpScript = $tmpPhp . '.php';
+        @unlink($tmpPhp);
+
+        try {
+            if (file_put_contents($tmpSrcPng, $binary) === false) {
+                return false;
+            }
+
+            $quality = (int) self::WEBP_QUALITY;
+            $script = <<<'PHP'
+<?php
+$src = $argv[1] ?? '';
+$dest = $argv[2] ?? '';
+$quality = (int) ($argv[3] ?? 82);
+if ($src === '' || $dest === '' || !is_file($src)) {
+    exit(1);
+}
+$binary = file_get_contents($src);
+$image = @imagecreatefromstring($binary);
+if ($image === false) {
+    exit(1);
+}
+if (function_exists('imageinterlace')) {
+    imageinterlace($image, false);
+}
+imagepalettetotruecolor($image);
+imagealphablending($image, true);
+imagesavealpha($image, true);
+$ok = imagewebp($image, $dest, $quality);
+imagedestroy($image);
+exit($ok && is_file($dest) ? 0 : 1);
+PHP;
+
+            if (file_put_contents($tmpPhpScript, $script) === false) {
+                return $this->encodeBinaryAsWebpInProcess($binary, $destinationAbsolute);
+            }
+
+            $nullDevice = PHP_OS_FAMILY === 'Windows' ? 'NUL' : '/dev/null';
+            $cmd = [
+                PHP_BINARY,
+                $tmpPhpScript,
+                $tmpSrcPng,
+                $destinationAbsolute,
+                (string) $quality,
+            ];
+
+            $descriptors = [
+                0 => ['pipe', 'r'],
+                1 => ['pipe', 'w'],
+                2 => ['file', $nullDevice, 'w'],
+            ];
+
+            $process = @proc_open($cmd, $descriptors, $pipes, null, null, ['bypass_shell' => true]);
+            if (!is_resource($process)) {
+                return $this->encodeBinaryAsWebpInProcess($binary, $destinationAbsolute);
+            }
+
+            fclose($pipes[0]);
+            stream_get_contents($pipes[1]);
+            fclose($pipes[1]);
+            $exitCode = proc_close($process);
+
+            return $exitCode === 0 && is_file($destinationAbsolute);
+        } finally {
+            @unlink($tmpSrcPng);
+            @unlink($tmpPhpScript);
+        }
     }
 }

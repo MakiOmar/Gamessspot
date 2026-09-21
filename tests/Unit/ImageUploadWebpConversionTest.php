@@ -67,6 +67,25 @@ class ImageUploadWebpConversionTest extends TestCase
         $this->assertFileExists($this->tempPublic . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $path));
     }
 
+    public function test_interlaced_png_converts_to_webp_quietly(): void
+    {
+        $service = new ImageUploadService();
+        $sourceAbsolute = $this->tempPublic . '/assets/ps4/interlaced_cover.png';
+
+        $img = imagecreatetruecolor(12, 12);
+        imageinterlace($img, true);
+        imagepng($img, $sourceAbsolute);
+        imagedestroy($img);
+
+        $this->assertTrue($this->isInterlacedPngFile($sourceAbsolute));
+
+        $newPath = $service->convertExistingPublicImage('assets/ps4/interlaced_cover.png', true);
+
+        $this->assertSame('assets/ps4/interlaced_cover.webp', $newPath);
+        $this->assertFileExists($this->tempPublic . '/assets/ps4/interlaced_cover.webp');
+        $this->assertFileDoesNotExist($sourceAbsolute);
+    }
+
     private function makePngUploadedFile(): UploadedFile
     {
         $tmp = $this->tempPublic . '/upload_src.png';
@@ -75,6 +94,15 @@ class ImageUploadWebpConversionTest extends TestCase
         imagedestroy($img);
 
         return new UploadedFile($tmp, 'cover.png', 'image/png', null, true);
+    }
+
+    private function isInterlacedPngFile(string $absolute): bool
+    {
+        $binary = file_get_contents($absolute);
+
+        return strlen($binary) >= 29
+            && str_starts_with($binary, "\x89PNG\r\n\x1a\n")
+            && ord($binary[28]) === 1;
     }
 
     private function deleteDirectory(string $dir): void
