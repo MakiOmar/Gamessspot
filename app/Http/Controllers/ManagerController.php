@@ -233,50 +233,20 @@ class ManagerController extends Controller
 
         $data = $request->except('_token', 'ps4_image', 'ps5_image', 'gallery_images', 'delete_gallery_ids'); // Exclude image files from mass assignment
         $data['description'] = Game::sanitizeDescription($request->input('description'));
-        // Handle PS4 image update
+        // Handle PS4 image update (convert to WebP when possible)
         if ($request->hasFile('ps4_image')) {
-            $ps4_image = $request->file('ps4_image');
-            $ps4_filename = $this->sanitizeFilename($ps4_image->getClientOriginalName());
-            $ps4_path = 'assets/ps4/' . $ps4_filename;
-
-            // Ensure the directory exists
-            if (!file_exists(public_path('assets/ps4'))) {
-                mkdir(public_path('assets/ps4'), 0777, true);
-            }
-
-            // Delete the old image if it exists
             if (!empty($game->ps4_image_url) && file_exists(public_path($game->ps4_image_url))) {
-                unlink(public_path($game->ps4_image_url));
+                @unlink(public_path($game->ps4_image_url));
             }
-
-            // Move the new image
-            $ps4_image->move(public_path('assets/ps4'), $ps4_filename);
-
-            // Store the new image path
-            $data['ps4_image_url'] = $ps4_path;
+            $data['ps4_image_url'] = $this->imageUploadService->upload($request->file('ps4_image'), 'assets/ps4');
         }
 
-        // Handle PS5 image update
+        // Handle PS5 image update (convert to WebP when possible)
         if ($request->hasFile('ps5_image')) {
-            $ps5_image = $request->file('ps5_image');
-            $ps5_filename = $this->sanitizeFilename($ps5_image->getClientOriginalName());
-            $ps5_path = 'assets/ps5/' . $ps5_filename;
-
-            // Ensure the directory exists
-            if (!file_exists(public_path('assets/ps5'))) {
-                mkdir(public_path('assets/ps5'), 0777, true);
-            }
-
-            // Delete the old image if it exists
             if (!empty($game->ps5_image_url) && file_exists(public_path($game->ps5_image_url))) {
-                unlink(public_path($game->ps5_image_url));
+                @unlink(public_path($game->ps5_image_url));
             }
-
-            // Move the new image
-            $ps5_image->move(public_path('assets/ps5'), $ps5_filename);
-
-            // Store the new image path
-            $data['ps5_image_url'] = $ps5_path;
+            $data['ps5_image_url'] = $this->imageUploadService->upload($request->file('ps5_image'), 'assets/ps5');
         }
 
         // Update the game with new data
@@ -374,40 +344,14 @@ class ManagerController extends Controller
         $validatedData['description'] = Game::sanitizeDescription($request->input('description'));
         unset($validatedData['gallery_images']);
 
-        // Handle PS4 image upload
+        // Handle PS4 image upload (convert to WebP when possible)
         if ($request->hasFile('ps4_image')) {
-            $ps4_image = $request->file('ps4_image');
-            $ps4_filename = $this->sanitizeFilename($ps4_image->getClientOriginalName());
-            $ps4_path = 'assets/ps4/' . $ps4_filename; // Define path in public/assets/ps4/
-
-            // Ensure the directory exists
-            if (!file_exists(public_path('assets/ps4'))) {
-                mkdir(public_path('assets/ps4'), 0777, true);
-            }
-
-            // Move the file to public/assets/ps4/
-            $ps4_image->move(public_path('assets/ps4'), $ps4_filename);
-
-            // Store the publicly accessible URL in the database
-            $validatedData['ps4_image_url'] = $ps4_path;
+            $validatedData['ps4_image_url'] = $this->imageUploadService->upload($request->file('ps4_image'), 'assets/ps4');
         }
 
-        // Handle PS5 image upload
+        // Handle PS5 image upload (convert to WebP when possible)
         if ($request->hasFile('ps5_image')) {
-            $ps5_image = $request->file('ps5_image');
-            $ps5_filename = $this->sanitizeFilename($ps5_image->getClientOriginalName());
-            $ps5_path = 'assets/ps5/' . $ps5_filename; // Define path in public/assets/ps5/
-
-            // Ensure the directory exists
-            if (!file_exists(public_path('assets/ps5'))) {
-                mkdir(public_path('assets/ps5'), 0777, true);
-            }
-
-            // Move the file to public/assets/ps5/
-            $ps5_image->move(public_path('assets/ps5'), $ps5_filename);
-
-            // Store the publicly accessible URL in the database
-            $validatedData['ps5_image_url'] = $ps5_path;
+            $validatedData['ps5_image_url'] = $this->imageUploadService->upload($request->file('ps5_image'), 'assets/ps5');
         }
 
         // Create the new game
@@ -723,6 +667,18 @@ class ManagerController extends Controller
         // Optimize: Get all game IDs for batch processing
         $gameIds = $psGames->pluck('id')->toArray();
 
+        $ratingByGameId = array();
+        if ( ! empty( $gameIds ) ) {
+            $ratingByGameId = DB::table('reviews')
+                ->selectRaw('reviewable_id, AVG(stars) as average, COUNT(*) as count')
+                ->where('reviewable_type', (new Game())->getMorphClass())
+                ->where('status', \App\Models\Review::STATUS_APPROVED)
+                ->whereIn('reviewable_id', $gameIds)
+                ->groupBy('reviewable_id')
+                ->get()
+                ->keyBy('reviewable_id');
+        }
+
         // For PS4 primary, pre-fetch accounts with offline=0 and primary>0 to avoid N+1
         $ps4PrimaryAvailableGames = array();
         if ( 4 === $platform && ! empty( $gameIds ) ) {
@@ -737,11 +693,10 @@ class ManagerController extends Controller
         }
 
         // Transform the data to include availability information for each type
+        // Note: Currently only primary and secondary are enabled for customer self-service
+        // To enable offline purchases, uncomment the 'offline' line below
         $transformed_games = $psGames->getCollection()->map(
-            function ($game) use ($platform, $ps4PrimaryAvailableGames) {
-                // Calculate availability for each type
-                // Note: Currently only primary and secondary are enabled for customer self-service
-                // To enable offline purchases, uncomment the 'offline' line below
+            function ($game) use ($platform, $ps4PrimaryAvailableGames, $ratingByGameId) {
                 $types = array(
                     // 'offline'   => $this->calculateTypeAvailability( $game->id, $platform, 'offline', $game, $ps4PrimaryAvailableGames ),
                     'primary'   => $this->calculateTypeAvailability( $game->id, $platform, 'primary', $game, $ps4PrimaryAvailableGames ),
@@ -749,13 +704,17 @@ class ManagerController extends Controller
                     'full'      => $this->calculateTypeAvailability( $game->id, $platform, 'full', $game, $ps4PrimaryAvailableGames ),
                 );
 
+                $rating = $ratingByGameId[$game->id] ?? null;
+
                 return array(
-                    'id'           => $game->id,
-                    'title'        => $game->title,
-                    'code'         => $game->code,
-                    'product_type' => $game->product_type,
-                    'image_url'    => $game->image_url,
-                    'types'        => $types,
+                    'id'              => $game->id,
+                    'title'           => $game->title,
+                    'code'            => $game->code,
+                    'product_type'    => $game->product_type,
+                    'image_url'       => $game->image_url,
+                    'types'           => $types,
+                    'rating_average'  => $rating ? round((float) $rating->average, 1) : 0,
+                    'rating_count'    => $rating ? (int) $rating->count : 0,
                 );
             }
         );

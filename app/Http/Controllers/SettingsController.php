@@ -3,17 +3,21 @@
 namespace App\Http\Controllers;
 
 use App\Models\StoresProfile;
+use App\Services\ImageUploadService;
 use App\Services\SettingsService;
 use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
 use Illuminate\View\View;
 use Rawilk\Settings\Facades\Settings;
 
 class SettingsController extends Controller
 {
+    public function __construct(
+        protected ImageUploadService $imageUploadService
+    ) {
+    }
     /**
      * Display the settings management page.
      */
@@ -138,23 +142,12 @@ class SettingsController extends Controller
                 ->withInput();
         }
 
-        // Handle logo upload if provided (store directly in public/logos, no symlink needed)
+        // Handle logo upload if provided (convert to WebP when possible)
         if ($request->hasFile('app_logo')) {
-            $file = $request->file('app_logo');
-
-            // Ensure logos directory exists in public path
-            $logosPath = public_path('logos');
-            if (! is_dir($logosPath)) {
-                mkdir($logosPath, 0755, true);
-            }
-
-            $extension = $file->getClientOriginalExtension();
-            $filename = Str::uuid()->toString() . '.' . $extension;
-
-            $file->move($logosPath, $filename);
-
-            // Delete old logo file if it exists
             $oldLogo = Settings::get('app.logo');
+
+            $relativePath = $this->imageUploadService->upload($request->file('app_logo'), 'logos');
+
             if ($oldLogo) {
                 $oldLogoPath = public_path($oldLogo);
                 if (is_file($oldLogoPath)) {
@@ -162,8 +155,7 @@ class SettingsController extends Controller
                 }
             }
 
-            // Store relative path from public root, e.g. logos/xxxx.webp
-            Settings::set('app.logo', 'logos/' . $filename);
+            Settings::set('app.logo', $relativePath);
         }
 
         // Update app settings
