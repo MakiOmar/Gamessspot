@@ -151,38 +151,23 @@ GET /api/games/platform/4?product_type=game&page=2
       "code": "GOW",
       "product_type": "game",
       "image_url": "assets/ps5/gow.webp",
-      "types": {
-        "primary": {
-          "available": true,
-          "stock": 3,
-          "price": 250.0,
-          "status": "enabled",
-          "reason": null
+        "types": {
+          "primary": { "available": true, "stock": 3, "price": 250.0, "status": "enabled", "reason": null },
+          "secondary": { "available": true, "stock": 2, "price": 180.0, "status": "enabled", "reason": null },
+          "full": { "available": false, "stock": 0, "price": 400.0, "status": "disabled", "reason": "No full accounts available." }
         },
-        "secondary": {
-          "available": true,
-          "stock": 2,
-          "price": 180.0,
-          "status": "enabled",
-          "reason": null
-        },
-        "full": {
-          "available": false,
-          "stock": 0,
-          "price": 400.0,
-          "status": "disabled",
-          "reason": "No full accounts available."
-        }
+        "rating_average": 4.5,
+        "rating_count": 12
       }
-    }
-  ],
-  "per_page": 20,
-  "total": 40
-}
-```
+    ],
+    "per_page": 20,
+    "total": 40
+  }
+  ```
 
 - `types.full.stock` = number of accounts currently eligible for a full sale (see [Full sell feature](#full-sell-feature-type-full)). Same eligibility is used for both platforms.
 - `types.primary` / `secondary` stock sums include accounts that also have the full-sell feature enabled.
+- `rating_average` / `rating_count` are approved-review aggregates for the game (0 when none).
 
 Subscriptions example item:
 
