@@ -79,7 +79,49 @@ Catalog items live in `games` with `product_type`:
 - `game` (default)
 - `subscription` (PlayStation Plus, etc.)
 
-Account sell types: `primary`, `secondary`, `full` (API). Manager UI also supports `offline`.
+Account sell types via API: `primary`, `secondary`, `full`. Manager UI also supports `offline`.
+
+### Full sell feature (`type: "full"`)
+
+`full` is **not** a separate account stock profile. Accounts may have an internal **full-sell feature** (`is_full`). When that feature is on and the account still has the required bundle stocks, it can be sold with `type: "full"`.
+
+**Request shape (unchanged)**
+
+```json
+{
+  "type": "full",
+  "platform": "5",
+  "game_id": 12
+}
+```
+
+`platform` is still required for pricing / `sold_item` labeling (`ps4_full` or `ps5_full`). The stock effect is always the **same cross-platform bundle**, regardless of `4` vs `5`.
+
+**What a full sale does**
+
+| Stock | After full sale |
+|-------|-----------------|
+| `ps4_primary_stock` | **Unchanged** (kept) |
+| `ps4_secondary_stock` | Set to `0` |
+| `ps4_offline_stock` | Set to `0` |
+| `ps5_primary_stock` | Set to `0` |
+| `ps5_secondary_stock` | Set to `0` |
+| `ps5_offline_stock` | Set to `0` |
+| Full-sell feature | Turned **off** (`is_full = false`) |
+
+**PS5-only accounts** (all PS4 stocks already `0`): full sale zeros all PS5 stocks and turns the feature off.
+
+**Eligibility for full stock counts** (`types.full.stock`, `ps*_full_stock`, `check_stock` with `type: full`):
+
+- Feature enabled, and
+- Dual account: PS4 secondary + offline &gt; 0 **and** all PS5 stocks &gt; 0, or
+- PS5-only account: all PS5 stocks &gt; 0
+
+**Interaction with other sell types**
+
+- Full-capable accounts **are included** in primary / secondary / offline stock sums (they are not segregated).
+- Selling any **individual** type (`primary`, `secondary`, …) on a full-capable account turns the full-sell feature **off**.
+- After a full sale, the account may still have PS4 primary stock available for a later `primary` sale (PS4 primary rules still apply, e.g. offline must be `0`).
 
 ### `GET /api/games/platform/{platform}`
 
@@ -139,7 +181,8 @@ GET /api/games/platform/4?product_type=game&page=2
 }
 ```
 
-**Error `400`** invalid platform.
+- `types.full.stock` = number of accounts currently eligible for a full sale (see [Full sell feature](#full-sell-feature-type-full)). Same eligibility is used for both platforms.
+- `types.primary` / `secondary` stock sums include accounts that also have the full-sell feature enabled.
 
 Subscriptions example item:
 
@@ -206,7 +249,8 @@ Works for both games and subscriptions (same table).
 
 Notes:
 
-- Stock fields for offline/primary/secondary include all accounts (including those with the full-sell feature enabled). `ps*_full_stock` counts accounts that currently can be sold as full (feature on + required bundle stocks).
+- Slot stock fields (`ps*_primary_stock`, etc.) sum **all** accounts (including full-capable ones).
+- `ps4_full_stock` and `ps5_full_stock` both count accounts currently eligible for a full sale (cross-platform / PS5-only rules above). Values are typically the same for a given game.
 - A **full** sale clears PS4 secondary+offline and all PS5 stocks, **keeps `ps4_primary_stock`**, then disables the full-sell feature on that account.
 - `reviews` includes **approved** reviews only (no phone numbers).
 
@@ -368,7 +412,10 @@ If phone already exists, returns existing customer (`200`). Duplicate email for 
 }
 ```
 
-For `full`, `stock` is the count of accounts with the full-sell feature enabled that still have the required cross-platform bundle stocks.
+| `type` | Meaning of `stock` |
+|--------|--------------------|
+| `primary` / `secondary` | Sum of matching slot stocks (includes full-capable accounts) |
+| `full` | Count of accounts eligible for a full sale (feature on + bundle stocks). `platform` does not change the eligibility rules. |
 
 ### `POST /api/orders/check_card_stock`
 
@@ -410,7 +457,7 @@ Allocates stock and creates an order. Use **either** a game/subscription sale **
 | Field | Notes |
 |-------|--------|
 | `type` | `primary`, `secondary`, or `full` |
-| `platform` | `"4"` or `"5"` |
+| `platform` | `"4"` or `"5"` — for `full`, labels `sold_item` as `ps4_full` / `ps5_full`; stock effect is always the cross-platform bundle |
 | `game_id` | Works for `product_type` game **or** subscription |
 | `wc_order_id` | Required unless using storefront fields |
 | `storefront_order_id` + `pos_transaction_id` | Optional storefront idempotency path |
@@ -431,7 +478,14 @@ Allocates stock and creates an order. Use **either** a game/subscription sale **
 
 **Error `422`** no matching account stock.
 
-`full` sells the account as a cross-platform bundle: zeros PS4 secondary+offline and all PS5 stocks, **keeps PS4 primary**, clears `is_full`, and records `sold_item` as `ps4_full` / `ps5_full` (platform from the request). Individual slot sales on a full-capable account also clear `is_full`.
+**Full sale (`type: "full"`)** — see [Full sell feature](#full-sell-feature-type-full):
+
+- Allocates an account with the full-sell feature and required bundle stocks.
+- Clears PS4 secondary+offline and all PS5 stocks; **keeps PS4 primary**.
+- Turns off the full-sell feature on that account.
+- Records `sold_item` as `ps4_full` or `ps5_full` from `platform`.
+
+**Individual sale** on a full-capable account also turns the full-sell feature off after the slot is decremented.
 
 #### Gift-card sale
 
