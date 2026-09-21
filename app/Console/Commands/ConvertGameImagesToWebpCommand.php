@@ -14,7 +14,7 @@ class ConvertGameImagesToWebpCommand extends Command
                             {--keep-original : Keep the original file after creating WebP}
                             {--limit=0 : Max games to process (0 = all)}';
 
-    protected $description = 'Convert each game PS4/PS5 image to WebP on disk and update image URLs in the database';
+    protected $description = 'Convert each game PS4/PS5/gallery image to WebP on disk and update image URLs in the database';
 
     public function handle(ImageUploadService $images): int
     {
@@ -28,7 +28,7 @@ class ConvertGameImagesToWebpCommand extends Command
         $deleteOriginal = ! (bool) $this->option('keep-original');
         $limit = (int) $this->option('limit');
 
-        $query = Game::query()
+        $baseQuery = Game::query()
             ->with('galleryImages')
             ->where(function ($q) {
                 $q->whereNotNull('ps4_image_url')->where('ps4_image_url', '!=', '')
@@ -45,11 +45,15 @@ class ConvertGameImagesToWebpCommand extends Command
         $updatedGames = 0;
         $processedGames = 0;
 
-        $total = $limit > 0 ? min($limit, (clone $query)->count()) : (clone $query)->count();
+        $total = (clone $baseQuery)->count();
+        if ($limit > 0) {
+            $total = min($limit, $total);
+        }
+
         $bar = $this->output->createProgressBar($total);
         $bar->start();
 
-        $query->chunkById(50, function ($games) use (
+        $baseQuery->chunkById(50, function ($games) use (
             $images,
             $dryRun,
             $deleteOriginal,
@@ -85,7 +89,6 @@ class ConvertGameImagesToWebpCommand extends Command
                     }
                 }
 
-                // Gallery images attached to this game
                 foreach ($game->galleryImages as $gallery) {
                     $result = $this->processPath(
                         $images,
@@ -120,7 +123,10 @@ class ConvertGameImagesToWebpCommand extends Command
         $bar->finish();
         $this->newLine(2);
 
-        $this->info(($dryRun ? '[dry-run] ' : '') . "Converted: {$converted}, already WebP/skipped: {$skipped}, failed: {$failed}, games updated: {$updatedGames}");
+        $this->info(
+            ($dryRun ? '[dry-run] ' : '')
+            . "Converted: {$converted}, already WebP/skipped: {$skipped}, failed: {$failed}, games updated: {$updatedGames}"
+        );
 
         if (!$dryRun && $updatedGames > 0) {
             CacheManager::invalidateGames();
@@ -130,11 +136,6 @@ class ConvertGameImagesToWebpCommand extends Command
         return self::SUCCESS;
     }
 
-    /**
-     * @param  int  $converted
-     * @param  int  $skipped
-     * @param  int  $failed
-     */
     private function processPath(
         ImageUploadService $images,
         ?string $path,
