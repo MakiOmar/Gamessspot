@@ -82,6 +82,12 @@
                             <option value="subscription">Subscription</option>
                         </select>
 
+                        <!-- Featured for public featured catalog endpoint -->
+                        <div class="form-check mt-3">
+                            <input type="checkbox" class="form-check-input" id="isFeatured" name="is_featured" value="1">
+                            <label class="form-check-label" for="isFeatured">Featured</label>
+                        </div>
+
                         <!-- Game Description (WYSIWYG) -->
                         <label for="description" class="mt-3">Description</label>
                         <textarea id="description" name="description" class="form-control" rows="8" placeholder="Write the game description..."></textarea>
@@ -280,6 +286,7 @@
             $('#editGameForm').find('input').val(''); // Reset all input fields
             $('#editGameForm').find('select').not('#productType').val('1'); // Status selects default Available
             $('#productType').val(@json($defaultProductType));
+            $('#isFeatured').prop('checked', false);
             $('#editGameForm').find('.is-invalid').removeClass('is-invalid'); // Remove validation classes
             $('#editGameForm').find('.invalid-feedback').remove(); // Remove previous error messages
             $('#editGameModalLabel').text(@json($isSubscriptionCatalog ? 'Create New Subscription' : 'Create New Game'));
@@ -301,6 +308,7 @@
 
             // Clear any previous error messages or inputs
             $('#editGameForm').find('input, select').val(''); // Reset all input fields to blank
+            $('#isFeatured').prop('checked', false);
             $('#editGameForm').find('.is-invalid').removeClass('is-invalid'); // Remove previous validation errors
             $('#editGameForm').find('.invalid-feedback').remove(); // Remove previous error messages
             $('#editGameModalLabel').text(@json($isSubscriptionCatalog ? 'Edit Subscription' : 'Edit Game'));
@@ -318,6 +326,7 @@
                     $('#gameName').val(response.title);
                     $('#gameCode').val(response.code);
                     $('#productType').val(response.product_type || 'game');
+                    $('#isFeatured').prop('checked', !!response.is_featured);
                     $('#fullPrice').val(response.full_price);
                     $('#ps4PrimaryPrice').val(response.ps4_primary_price);
                     $('#ps4PrimaryStatus').val(response.ps4_primary_status);
@@ -415,6 +424,47 @@
         });
 
         // Handle game deletion
+        // Toggle featured star on listing (no page reload)
+        $(document).on('click', '.toggle-featured', function (e) {
+            e.preventDefault();
+            const $btn = $(this);
+            const gameId = $btn.data('id');
+
+            $.ajax({
+                url: '/manager/games/' + gameId + '/featured',
+                method: 'POST',
+                data: { _method: 'PATCH' },
+                success: function (response) {
+                    const featured = !!response.is_featured;
+                    $btn.data('featured', featured ? '1' : '0');
+                    $btn.attr('title', featured ? 'Remove from featured' : 'Set as featured');
+                    $btn.toggleClass('btn-warning', featured);
+                    $btn.toggleClass('btn-outline-secondary', !featured);
+                    $btn.find('i').toggleClass('fas', featured).toggleClass('far', !featured);
+
+                    Swal.fire({
+                        toast: true,
+                        position: 'top-end',
+                        icon: 'success',
+                        title: response.message || (featured ? 'Featured' : 'Unfeatured'),
+                        showConfirmButton: false,
+                        timer: 2000
+                    });
+                },
+                error: function (xhr) {
+                    const message = xhr.responseJSON && xhr.responseJSON.message
+                        ? xhr.responseJSON.message
+                        : 'Failed to update featured status.';
+                    Swal.fire({
+                        title: 'Error',
+                        text: message,
+                        icon: 'error',
+                        confirmButtonText: 'OK'
+                    });
+                }
+            });
+        });
+
         $(document).on('click', '.delete-game', function (e) {
             e.preventDefault();
 

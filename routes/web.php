@@ -608,6 +608,7 @@ Route::prefix('manager')->group(function () {
                 Route::get('/{id}/edit', [ManagerController::class, 'edit'])->name('manager.games.edit');
                 Route::post('/store', [ManagerController::class, 'store'])->name('games.store');
                 Route::put('/{id}', [ManagerController::class, 'update'])->name('manager.games.update');
+                Route::patch('/{id}/featured', [ManagerController::class, 'toggleFeatured'])->name('manager.games.featured');
                 Route::delete('/{id}', [ManagerController::class, 'destroy'])->name('manager.games.destroy');
             });
         });

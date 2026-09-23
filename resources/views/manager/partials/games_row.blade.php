@@ -21,7 +21,15 @@
                 <td>{{ $game->code }}</td>
                 <td><a href="#">View Reports</a></td>
                 <td>
-                    <div class="d-flex flex-wrap gap-2">
+                    <div class="d-flex flex-wrap gap-2 align-items-center">
+                        <!-- Toggle featured for public catalog -->
+                        <button type="button"
+                            class="btn btn-sm toggle-featured {{ $game->is_featured ? 'btn-warning' : 'btn-outline-secondary' }}"
+                            data-id="{{ $game->id }}"
+                            data-featured="{{ $game->is_featured ? '1' : '0' }}"
+                            title="{{ $game->is_featured ? 'Remove from featured' : 'Set as featured' }}">
+                            <i class="{{ $game->is_featured ? 'fas' : 'far' }} fa-star"></i>
+                        </button>
                         <a href="#" class="btn btn-primary btn-sm edit-game" data-id="{{ $game->id }}" data-bs-toggle="modal" data-bs-target="#editGameModal">Edit</a>
                         @if(auth()->user()->roles->contains('name', 'admin'))
                             <button type="button"

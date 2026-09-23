@@ -225,6 +225,7 @@ class ManagerController extends Controller
         'ps5_secondary_status' => 'required|boolean',
         'ps5_offline_status'   => 'required|boolean',
         'description'          => 'nullable|string',
+        'is_featured'          => 'nullable|boolean',
         'gallery_images'       => 'nullable|array|max:' . GalleryImage::MAX_PER_PRODUCT,
         'gallery_images.*'     => 'nullable|image:allow_svg|mimes:webp,jpeg,png,jpg,gif,svg|max:2048',
         'delete_gallery_ids'   => 'nullable|array',
@@ -233,20 +234,51 @@ class ManagerController extends Controller
 
         $data = $request->except('_token', 'ps4_image', 'ps5_image', 'gallery_images', 'delete_gallery_ids'); // Exclude image files from mass assignment
         $data['description'] = Game::sanitizeDescription($request->input('description'));
-        // Handle PS4 image update (convert to WebP when possible)
+        $data['is_featured'] = $request->boolean('is_featured');
+        // Handle PS4 image update
         if ($request->hasFile('ps4_image')) {
-            if (!empty($game->ps4_image_url) && file_exists(public_path($game->ps4_image_url))) {
-                @unlink(public_path($game->ps4_image_url));
+            $ps4_image = $request->file('ps4_image');
+            $ps4_filename = $this->sanitizeFilename($ps4_image->getClientOriginalName());
+            $ps4_path = 'assets/ps4/' . $ps4_filename;
+
+            // Ensure the directory exists
+            if (!file_exists(public_path('assets/ps4'))) {
+                mkdir(public_path('assets/ps4'), 0777, true);
             }
-            $data['ps4_image_url'] = $this->imageUploadService->upload($request->file('ps4_image'), 'assets/ps4');
+
+            // Delete the old image if it exists
+            if (!empty($game->ps4_image_url) && file_exists(public_path($game->ps4_image_url))) {
+                unlink(public_path($game->ps4_image_url));
+            }
+
+            // Move the new image
+            $ps4_image->move(public_path('assets/ps4'), $ps4_filename);
+
+            // Store the new image path
+            $data['ps4_image_url'] = $ps4_path;
         }
 
-        // Handle PS5 image update (convert to WebP when possible)
+        // Handle PS5 image update
         if ($request->hasFile('ps5_image')) {
-            if (!empty($game->ps5_image_url) && file_exists(public_path($game->ps5_image_url))) {
-                @unlink(public_path($game->ps5_image_url));
+            $ps5_image = $request->file('ps5_image');
+            $ps5_filename = $this->sanitizeFilename($ps5_image->getClientOriginalName());
+            $ps5_path = 'assets/ps5/' . $ps5_filename;
+
+            // Ensure the directory exists
+            if (!file_exists(public_path('assets/ps5'))) {
+                mkdir(public_path('assets/ps5'), 0777, true);
             }
-            $data['ps5_image_url'] = $this->imageUploadService->upload($request->file('ps5_image'), 'assets/ps5');
+
+            // Delete the old image if it exists
+            if (!empty($game->ps5_image_url) && file_exists(public_path($game->ps5_image_url))) {
+                unlink(public_path($game->ps5_image_url));
+            }
+
+            // Move the new image
+            $ps5_image->move(public_path('assets/ps5'), $ps5_filename);
+
+            // Store the new image path
+            $data['ps5_image_url'] = $ps5_path;
         }
 
         // Update the game with new data
@@ -338,20 +370,48 @@ class ManagerController extends Controller
         'ps5_secondary_status' => 'required|boolean',
         'ps5_offline_status'   => 'required|boolean',
         'description'          => 'nullable|string',
+        'is_featured'          => 'nullable|boolean',
         'gallery_images'       => 'nullable|array|max:' . GalleryImage::MAX_PER_PRODUCT,
         'gallery_images.*'     => 'nullable|image:allow_svg|mimes:webp,jpeg,png,jpg,gif,svg|max:2048',
         ]);
         $validatedData['description'] = Game::sanitizeDescription($request->input('description'));
+        $validatedData['is_featured'] = $request->boolean('is_featured');
         unset($validatedData['gallery_images']);
 
-        // Handle PS4 image upload (convert to WebP when possible)
+        // Handle PS4 image upload
         if ($request->hasFile('ps4_image')) {
-            $validatedData['ps4_image_url'] = $this->imageUploadService->upload($request->file('ps4_image'), 'assets/ps4');
+            $ps4_image = $request->file('ps4_image');
+            $ps4_filename = $this->sanitizeFilename($ps4_image->getClientOriginalName());
+            $ps4_path = 'assets/ps4/' . $ps4_filename; // Define path in public/assets/ps4/
+
+            // Ensure the directory exists
+            if (!file_exists(public_path('assets/ps4'))) {
+                mkdir(public_path('assets/ps4'), 0777, true);
+            }
+
+            // Move the file to public/assets/ps4/
+            $ps4_image->move(public_path('assets/ps4'), $ps4_filename);
+
+            // Store the publicly accessible URL in the database
+            $validatedData['ps4_image_url'] = $ps4_path;
         }
 
-        // Handle PS5 image upload (convert to WebP when possible)
+        // Handle PS5 image upload
         if ($request->hasFile('ps5_image')) {
-            $validatedData['ps5_image_url'] = $this->imageUploadService->upload($request->file('ps5_image'), 'assets/ps5');
+            $ps5_image = $request->file('ps5_image');
+            $ps5_filename = $this->sanitizeFilename($ps5_image->getClientOriginalName());
+            $ps5_path = 'assets/ps5/' . $ps5_filename; // Define path in public/assets/ps5/
+
+            // Ensure the directory exists
+            if (!file_exists(public_path('assets/ps5'))) {
+                mkdir(public_path('assets/ps5'), 0777, true);
+            }
+
+            // Move the file to public/assets/ps5/
+            $ps5_image->move(public_path('assets/ps5'), $ps5_filename);
+
+            // Store the publicly accessible URL in the database
+            $validatedData['ps5_image_url'] = $ps5_path;
         }
 
         // Create the new game
@@ -586,6 +646,35 @@ class ManagerController extends Controller
         }
     }
     /**
+     * Toggle whether a game is featured in the public catalog.
+     */
+    public function toggleFeatured($id)
+    {
+        $game = Game::findOrFail($id);
+        $game->is_featured = ! $game->is_featured;
+        $game->save();
+
+        CacheManager::invalidateGames();
+
+        return response()->json([
+            'success' => true,
+            'is_featured' => (bool) $game->is_featured,
+            'message' => $game->is_featured ? 'Game marked as featured.' : 'Game removed from featured.',
+        ]);
+    }
+
+    /**
+     * Fetch featured games for a platform (same payload as platform catalog).
+     *
+     * @param int $platform
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getFeaturedGamesByPlatformApi($platform)
+    {
+        return $this->paginateGamesByPlatformApi((int) $platform, true);
+    }
+
+    /**
      * Get games by platform (PS4 or PS5) via API with detailed availability for each type.
      *
      * @param int $platform (4 for PS4, 5 for PS5)
@@ -593,10 +682,20 @@ class ManagerController extends Controller
      */
     public function getGamesByPlatformApi($platform)
     {
-        $platform = (int) $platform;
+        return $this->paginateGamesByPlatformApi((int) $platform, false);
+    }
 
+    /**
+     * Shared platform catalog query + transform for all / featured games.
+     *
+     * @param int  $platform
+     * @param bool $featuredOnly
+     * @return \Illuminate\Http\JsonResponse
+     */
+    private function paginateGamesByPlatformApi(int $platform, bool $featuredOnly = false)
+    {
         // Validate the platform input (should be 4 or 5)
-        if ( ! in_array( $platform, array( 4, 5 ) ) ) {
+        if ( ! in_array( $platform, array( 4, 5 ), true ) ) {
             return response()->json( array( 'error' => 'Invalid platform. Use 4 for PS4 or 5 for PS5.' ), 400 );
         }
 
@@ -642,6 +741,10 @@ class ManagerController extends Controller
                      ->where('special_prices.is_available', '=', 1);
             })
             ->where('games.product_type', $productType);
+
+        if ( $featuredOnly ) {
+            $psGamesQuery->where('games.is_featured', 1);
+        }
 
         $psGames = $psGamesQuery
             ->groupBy(
@@ -693,12 +796,9 @@ class ManagerController extends Controller
         }
 
         // Transform the data to include availability information for each type
-        // Note: Currently only primary and secondary are enabled for customer self-service
-        // To enable offline purchases, uncomment the 'offline' line below
         $transformed_games = $psGames->getCollection()->map(
             function ($game) use ($platform, $ps4PrimaryAvailableGames, $ratingByGameId) {
                 $types = array(
-                    // 'offline'   => $this->calculateTypeAvailability( $game->id, $platform, 'offline', $game, $ps4PrimaryAvailableGames ),
                     'primary'   => $this->calculateTypeAvailability( $game->id, $platform, 'primary', $game, $ps4PrimaryAvailableGames ),
                     'secondary' => $this->calculateTypeAvailability( $game->id, $platform, 'secondary', $game, $ps4PrimaryAvailableGames ),
                     'full'      => $this->calculateTypeAvailability( $game->id, $platform, 'full', $game, $ps4PrimaryAvailableGames ),
@@ -722,8 +822,8 @@ class ManagerController extends Controller
         // Set the transformed collection back to the paginator
         $psGames->setCollection( $transformed_games );
 
-        // Automatic debug data for WooCommerce game (ID 138)
-        if ( $platform === 4 ) {
+        // Automatic debug data for WooCommerce game (ID 138) — platform catalog only
+        if ( ! $featuredOnly && $platform === 4 ) {
             $debugGameId  = 138;
             $gameIsPresent = in_array( $debugGameId, $gameIds, true );
 

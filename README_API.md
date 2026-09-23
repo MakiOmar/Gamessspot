@@ -27,6 +27,7 @@ Detailed docs for specific features:
 | `POST` | `/api/login` | No | Sanctum token |
 | `GET` | `/api/user` | Sanctum | Current user |
 | `GET` | `/api/games/platform/{4\|5}` | No | Catalog list (games or subscription) |
+| `GET` | `/api/games/featured/{4\|5}` | No | Featured catalog list (same shape as platform) |
 | `GET` | `/api/games/{id}` | No | Single catalog item + gallery + reviews |
 | `GET` | `/api/card-ctegories/list` | No | Gift-card categories (typo preserved) |
 | `GET` | `/api/card-categories/{id}` | No | Single gift-card category |
@@ -179,6 +180,30 @@ Subscriptions example item:
   "types": { "primary": {}, "secondary": {}, "full": {} }
 }
 ```
+
+### `GET /api/games/featured/{platform}`
+
+Same response shape and rules as [`GET /api/games/platform/{platform}`](#get-apigamesplatformplatform), limited to games with `is_featured = true`.
+
+| Param | Values |
+|-------|--------|
+| `platform` (path) | `4` = PS4, `5` = PS5 |
+| `product_type` (query) | `game` (default) or `subscription` |
+| `page` (query) | Pagination page (20 per page) |
+
+**Examples**
+
+```http
+GET /api/games/featured/5
+GET /api/games/featured/5?product_type=subscription
+GET /api/games/featured/4?product_type=game&page=2
+```
+
+**Notes**
+
+- Public, no Sanctum.
+- Invalid platform returns `400` with `{ "error": "Invalid platform. Use 4 for PS4 or 5 for PS5." }`.
+- Stock, special prices (store profile `17`), `types`, and ratings behave exactly like the platform catalog endpoint.
 
 ### `GET /api/games/{id}`
 
@@ -510,6 +535,13 @@ List PS5 subscriptions:
 
 ```bash
 curl "{BASE_URL}/api/games/platform/5?product_type=subscription" \
+  -H "Accept: application/json"
+```
+
+List featured PS5 games:
+
+```bash
+curl "{BASE_URL}/api/games/featured/5" \
   -H "Accept: application/json"
 ```
 

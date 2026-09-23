@@ -72,6 +72,7 @@ class Game extends Model
         'title',
         'code',
         'product_type',
+        'is_featured',
         'full_price',
         'ps4_primary_price',
         'ps4_secondary_price',
@@ -89,6 +90,16 @@ class Game extends Model
         'ps5_secondary_status',
         'description',
     );
+
+    protected $casts = [
+        'is_featured' => 'boolean',
+        'ps4_primary_status' => 'boolean',
+        'ps4_secondary_status' => 'boolean',
+        'ps4_offline_status' => 'boolean',
+        'ps5_primary_status' => 'boolean',
+        'ps5_secondary_status' => 'boolean',
+        'ps5_offline_status' => 'boolean',
+    ];
 
     /**
      * The accounts that belong to the game.
@@ -117,6 +128,11 @@ class Game extends Model
     public function scopeSubscriptions($query)
     {
         return $query->where('product_type', self::TYPE_SUBSCRIPTION);
+    }
+
+    public function scopeFeatured($query)
+    {
+        return $query->where('is_featured', true);
     }
 
     public function isSubscription(): bool
