@@ -241,6 +241,45 @@
             $('#description').val(html || '');
         }
 
+        // Status selects use "1"/"0"; API returns booleans from Eloquent casts
+        function setStatusSelect(selector, value) {
+            $(selector).val(value ? '1' : '0');
+        }
+
+        // Map validation error keys (snake_case names) to form controls
+        function fieldForValidationKey(key) {
+            var $byName = $('#editGameForm').find('[name="' + key + '"]');
+            if ($byName.length) {
+                return $byName.first();
+            }
+            return $('#' + key);
+        }
+
+        function showValidationErrors(xhr) {
+            var payload = xhr.responseJSON || {};
+            var errors = payload.errors || {};
+            var messages = [];
+
+            $.each(errors, function (key, value) {
+                var msg = Array.isArray(value) ? value[0] : value;
+                messages.push(msg);
+                var $field = fieldForValidationKey(key);
+                if ($field.length) {
+                    $field.addClass('is-invalid');
+                    if (!$field.next('.invalid-feedback').length) {
+                        $field.after('<div class="invalid-feedback">' + msg + '</div>');
+                    }
+                }
+            });
+
+            Swal.fire({
+                title: 'Validation error',
+                text: payload.message || messages.join(' ') || 'Please fix the highlighted fields.',
+                icon: 'error',
+                confirmButtonText: 'OK'
+            });
+        }
+
         // Render existing gallery thumbs with delete checkboxes
         function renderExistingGallery(images) {
             var $wrap = $('#existingGallery');
@@ -329,17 +368,17 @@
                     $('#isFeatured').prop('checked', !!response.is_featured);
                     $('#fullPrice').val(response.full_price);
                     $('#ps4PrimaryPrice').val(response.ps4_primary_price);
-                    $('#ps4PrimaryStatus').val(response.ps4_primary_status);
+                    setStatusSelect('#ps4PrimaryStatus', response.ps4_primary_status);
                     $('#ps4SecondaryPrice').val(response.ps4_secondary_price);
-                    $('#ps4SecondaryStatus').val(response.ps4_secondary_status);
+                    setStatusSelect('#ps4SecondaryStatus', response.ps4_secondary_status);
                     $('#ps4OfflinePrice').val(response.ps4_offline_price);
-                    $('#ps4OfflineStatus').val(response.ps4_offline_status);
+                    setStatusSelect('#ps4OfflineStatus', response.ps4_offline_status);
                     $('#ps5PrimaryPrice').val(response.ps5_primary_price);
-                    $('#ps5PrimaryStatus').val(response.ps5_primary_status);
+                    setStatusSelect('#ps5PrimaryStatus', response.ps5_primary_status);
                     $('#ps5OfflinePrice').val(response.ps5_offline_price);
-                    $('#ps5OfflineStatus').val(response.ps5_offline_status);
+                    setStatusSelect('#ps5OfflineStatus', response.ps5_offline_status);
                     $('#ps5SecondaryPrice').val(response.ps5_secondary_price);
-                    $('#ps5SecondaryStatus').val(response.ps5_secondary_status);
+                    setStatusSelect('#ps5SecondaryStatus', response.ps5_secondary_status);
                     setGameDescription(response.description);
                     renderExistingGallery(response.gallery || []);
 
@@ -401,23 +440,15 @@
                     location.reload(); // Reload the page or update the table dynamically
                 },
                 error: function(xhr) {
-                    if (xhr.status === 422) { // Handle validation errors
-                        var errors = xhr.responseJSON.errors;
-
-                        // Loop through validation errors and display them
-                        $.each(errors, function(key, value) {
-                            var inputField = $('#' + key);
-                            inputField.addClass('is-invalid');
-                            inputField.after('<div class="invalid-feedback">' + value[0] + '</div>');
-                        });
+                    if (xhr.status === 422) {
+                        showValidationErrors(xhr);
                     } else {
                         Swal.fire({
                             title: 'Error',
-                            text: 'An error occurred.',
+                            text: (xhr.responseJSON && xhr.responseJSON.message) || 'An error occurred.',
                             icon: 'error',
                             confirmButtonText: 'OK'
                         });
-
                     }
                 }
             });
