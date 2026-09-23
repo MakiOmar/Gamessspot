@@ -92,6 +92,9 @@
                         </tbody>
                     </table>
                 </div>
+                <div class="mt-2">
+                    {{ $backups->appends(request()->query())->links('vendor.pagination.bootstrap-5') }}
+                </div>
             </div>
         </div>
     </div>
@@ -171,8 +174,10 @@ jQuery(function ($) {
         headers: { 'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content') }
     });
 
-    @if (request('tab') === 'activity' || request()->hasAny(['action', 'from', 'to', 'actor']))
+    @if (request('tab') === 'activity' || request()->hasAny(['action', 'from', 'to', 'actor', 'activity_page']))
         $('#activity-tab').tab('show');
+    @elseif (request()->has('backup_page'))
+        $('#backups-tab').tab('show');
     @endif
 
     function toast(icon, title) {

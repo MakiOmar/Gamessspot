@@ -7,6 +7,7 @@ use App\Models\SystemOpsSetting;
 use App\Services\SystemActivityLogger;
 use App\Services\SystemBackupService;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Validation\Rule;
 
@@ -68,7 +69,7 @@ class SystemOpsController extends Controller
     public function index(Request $request)
     {
         $settings = SystemOpsSetting::current();
-        $backups = $this->backupService->listBackups();
+        $backups = $this->paginateBackups($request);
 
         $activityQuery = SystemActivityLog::query()->orderByDesc('id');
 
@@ -89,10 +90,33 @@ class SystemOpsController extends Controller
             });
         }
 
-        $activities = $activityQuery->paginate(25)->appends($request->query());
+        $activities = $activityQuery->paginate(25, ['*'], 'activity_page')->appends($request->query());
         $actions = SystemActivityLog::query()->distinct()->orderBy('action')->pluck('action');
 
         return view('manager.system_ops.index', compact('settings', 'backups', 'activities', 'actions'));
+    }
+
+    /**
+     * Paginate filesystem backup list (not an Eloquent query).
+     */
+    protected function paginateBackups(Request $request): LengthAwarePaginator
+    {
+        $all = $this->backupService->listBackups();
+        $perPage = 15;
+        $page = max(1, (int) $request->input('backup_page', 1));
+        $total = count($all);
+        $items = array_slice($all, ($page - 1) * $perPage, $perPage);
+
+        return (new LengthAwarePaginator(
+            $items,
+            $total,
+            $perPage,
+            $page,
+            array(
+                'path' => $request->url(),
+                'pageName' => 'backup_page',
+            )
+        ))->appends($request->except('backup_page'));
     }
 
     public function updateBackupSettings(Request $request)
