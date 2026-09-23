@@ -776,6 +776,22 @@ Route::prefix('manager')->group(function () {
             // System Health Check Route (Admin only)
             Route::get('/health-check', [ManagerController::class, 'healthCheck'])->name('manager.health-check');
 
+            // System Ops: backups + activity (admin + SYSTEM_OPS_PASSWORD unlock)
+            Route::prefix('system-ops')->group(function () {
+                Route::get('/unlock', [\App\Http\Controllers\SystemOpsController::class, 'showUnlock'])->name('manager.system-ops.unlock');
+                Route::post('/unlock', [\App\Http\Controllers\SystemOpsController::class, 'unlock'])->name('manager.system-ops.unlock.submit');
+
+                Route::middleware('system.ops')->group(function () {
+                    Route::get('/', [\App\Http\Controllers\SystemOpsController::class, 'index'])->name('manager.system-ops.index');
+                    Route::post('/lock', [\App\Http\Controllers\SystemOpsController::class, 'lock'])->name('manager.system-ops.lock');
+                    Route::post('/backup-settings', [\App\Http\Controllers\SystemOpsController::class, 'updateBackupSettings'])->name('manager.system-ops.backup-settings');
+                    Route::post('/backups', [\App\Http\Controllers\SystemOpsController::class, 'createBackup'])->name('manager.system-ops.backups.create');
+                    Route::get('/backups/download', [\App\Http\Controllers\SystemOpsController::class, 'downloadBackup'])->name('manager.system-ops.backups.download');
+                    Route::delete('/backups', [\App\Http\Controllers\SystemOpsController::class, 'deleteBackup'])->name('manager.system-ops.backups.delete');
+                    Route::post('/backups/restore', [\App\Http\Controllers\SystemOpsController::class, 'restoreBackup'])->name('manager.system-ops.backups.restore');
+                });
+            });
+
             // Roles & Permissions management (Admin only)
             Route::prefix('roles-permissions')->group(function () {
                 Route::get('/', [RolePermissionController::class, 'index'])->name('manager.roles-permissions.index');

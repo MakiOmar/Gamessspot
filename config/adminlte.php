@@ -570,6 +570,13 @@ return [
             'icon' => 'bi bi-heart-pulse-fill',
             'can' => 'manage-options',
         ],
+        // System Ops (backups + activity; also requires SYSTEM_OPS_PASSWORD)
+        [
+            'text' => 'System Ops',
+            'route' => 'manager.system-ops.index',
+            'icon' => 'bi bi-shield-lock-fill',
+            'can' => 'manage-options',
+        ],
     ],
 
     'navbar-left' => [

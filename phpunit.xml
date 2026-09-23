@@ -30,5 +30,6 @@
         <env name="QUEUE_CONNECTION" value="sync"/>
         <env name="SESSION_DRIVER" value="array"/>
         <env name="TELESCOPE_ENABLED" value="false"/>
+        <env name="SYSTEM_OPS_PASSWORD" value="ops-secret-test"/>
     </php>
 </phpunit>

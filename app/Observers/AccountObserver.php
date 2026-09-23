@@ -3,60 +3,74 @@
 namespace App\Observers;
 
 use App\Models\Account;
+use App\Models\Order;
 use App\Services\CacheManager;
+use App\Services\SystemActivityLogger;
 
 class AccountObserver
 {
-    /**
-     * Handle the Account "created" event.
-     *
-     * @param  \App\Models\Account  $account
-     * @return void
-     */
+    public function __construct(
+        protected SystemActivityLogger $activityLogger
+    ) {
+    }
+
     public function created(Account $account)
     {
         $this->invalidateAccountCaches('created');
     }
 
-    /**
-     * Handle the Account "updated" event.
-     *
-     * @param  \App\Models\Account  $account
-     * @return void
-     */
     public function updated(Account $account)
     {
         $this->invalidateAccountCaches('updated');
     }
 
     /**
-     * Handle the Account "deleted" event.
-     *
-     * @param  \App\Models\Account  $account
-     * @return void
+     * Before DB delete: log order FK nulls (SET NULL) that Eloquent will not see.
      */
+    public function deleting(Account $account)
+    {
+        $orders = Order::query()
+            ->where('account_id', $account->id)
+            ->get(array('id', 'account_id', 'buyer_name', 'buyer_phone'));
+
+        foreach ($orders as $order) {
+            $this->activityLogger->log(
+                'order.account_id_nulled',
+                'order',
+                (int) $order->id,
+                'Order #' . $order->id,
+                array(
+                    'previous_account_id' => $account->id,
+                    'account_mail' => $account->mail,
+                    'cause' => 'account_deleted',
+                    'buyer_name' => $order->buyer_name,
+                    'buyer_phone' => $order->buyer_phone,
+                )
+            );
+        }
+
+        $this->activityLogger->log(
+            'account.deleted',
+            'account',
+            (int) $account->id,
+            $account->mail ?: ('Account #' . $account->id),
+            array(
+                'game_id' => $account->game_id,
+                'orders_affected' => $orders->count(),
+            )
+        );
+    }
+
     public function deleted(Account $account)
     {
         $this->invalidateAccountCaches('deleted');
     }
 
-    /**
-     * Handle the Account "restored" event.
-     *
-     * @param  \App\Models\Account  $account
-     * @return void
-     */
     public function restored(Account $account)
     {
         $this->invalidateAccountCaches('restored');
     }
 
-    /**
-     * Invalidate account-related caches
-     *
-     * @param string $event
-     * @return void
-     */
     protected function invalidateAccountCaches(string $event)
     {
         try {
@@ -66,4 +80,3 @@ class AccountObserver
         }
     }
 }
-

@@ -30,3 +30,5 @@ Artisan::command('inspire', function () {
 
 Schedule::command('queue:work database --stop-when-empty')->everyMinute();
 Schedule::command('accounts:sync-secondary-stock')->hourly();
+// System Ops automatic DB backup (interval enforced inside the command)
+Schedule::command('system-ops:run-scheduled-backup')->hourly();
