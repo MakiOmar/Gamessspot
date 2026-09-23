@@ -13,11 +13,6 @@
                 <h3 class="card-title">Enter System Ops password</h3>
             </div>
             <div class="card-body">
-                <p class="text-muted">
-                    Admin access alone is not enough. Enter the password from
-                    <code>SYSTEM_OPS_PASSWORD</code> in <code>.env</code>.
-                </p>
-
                 @if (session('status'))
                     <div class="alert alert-success">{{ session('status') }}</div>
                 @endif
