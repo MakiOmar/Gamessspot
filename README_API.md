@@ -27,6 +27,7 @@ Detailed docs for specific features:
 | `POST` | `/api/login` | No | Sanctum token |
 | `GET` | `/api/user` | Sanctum | Current user |
 | `GET` | `/api/games/platform/{4\|5}` | No | Catalog list (games or subscription) |
+| `GET` | `/api/games/featured` | No | Featured for both PS4 + PS5 (`count` limit) |
 | `GET` | `/api/games/featured/{4\|5}` | No | Featured catalog list (same shape as platform) |
 | `GET` | `/api/games/{id}` | No | Single catalog item + gallery + reviews |
 | `GET` | `/api/card-ctegories/list` | No | Gift-card categories (typo preserved) |
@@ -181,6 +182,58 @@ Subscriptions example item:
 }
 ```
 
+### `GET /api/games/featured`
+
+Featured games for **both** platforms in one response. Not paginated — use `count` to limit items **per platform**.
+
+| Param | Values |
+|-------|--------|
+| `count` (query) | Items per platform (default `10`, min `1`, max `50`) |
+| `product_type` (query) | `game` (default) or `subscription` |
+
+**Examples**
+
+```http
+GET /api/games/featured
+GET /api/games/featured?count=6
+GET /api/games/featured?count=8&product_type=subscription
+```
+
+**Success `200`**
+
+```json
+{
+  "count": 6,
+  "4": [
+    {
+      "id": 12,
+      "title": "God of War",
+      "code": "GOW",
+      "product_type": "game",
+      "image_url": "assets/ps4/gow.webp",
+      "types": { "primary": {}, "secondary": {}, "full": {} },
+      "rating_average": 4.5,
+      "rating_count": 12
+    }
+  ],
+  "5": [
+    {
+      "id": 12,
+      "title": "God of War",
+      "product_type": "game",
+      "image_url": "assets/ps5/gow.webp",
+      "types": { "primary": {}, "secondary": {}, "full": {} },
+      "rating_average": 4.5,
+      "rating_count": 12
+    }
+  ]
+}
+```
+
+- Keys `4` / `5` are PS4 / PS5 lists (same item shape as the platform catalog).
+- A game can appear in both lists when it has stock on both platforms.
+- Stock, special prices (store profile `17`), `types`, and ratings use the same rules as the platform endpoint.
+
 ### `GET /api/games/featured/{platform}`
 
 Same response shape and rules as [`GET /api/games/platform/{platform}`](#get-apigamesplatformplatform), limited to games with `is_featured = true`.
@@ -189,7 +242,8 @@ Same response shape and rules as [`GET /api/games/platform/{platform}`](#get-api
 |-------|--------|
 | `platform` (path) | `4` = PS4, `5` = PS5 |
 | `product_type` (query) | `game` (default) or `subscription` |
-| `page` (query) | Pagination page (20 per page) |
+| `page` (query) | Pagination page (20 per page); ignored when `count` is set |
+| `count` (query) | Optional; when set, returns a limited list instead of pagination (default clamp 1–50) |
 
 **Examples**
 
@@ -197,12 +251,14 @@ Same response shape and rules as [`GET /api/games/platform/{platform}`](#get-api
 GET /api/games/featured/5
 GET /api/games/featured/5?product_type=subscription
 GET /api/games/featured/4?product_type=game&page=2
+GET /api/games/featured/5?count=6
 ```
 
 **Notes**
 
 - Public, no Sanctum.
 - Invalid platform returns `400` with `{ "error": "Invalid platform. Use 4 for PS4 or 5 for PS5." }`.
+- With `count`, response is `{ "count": N, "data": [ ... ] }` (not a Laravel paginator).
 - Stock, special prices (store profile `17`), `types`, and ratings behave exactly like the platform catalog endpoint.
 
 ### `GET /api/games/{id}`
@@ -542,6 +598,13 @@ List featured PS5 games:
 
 ```bash
 curl "{BASE_URL}/api/games/featured/5" \
+  -H "Accept: application/json"
+```
+
+List featured for both platforms (6 each):
+
+```bash
+curl "{BASE_URL}/api/games/featured?count=6" \
   -H "Accept: application/json"
 ```
 

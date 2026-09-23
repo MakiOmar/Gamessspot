@@ -664,14 +664,48 @@ class ManagerController extends Controller
     }
 
     /**
+     * Fetch featured games for both PS4 and PS5 (limited list, not paginated).
+     *
+     * Query: count (default 10, max 50), product_type (game|subscription)
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getFeaturedGamesApi()
+    {
+        $count = $this->resolveFeaturedCount();
+
+        return response()->json(array(
+            'count' => $count,
+            '4'     => $this->listGamesByPlatformApi(4, true, $count),
+            '5'     => $this->listGamesByPlatformApi(5, true, $count),
+        ));
+    }
+
+    /**
      * Fetch featured games for a platform (same payload as platform catalog).
+     * Optional query `count` returns a limited list instead of pagination.
      *
      * @param int $platform
      * @return \Illuminate\Http\JsonResponse
      */
     public function getFeaturedGamesByPlatformApi($platform)
     {
-        return $this->paginateGamesByPlatformApi((int) $platform, true);
+        $platform = (int) $platform;
+
+        if ( ! in_array( $platform, array( 4, 5 ), true ) ) {
+            return response()->json( array( 'error' => 'Invalid platform. Use 4 for PS4 or 5 for PS5.' ), 400 );
+        }
+
+        if ( request()->has('count') ) {
+            $count = $this->resolveFeaturedCount();
+
+            return response()->json(array(
+                'count' => $count,
+                'data'  => $this->listGamesByPlatformApi($platform, true, $count),
+            ));
+        }
+
+        return $this->paginateGamesByPlatformApi($platform, true);
     }
 
     /**
@@ -686,13 +720,39 @@ class ManagerController extends Controller
     }
 
     /**
+     * Clamp featured list size from the count query param.
+     */
+    private function resolveFeaturedCount(): int
+    {
+        $count = (int) request()->input('count', 10);
+
+        return max(1, min(50, $count));
+    }
+
+    /**
+     * Limited (non-paginated) platform catalog items for featured lists.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private function listGamesByPlatformApi(int $platform, bool $featuredOnly, int $limit): array
+    {
+        $result = $this->paginateGamesByPlatformApi($platform, $featuredOnly, $limit);
+
+        return is_array($result) ? $result : array();
+    }
+
+    /**
      * Shared platform catalog query + transform for all / featured games.
      *
-     * @param int  $platform
-     * @param bool $featuredOnly
-     * @return \Illuminate\Http\JsonResponse
+     * When $limit is set, returns a plain array of transformed items (no pagination).
+     * When $limit is null, returns a JsonResponse with a Laravel paginator.
+     *
+     * @param int      $platform
+     * @param bool     $featuredOnly
+     * @param int|null $limit
+     * @return \Illuminate\Http\JsonResponse|array
      */
-    private function paginateGamesByPlatformApi(int $platform, bool $featuredOnly = false)
+    private function paginateGamesByPlatformApi(int $platform, bool $featuredOnly = false, ?int $limit = null)
     {
         // Validate the platform input (should be 4 or 5)
         if ( ! in_array( $platform, array( 4, 5 ), true ) ) {
@@ -746,7 +806,7 @@ class ManagerController extends Controller
             $psGamesQuery->where('games.is_featured', 1);
         }
 
-        $psGames = $psGamesQuery
+        $psGamesQuery
             ->groupBy(
                 'games.id',
                 'games.title',
@@ -764,11 +824,16 @@ class ManagerController extends Controller
                 "games.{$primary_status}",
                 "games.{$secondary_status}"
             )
-            ->havingRaw( "SUM(accounts.ps{$platform}_offline_stock) > 0 OR SUM(accounts.ps{$platform}_primary_stock) > 0 OR SUM(accounts.ps{$platform}_secondary_stock) > 0 OR SUM(CASE WHEN (" . Account::fullSellEligibleSql() . ") THEN 1 ELSE 0 END) > 0" )
-            ->paginate( 20 );
+            ->havingRaw( "SUM(accounts.ps{$platform}_offline_stock) > 0 OR SUM(accounts.ps{$platform}_primary_stock) > 0 OR SUM(accounts.ps{$platform}_secondary_stock) > 0 OR SUM(CASE WHEN (" . Account::fullSellEligibleSql() . ") THEN 1 ELSE 0 END) > 0" );
 
-        // Optimize: Get all game IDs for batch processing
-        $gameIds = $psGames->pluck('id')->toArray();
+        // Limited list (featured combined / count=N) vs paginated catalog
+        if ( null !== $limit ) {
+            $psGamesRows = $psGamesQuery->limit( $limit )->get();
+            $gameIds     = $psGamesRows->pluck('id')->toArray();
+        } else {
+            $psGames = $psGamesQuery->paginate( 20 );
+            $gameIds = $psGames->pluck('id')->toArray();
+        }
 
         $ratingByGameId = array();
         if ( ! empty( $gameIds ) ) {
@@ -795,29 +860,34 @@ class ManagerController extends Controller
                 ->toArray();
         }
 
+        $mapGame = function ($game) use ($platform, $ps4PrimaryAvailableGames, $ratingByGameId) {
+            $types = array(
+                'primary'   => $this->calculateTypeAvailability( $game->id, $platform, 'primary', $game, $ps4PrimaryAvailableGames ),
+                'secondary' => $this->calculateTypeAvailability( $game->id, $platform, 'secondary', $game, $ps4PrimaryAvailableGames ),
+                'full'      => $this->calculateTypeAvailability( $game->id, $platform, 'full', $game, $ps4PrimaryAvailableGames ),
+            );
+
+            $rating = $ratingByGameId[$game->id] ?? null;
+
+            return array(
+                'id'              => $game->id,
+                'title'           => $game->title,
+                'code'            => $game->code,
+                'product_type'    => $game->product_type,
+                'image_url'       => $game->image_url,
+                'types'           => $types,
+                'rating_average'  => $rating ? round((float) $rating->average, 1) : 0,
+                'rating_count'    => $rating ? (int) $rating->count : 0,
+            );
+        };
+
+        // Limited featured list: return plain item arrays (caller wraps JSON)
+        if ( null !== $limit ) {
+            return $psGamesRows->map( $mapGame )->values()->all();
+        }
+
         // Transform the data to include availability information for each type
-        $transformed_games = $psGames->getCollection()->map(
-            function ($game) use ($platform, $ps4PrimaryAvailableGames, $ratingByGameId) {
-                $types = array(
-                    'primary'   => $this->calculateTypeAvailability( $game->id, $platform, 'primary', $game, $ps4PrimaryAvailableGames ),
-                    'secondary' => $this->calculateTypeAvailability( $game->id, $platform, 'secondary', $game, $ps4PrimaryAvailableGames ),
-                    'full'      => $this->calculateTypeAvailability( $game->id, $platform, 'full', $game, $ps4PrimaryAvailableGames ),
-                );
-
-                $rating = $ratingByGameId[$game->id] ?? null;
-
-                return array(
-                    'id'              => $game->id,
-                    'title'           => $game->title,
-                    'code'            => $game->code,
-                    'product_type'    => $game->product_type,
-                    'image_url'       => $game->image_url,
-                    'types'           => $types,
-                    'rating_average'  => $rating ? round((float) $rating->average, 1) : 0,
-                    'rating_count'    => $rating ? (int) $rating->count : 0,
-                );
-            }
-        );
+        $transformed_games = $psGames->getCollection()->map( $mapGame );
 
         // Set the transformed collection back to the paginator
         $psGames->setCollection( $transformed_games );

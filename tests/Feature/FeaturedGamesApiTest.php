@@ -92,6 +92,72 @@ class FeaturedGamesApiTest extends TestCase
             ->assertJsonPath('error', 'Invalid platform. Use 4 for PS4 or 5 for PS5.');
     }
 
+    public function test_combined_featured_endpoint_returns_both_platforms_with_count(): void
+    {
+        $featured = Game::factory()->featured()->create([
+            'title' => 'Both Platforms Featured',
+            'ps4_primary_status' => true,
+            'ps5_primary_status' => true,
+        ]);
+
+        Account::create(array_merge([
+            'mail' => 'both_' . uniqid() . '@example.com',
+            'password' => 'secret',
+            'game_id' => $featured->id,
+            'region' => 'US',
+            'cost' => 10,
+            'birthdate' => '1990-01-01',
+            'login_code' => '3333',
+            'is_full' => false,
+        ], Account::resolveInitialStocks(false, false)));
+
+        $response = $this->getJson('/api/games/featured?count=5');
+
+        $response->assertOk()
+            ->assertJsonPath('count', 5)
+            ->assertJsonStructure([
+                'count',
+                '4',
+                '5',
+            ]);
+
+        $this->assertContains($featured->id, collect($response->json('4'))->pluck('id')->all());
+        $this->assertContains($featured->id, collect($response->json('5'))->pluck('id')->all());
+
+        $ps5Item = collect($response->json('5'))->firstWhere('id', $featured->id);
+        $this->assertArrayHasKey('types', $ps5Item);
+        $this->assertArrayHasKey('primary', $ps5Item['types']);
+        $this->assertLessThanOrEqual(5, count($response->json('4')));
+        $this->assertLessThanOrEqual(5, count($response->json('5')));
+    }
+
+    public function test_featured_platform_count_returns_limited_list(): void
+    {
+        $featured = Game::factory()->featured()->create([
+            'ps5_primary_status' => true,
+        ]);
+
+        Account::create(array_merge([
+            'mail' => 'cnt_' . uniqid() . '@example.com',
+            'password' => 'secret',
+            'game_id' => $featured->id,
+            'region' => 'US',
+            'cost' => 10,
+            'birthdate' => '1990-01-01',
+            'login_code' => '4444',
+            'is_full' => false,
+        ], Account::resolveInitialStocks(false, false)));
+
+        $response = $this->getJson('/api/games/featured/5?count=3');
+
+        $response->assertOk()
+            ->assertJsonPath('count', 3)
+            ->assertJsonStructure(['count', 'data']);
+
+        $this->assertLessThanOrEqual(3, count($response->json('data')));
+        $this->assertContains($featured->id, collect($response->json('data'))->pluck('id')->all());
+    }
+
     public function test_toggle_featured_flips_flag(): void
     {
         $game = Game::factory()->create(['is_featured' => false]);

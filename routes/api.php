@@ -54,6 +54,8 @@ Route::middleware('auth:sanctum')->post('/orders/check_stock', [OrderController:
 Route::middleware('auth:sanctum')->post('/orders/check_card_stock', [OrderController::class, 'checkCardStockApi']);
 Route::middleware('auth:sanctum')->post('/pos/receive-order', [OrderController::class, 'receiveFromPos']);
 Route::get('/games/platform/{platform}', [ManagerController::class, 'getGamesByPlatformApi']);
+// Combined featured (both platforms) must be registered before /games/featured/{platform}
+Route::get('/games/featured', [ManagerController::class, 'getFeaturedGamesApi']);
 Route::get('/games/featured/{platform}', [ManagerController::class, 'getFeaturedGamesByPlatformApi']);
 Route::get('/games/{id}', [ManagerController::class, 'getGameById']);
 Route::get('/card-ctegories/list', [CardCategoryController::class, 'sellApi']);
