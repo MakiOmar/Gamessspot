@@ -591,6 +591,7 @@ Each game offer (`ps4|ps5` × `primary|secondary|offline|full`) and each gift-ca
 - SKUs: `ACCOUNTS-GAME-{gameId}-{PS4|PS5}-{OFFER}` and `ACCOUNTS-CARD-{categoryId}`. Links are stored in `game_pos_products` and `card_categories.pos_*`.
 - Saving a game (title, code, prices, offer status) or a card category (name, price) queues `SyncPosCatalogJob` after commit. It calls POS `POST /api/accounts/catalog/upsert/{business_id}`. A POS failure is logged and never blocks the save.
 - Offers that are switched off are pushed as inactive only when already linked; deletes deactivate existing products and never create new ones.
+- Manager "Send to POS" sends one line per order with `_pos_product_id` set to the linked product (inactive links still count). Unlinked offers fall back to the shared `pos.*_id` placeholders from settings.
 - Backfill: `php artisan pos:sync-catalog` (`--games`, `--cards`, `--id=12 --id=13`).
 - Env: `POS_CATALOG_SYNC` (default `true`), `POS_BUSINESS_ID` (default `1`), `POS_CATALOG_SYNC_TIMEOUT` seconds (default `20`). Deploy POS first.
 

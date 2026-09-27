@@ -19,6 +19,7 @@ use Illuminate\Support\Str;
 use App\Models\Role;
 use Illuminate\Support\Facades\Http;
 use App\Services\SettingsService;
+use App\Services\PosSaleProductResolver;
 use Rawilk\Settings\Facades\Settings;
 use App\Jobs\SendInventoryWebhookJob;
 use App\Services\CacheManager;
@@ -1286,8 +1287,7 @@ class OrderController extends Controller
         ]);
 
         // Get POS settings from database
-        $posSkus = SettingsService::getPosSkus();
-        $posIds = SettingsService::getPosIds();
+        $posProducts = PosSaleProductResolver::fromSettings();
         $store_profile_ids = SettingsService::getPosLocationMap();
         $defaultPosLocation = SettingsService::getDefaultPosLocationMap()['profile_13'] ?? 1;
         $pos_location = $defaultPosLocation; // Default POS location fallback
@@ -1299,8 +1299,6 @@ class OrderController extends Controller
         $order_key        = '';
         $line_items       = [];
         $buyer_phone      = false;
-        $groupedLineItems = [];
-        $groupGameTitles  = [];
         $failedOrders     = [];
         // Filter orders that haven't been sent to POS (pos_order_id is null)
         $unsentOrderIds = Order::whereIn('id', $orderIds)
@@ -1354,6 +1352,7 @@ class OrderController extends Controller
                     $account_mail = null;
                     $account_password = null;
                     $game_title = null;
+                    $posProduct = $posProducts->forCard($card->category);
                 } else {
                     $card = null;
                     $account = Account::with('game:id,title')->findOrFail($order->account_id);
@@ -1362,25 +1361,14 @@ class OrderController extends Controller
                     $game_title = $account->game->title;
                     $card_code = null;
                     $card_category = null;
+                    $posProduct = $posProducts->forGame($order->sold_item, (int) $account->game_id);
                 }
                 if ($buyer_phone && $order->buyer_phone !== $buyer_phone) {
                     return redirect()->route('manager.orders')->with('error', 'Selected orders are not for the same client.');
                 }
                 $buyer_phone          = $order->buyer_phone;
                 $woocommerce_order_id = $order->woocommerce_order_id;
-                $sold_item            = $order->sold_item;
-                $platform             = explode('_', $sold_item);
                 $user = User::where('phone', $order->buyer_phone)->first();
-                if (isset($platform[1])) {
-                    $key = $platform[1];
-                    $sku = $posSkus[$key] ?? $posSkus['primary'];
-                    $pos_product_id = $posIds[$key] ?? $posIds['primary'];
-                    $type = $key;
-                } else {
-                    $sku = $posSkus['card'];
-                    $pos_product_id = $posIds['card'];
-                    $type = 'card';
-                }
                 if ($user) {
                     // User found, get the email
                     $email = $user->email;
@@ -1438,10 +1426,8 @@ class OrderController extends Controller
                     );
                 }
 
-                $groupKey = $type;
-
-                if (! isset($groupedLineItems[$groupKey])) {
-                    $groupedLineItems[$groupKey] = array(
+                // One POS line per Accounts order so each game offer and login stays on its own product.
+                $line_items[] = array(
                         "name" => $order->sold_item,
                         "product_id" => $order->sold_item === 'card' ? $order->card_id : $order->account_id,
                         "variation_id" => 0,
@@ -1456,7 +1442,7 @@ class OrderController extends Controller
                             array(
                                 "id" => 1207,
                                 "key" => "platform",
-                                "value" => "$platform[0]"
+                                "value" => $posProduct['platform']
                             ),
                             array(
                                 "id" => 1208,
@@ -1471,7 +1457,7 @@ class OrderController extends Controller
                             array(
                                 "id" => 1217,
                                 "key" => "type",
-                                "value" => $type
+                                "value" => $posProduct['type']
                             ),
                             array(
                                 "id" => 1218,
@@ -1481,7 +1467,7 @@ class OrderController extends Controller
                             array(
                                 "id" => 1219,
                                 "key" => "_pos_product_id",
-                                "value" => $pos_product_id
+                                "value" => $posProduct['pos_product_id']
                             ),
                             array(
                                 "id" => 1220,
@@ -1494,40 +1480,14 @@ class OrderController extends Controller
                                 "value" => $card_category
                             )
                         ),
-                        "sku" => "$sku",
+                        "sku" => $posProduct['sku'],
                         "price" => $order->price,
                         "image" => array(
                             "id" => "",
                             "src" => ""
                         ),
                         "parent_name" => null
-                    );
-
-                    $groupGameTitles[$groupKey] = array();
-                    if ($game_title) {
-                        $groupGameTitles[$groupKey][] = $game_title;
-                    }
-                } else {
-                    $groupedLineItems[$groupKey]['quantity'] += 1;
-                    $groupedLineItems[$groupKey]['subtotal'] = (string) ((float) $groupedLineItems[$groupKey]['subtotal'] + (float) $order->price);
-                    $groupedLineItems[$groupKey]['total'] = (string) ((float) $groupedLineItems[$groupKey]['total'] + (float) $order->price);
-
-                    if ($game_title) {
-                        if (! in_array($game_title, $groupGameTitles[$groupKey], true)) {
-                            $groupGameTitles[$groupKey][] = $game_title;
-                        }
-
-                        if (count($groupGameTitles[$groupKey]) > 1) {
-                            foreach ($groupedLineItems[$groupKey]['meta_data'] as &$metaItem) {
-                                if (isset($metaItem['key']) && $metaItem['key'] === 'game_title') {
-                                    $metaItem['value'] = 'Multiple games';
-                                    break;
-                                }
-                            }
-                            unset($metaItem);
-                        }
-                    }
-                }
+                );
 
                 $order_total += $order->price;
                 $order_key .= $orderId;
@@ -1541,7 +1501,6 @@ class OrderController extends Controller
             $basic_details['shipping'] = $billing_details;
         }
         if ($basic_details) {
-            $line_items = array_values($groupedLineItems);
             $basic_details['line_items'] = $line_items;
             $basic_details['total'] = $order_total;
             $basic_details['order_key'] = $order_key;
