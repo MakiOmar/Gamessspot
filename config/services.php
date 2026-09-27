@@ -31,4 +31,11 @@ return [
         'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
     ],
 
+    // Push each game offer / card category to POS as its own product (README_API.md "POS catalog sync").
+    'pos_catalog' => [
+        'enabled' => filter_var(env('POS_CATALOG_SYNC', true), FILTER_VALIDATE_BOOL),
+        'business_id' => (int) env('POS_BUSINESS_ID', 1),
+        'timeout' => (int) env('POS_CATALOG_SYNC_TIMEOUT', 20),
+    ],
+
 ];

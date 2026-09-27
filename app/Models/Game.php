@@ -109,6 +109,11 @@ class Game extends Model
         return $this->hasMany(Account::class);
     }
 
+    public function posProducts()
+    {
+        return $this->hasMany(GamePosProduct::class);
+    }
+
     // In Game model
     public function specialPrices()
     {

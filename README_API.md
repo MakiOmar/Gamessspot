@@ -319,6 +319,11 @@ Notes:
 - `ps4_full_stock` and `ps5_full_stock` both count accounts currently eligible for a full sale (cross-platform / PS5-only rules above). Values are typically the same for a given game.
 - A **full** sale clears PS4 secondary+offline and all PS5 stocks, **keeps `ps4_primary_stock`**, then disables the full-sell feature on that account.
 - `reviews` includes **approved** reviews only (no phone numbers).
+- `pos_offers` maps platform digit → offer → `{ product_id, variation_id }` of the synced POS product (see [POS catalog sync](#pos-catalog-sync)). Offers that are not currently sold are omitted; `{}` when nothing is synced. The platform catalog endpoint returns the same field limited to the requested platform.
+
+```json
+"pos_offers": { "5": { "primary": { "product_id": 901, "variation_id": 1402 } } }
+```
 
 **Error `404`** game not found.
 
@@ -367,10 +372,13 @@ Legacy path spelling (`ctegories`). Categories that have at least one active cod
       { "id": 2, "url": "https://...", "path": "...", "sort_order": 0 }
     ],
     "reviews": { "average": 4.0, "count": 2, "items": [] },
-    "cards_count": 10
+    "cards_count": 10,
+    "pos_variation_id": 1410
   }
 }
 ```
+
+`pos_variation_id` (also on each list item) is the synced POS variation for the category, or `null` when the category is not synced or its POS product is inactive.
 
 ---
 
@@ -573,6 +581,18 @@ Send `card_category_id` (triggers card flow):
 ### `POST /api/pos/receive-order`
 
 Authenticated POS receive endpoint (internal/POS integration). Prefer using the same Bearer token as other Sanctum routes.
+
+---
+
+## POS catalog sync
+
+Each game offer (`ps4|ps5` × `primary|secondary|offline|full`) and each gift-card category has its own hidden POS product, so a sale here creates a POS sale of that exact product.
+
+- SKUs: `ACCOUNTS-GAME-{gameId}-{PS4|PS5}-{OFFER}` and `ACCOUNTS-CARD-{categoryId}`. Links are stored in `game_pos_products` and `card_categories.pos_*`.
+- Saving a game (title, code, prices, offer status) or a card category (name, price) queues `SyncPosCatalogJob` after commit. It calls POS `POST /api/accounts/catalog/upsert/{business_id}`. A POS failure is logged and never blocks the save.
+- Offers that are switched off are pushed as inactive only when already linked; deletes deactivate existing products and never create new ones.
+- Backfill: `php artisan pos:sync-catalog` (`--games`, `--cards`, `--id=12 --id=13`).
+- Env: `POS_CATALOG_SYNC` (default `true`), `POS_BUSINESS_ID` (default `1`), `POS_CATALOG_SYNC_TIMEOUT` seconds (default `20`). Deploy POS first.
 
 ---
 

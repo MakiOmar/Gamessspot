@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Support\Facades\Auth;
 use App\Models\Game;
+use App\Models\GamePosProduct;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Cache;
@@ -176,6 +177,7 @@ class ManagerController extends Controller
         return response()->json([
             'success' => true,
             'data' => array_merge((array) $game, [
+                'pos_offers' => (object) (GamePosProduct::shopOffersFor([(int) $game->id])[(int) $game->id] ?? []),
                 'gallery' => $gameModel ? $gameModel->galleryApiPayload() : [],
                 'reviews' => $gameModel ? $gameModel->reviewsApiPayload() : [
                     'average' => 0,
@@ -860,7 +862,9 @@ class ManagerController extends Controller
                 ->toArray();
         }
 
-        $mapGame = function ($game) use ($platform, $ps4PrimaryAvailableGames, $ratingByGameId) {
+        $posOffersByGameId = GamePosProduct::shopOffersFor( array_map( 'intval', $gameIds ) );
+
+        $mapGame = function ($game) use ($platform, $ps4PrimaryAvailableGames, $ratingByGameId, $posOffersByGameId) {
             $types = array(
                 'primary'   => $this->calculateTypeAvailability( $game->id, $platform, 'primary', $game, $ps4PrimaryAvailableGames ),
                 'secondary' => $this->calculateTypeAvailability( $game->id, $platform, 'secondary', $game, $ps4PrimaryAvailableGames ),
@@ -876,6 +880,10 @@ class ManagerController extends Controller
                 'product_type'    => $game->product_type,
                 'image_url'       => $game->image_url,
                 'types'           => $types,
+                'pos_offers'      => (object) array_intersect_key(
+                    $posOffersByGameId[(int) $game->id] ?? array(),
+                    array( (string) $platform => true )
+                ),
                 'rating_average'  => $rating ? round((float) $rating->average, 1) : 0,
                 'rating_count'    => $rating ? (int) $rating->count : 0,
             );

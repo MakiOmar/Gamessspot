@@ -89,6 +89,7 @@ class AppServiceProvider extends ServiceProvider
         \App\Models\Account::observe(\App\Observers\AccountObserver::class);
         \App\Models\Card::observe(\App\Observers\CardObserver::class);
         \App\Models\Game::observe(\App\Observers\GameObserver::class);
+        \App\Models\CardCategory::observe(\App\Observers\CardCategoryObserver::class);
         \App\Models\DeviceRepair::observe(\App\Observers\DeviceRepairObserver::class);
     }
 }

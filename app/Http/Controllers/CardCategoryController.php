@@ -44,6 +44,8 @@ class CardCategoryController extends Controller
             $category->setAttribute('reviews', $category->reviewsApiPayload());
             // Ensure description is present on list payloads
             $category->makeVisible(['description']);
+            // Only an active POS link is exposed; null makes the shop use the shared gift-card SKU.
+            $category->setAttribute('pos_variation_id', $category->activePosVariationId());
             return $category;
         });
     }
@@ -79,6 +81,7 @@ class CardCategoryController extends Controller
                 'id' => $cardCategory->id,
                 'name' => $cardCategory->name,
                 'price' => $cardCategory->price,
+                'pos_variation_id' => $cardCategory->activePosVariationId(),
                 'description' => $cardCategory->description,
                 'poster_image' => $cardCategory->poster_image
                     ? asset($cardCategory->poster_image)

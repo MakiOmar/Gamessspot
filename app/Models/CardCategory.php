@@ -16,6 +16,22 @@ class CardCategory extends Model
 
     protected $fillable = ['name', 'price', 'poster_image', 'description'];
 
+    protected $hidden = ['pos_product_id', 'pos_active'];
+
+    protected $casts = [
+        'pos_product_id' => 'integer',
+        'pos_variation_id' => 'integer',
+        'pos_active' => 'boolean',
+    ];
+
+    /**
+     * POS variation the shop should sell, or null so it falls back to the shared gift-card product.
+     */
+    public function activePosVariationId(): ?int
+    {
+        return $this->pos_active && $this->pos_variation_id ? (int) $this->pos_variation_id : null;
+    }
+
     /**
      * Get the cards for the category.
      */

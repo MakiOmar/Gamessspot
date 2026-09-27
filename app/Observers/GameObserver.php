@@ -2,11 +2,14 @@
 
 namespace App\Observers;
 
+use App\Jobs\SyncPosCatalogJob;
 use App\Models\Account;
 use App\Models\Game;
 use App\Models\Order;
 use App\Services\CacheManager;
+use App\Services\PosCatalogSync;
 use App\Services\SystemActivityLogger;
+use Illuminate\Support\Facades\Log;
 
 class GameObserver
 {
@@ -15,14 +18,29 @@ class GameObserver
     ) {
     }
 
+    /**
+     * Columns that change a POS offer product (name, price, or sold/not sold).
+     */
+    private const POS_FIELDS = [
+        'title', 'code', 'full_price',
+        'ps4_primary_price', 'ps4_secondary_price', 'ps4_offline_price',
+        'ps5_primary_price', 'ps5_secondary_price', 'ps5_offline_price',
+        'ps4_primary_status', 'ps4_secondary_status', 'ps4_offline_status',
+        'ps5_primary_status', 'ps5_secondary_status', 'ps5_offline_status',
+    ];
+
     public function created(Game $game)
     {
         $this->invalidateGameCaches('created');
+        $this->queuePosSync(SyncPosCatalogJob::game($game));
     }
 
     public function updated(Game $game)
     {
         $this->invalidateGameCaches('updated');
+        if ($game->wasChanged(self::POS_FIELDS)) {
+            $this->queuePosSync(SyncPosCatalogJob::game($game));
+        }
     }
 
     /**
@@ -82,6 +100,22 @@ class GameObserver
     public function deleted(Game $game)
     {
         $this->invalidateGameCaches('deleted');
+        $this->queuePosSync(SyncPosCatalogJob::deletedGame($game));
+    }
+
+    /**
+     * A queue or POS outage must never fail the manager save.
+     */
+    protected function queuePosSync(SyncPosCatalogJob $job): void
+    {
+        if (! PosCatalogSync::enabled()) {
+            return;
+        }
+        try {
+            dispatch($job);
+        } catch (\Throwable $e) {
+            Log::warning('POS catalog sync could not be queued', ['kind' => $job->kind, 'id' => $job->id, 'message' => $e->getMessage()]);
+        }
     }
 
     public function restored(Game $game)
