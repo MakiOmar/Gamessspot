@@ -419,6 +419,15 @@ return [
             'can' => ['view-game-accounts', 'manage-accounts'],
         ],
 
+        // Traders (suppliers, purchase orders, payments)
+        [
+            'text' => 'Traders',
+            'route' => 'manager.traders.index',
+            'icon' => 'bi bi-truck',
+            'can' => 'view-traders',
+            'active' => ['manager/traders*', 'manager/purchase-orders*'],
+        ],
+
         // Reports
         [
             'text' => 'Reports',

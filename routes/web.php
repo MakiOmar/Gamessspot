@@ -4,6 +4,9 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Auth\AdminLoginController;
 use App\Http\Controllers\ManagerController;
 use App\Http\Controllers\AccountController;
+use App\Http\Controllers\PurchaseOrderController;
+use App\Http\Controllers\TraderController;
+use App\Http\Controllers\TraderPaymentController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\StoreProfileController;
@@ -630,6 +633,50 @@ Route::prefix('manager')->group(function () {
                 Route::put('/{id}', [AccountController::class, 'update'])->name('manager.accounts.update');
                 Route::delete('/{id}', [AccountController::class, 'destroy'])->name('manager.accounts.destroy');
             });
+        });
+
+        // Traders: suppliers, purchase orders and payments
+        Route::get('/traders/{trader}/purchase-order-lines', [TraderController::class, 'purchaseOrderLines'])
+            ->whereNumber('trader')
+            ->name('manager.traders.lines');
+
+        Route::middleware('can:view-traders')->group(function () {
+            Route::get('/traders', [TraderController::class, 'index'])->name('manager.traders.index');
+            Route::get('/traders/{trader}', [TraderController::class, 'show'])->whereNumber('trader')->name('manager.traders.show');
+            Route::get('/trader-payments/{payment}/attachment', [TraderPaymentController::class, 'attachment'])
+                ->whereNumber('payment')
+                ->name('manager.trader-payments.attachment');
+            Route::get('/purchase-orders/{purchaseOrder}', [PurchaseOrderController::class, 'show'])
+                ->whereNumber('purchaseOrder')
+                ->name('manager.purchase-orders.show');
+        });
+
+        Route::middleware('can:manage-traders')->group(function () {
+            Route::post('/traders', [TraderController::class, 'store'])->name('manager.traders.store');
+            Route::put('/traders/{trader}', [TraderController::class, 'update'])->whereNumber('trader')->name('manager.traders.update');
+            Route::put('/traders/{trader}/opening-balance', [TraderController::class, 'updateOpeningBalance'])
+                ->whereNumber('trader')
+                ->name('manager.traders.opening-balance');
+            Route::post('/traders/{trader}/payments', [TraderPaymentController::class, 'store'])
+                ->whereNumber('trader')
+                ->name('manager.trader-payments.store');
+            Route::get('/purchase-orders/create', [PurchaseOrderController::class, 'create'])->name('manager.purchase-orders.create');
+            Route::post('/purchase-orders', [PurchaseOrderController::class, 'store'])->name('manager.purchase-orders.store');
+            Route::get('/purchase-orders/{purchaseOrder}/edit', [PurchaseOrderController::class, 'edit'])
+                ->whereNumber('purchaseOrder')
+                ->name('manager.purchase-orders.edit');
+            Route::put('/purchase-orders/{purchaseOrder}', [PurchaseOrderController::class, 'update'])
+                ->whereNumber('purchaseOrder')
+                ->name('manager.purchase-orders.update');
+        });
+
+        Route::middleware('can:void-trader-transactions')->group(function () {
+            Route::post('/purchase-orders/{purchaseOrder}/void', [PurchaseOrderController::class, 'void'])
+                ->whereNumber('purchaseOrder')
+                ->name('manager.purchase-orders.void');
+            Route::post('/trader-payments/{payment}/void', [TraderPaymentController::class, 'void'])
+                ->whereNumber('payment')
+                ->name('manager.trader-payments.void');
         });
 
         // Sell log: read access (includes call center — search/view order details only)
