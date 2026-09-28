@@ -455,6 +455,17 @@ class TradersModuleTest extends TestCase
         $this->assertNotNull($game->fresh());
     }
 
+    public function test_lock_item_for_import_rejects_line_of_voided_order(): void
+    {
+        $service = app(PurchaseOrderService::class);
+        $order = $this->createOrder(Trader::factory()->create(), array($this->line(Game::factory()->create(), 2, 10)));
+        $itemId = $order->items()->first()->id;
+        $service->void($order, 'Duplicate', null);
+
+        $this->expectException(\Illuminate\Validation\ValidationException::class);
+        \Illuminate\Support\Facades\DB::transaction(fn () => $service->lockItemForImport($itemId));
+    }
+
     public function test_opening_balance_update_changes_balance(): void
     {
         $admin = $this->createUserWithRole('admin');

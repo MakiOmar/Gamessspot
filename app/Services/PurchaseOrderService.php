@@ -78,7 +78,7 @@ class PurchaseOrderService
                 throw ValidationException::withMessages(array('order' => 'A cancelled purchase order cannot be edited.'));
             }
 
-            $existing = $order->items()->withCount('accounts')->get()->keyBy('id');
+            $existing = $order->items()->lockForUpdate()->withCount('accounts')->get()->keyBy('id');
             $hasImported = $existing->sum('accounts_count') > 0;
 
             $this->assertHeaderEditable($order, $data, $hasImported);
@@ -161,14 +161,24 @@ class PurchaseOrderService
     }
 
     /**
-     * Lock the line row and return it with its remaining quantity; throws when the order is not usable.
+     * Lock the order row, then the line row (same order as update/void to avoid races and deadlocks),
+     * and return the line with its remaining quantity. Must run inside a transaction.
      *
      * @return array{0: TraderPurchaseOrderItem, 1: int}
      */
     public function lockItemForImport(int $itemId): array
     {
-        $item = TraderPurchaseOrderItem::query()->lockForUpdate()->with(array('purchaseOrder.trader', 'game:id,title'))->findOrFail($itemId);
-        $order = $item->purchaseOrder;
+        $orderId = TraderPurchaseOrderItem::query()->whereKey($itemId)->value('purchase_order_id');
+
+        if ($orderId === null) {
+            throw ValidationException::withMessages(array(
+                'purchase_order_item_id' => 'The selected purchase order line does not exist.',
+            ));
+        }
+
+        $order = TraderPurchaseOrder::query()->lockForUpdate()->with('trader')->findOrFail($orderId);
+        $item = TraderPurchaseOrderItem::query()->lockForUpdate()->with('game:id,title')->findOrFail($itemId);
+        $item->setRelation('purchaseOrder', $order);
 
         if ($order->isCancelled()) {
             throw ValidationException::withMessages(array(
