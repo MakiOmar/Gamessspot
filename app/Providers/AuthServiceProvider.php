@@ -41,5 +41,14 @@ class AuthServiceProvider extends ServiceProvider
                     || $role->hasCapability('manage-accounts')
             );
         });
+
+        Gate::define('view-traders', function ($user) {
+            $user->loadMissing('roles');
+
+            return $user->roles->contains(
+                fn ($role) => $role->hasCapability('view-traders')
+                    || $role->hasCapability('manage-traders')
+            );
+        });
     }
 }
