@@ -167,7 +167,7 @@ class PurchaseOrderService
      */
     public function lockItemForImport(int $itemId): array
     {
-        $item = TraderPurchaseOrderItem::query()->lockForUpdate()->with('purchaseOrder.trader')->findOrFail($itemId);
+        $item = TraderPurchaseOrderItem::query()->lockForUpdate()->with(array('purchaseOrder.trader', 'game:id,title'))->findOrFail($itemId);
         $order = $item->purchaseOrder;
 
         if ($order->isCancelled()) {

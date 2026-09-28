@@ -2,7 +2,7 @@
 <div class="d-flex justify-content-between align-items-center mb-2">
     <h5 class="mb-0">Payments</h5>
     @can('manage-traders')
-        <button type="button" class="btn btn-sm btn-success" data-toggle="modal" data-target="#paymentModal">
+        <button type="button" class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#paymentModal">
             <i class="bi bi-cash-coin"></i> Add Payment
         </button>
     @endcan

@@ -42,7 +42,7 @@
                         <i class="bi bi-plus-lg"></i> New Purchase Order
                     </a>
                 @endif
-                <button type="button" class="btn btn-sm btn-success" data-toggle="modal" data-target="#paymentModal">
+                <button type="button" class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#paymentModal">
                     <i class="bi bi-cash-coin"></i> Add Payment
                 </button>
             @endcan

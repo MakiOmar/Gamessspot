@@ -14,6 +14,20 @@
     <td>{{ $account->ps5_primary_stock }}</td>
     <td>{{ $account->ps5_secondary_stock }}</td>
     <td>{{ $account->cost }}</td>
+    <!-- Purchase source: trader and PO link to their pages; legacy accounts have none -->
+    <td class="small">
+        @if ($account->trader_id)
+            @can('view-traders')
+                <a href="{{ route('manager.traders.show', $account->trader_id) }}">{{ $account->trader?->name }}</a>
+                / <a href="{{ route('manager.purchase-orders.show', $account->purchase_order_id) }}">{{ $account->purchaseOrder?->po_number }}</a>
+            @else
+                {{ $account->trader?->name }} / {{ $account->purchaseOrder?->po_number }}
+            @endcan
+            <br><span class="text-muted">{{ $account->purchase_date?->toDateString() }} · {{ number_format((float) $account->original_cost, 2) }}</span>
+        @else
+            <span class="text-muted">No source</span>
+        @endif
+    </td>
     <td>{{ $account->password }}</td>
     @can('manage-accounts')
     <td>
@@ -28,6 +42,8 @@
                 data-cost="{{ $account->cost }}"
                 data-birthdate="{{ $account->birthdate }}"
                 data-login_code="{{ $account->login_code }}"
+                data-linked="{{ $account->hasPurchaseSource() ? '1' : '0' }}"
+                data-source="{{ $account->hasPurchaseSource() ? ($account->trader?->name . ' / ' . $account->purchaseOrder?->po_number . ' / ' . $account->purchase_date?->toDateString() . ' / ' . number_format((float) $account->original_cost, 2)) : '' }}"
                 data-ps4_primary="{{ $account->ps4_primary_stock }}"
                 data-ps4_secondary="{{ $account->ps4_secondary_stock }}"
                 data-ps4_offline="{{ $account->ps4_offline_stock }}"

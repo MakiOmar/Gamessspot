@@ -101,6 +101,7 @@
                         <th>Primary (PS5)</th>
                         <th>Secondary (PS5)</th>
                         <th>Cost</th>
+                        <th>Source</th>
                         <th>Password</th>
                         @can('manage-accounts')
                         <th>Actions</th>
@@ -156,6 +157,37 @@
                         </div>
                     </div>
 
+                    <!-- Purchase source (add mode): Trader, then Purchase Order, then Game line -->
+                    <div id="accountSourceSelects" class="border rounded p-2 mb-2 bg-light">
+                        <div class="form-group mb-2">
+                            <label for="accountTrader">Trader</label>
+                            <select class="form-control source-trader" id="accountTrader">
+                                <option value="">Select trader</option>
+                                @foreach($traders as $trader)
+                                    <option value="{{ $trader->id }}">{{ $trader->name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="form-group mb-2">
+                            <label for="accountPurchaseOrder">Purchase Order</label>
+                            <select class="form-control source-po" id="accountPurchaseOrder" disabled>
+                                <option value="">Select purchase order</option>
+                            </select>
+                        </div>
+                        <div class="form-group mb-0">
+                            <label for="accountLine">Game line</label>
+                            <select class="form-control source-line" id="accountLine" name="purchase_order_item_id" disabled>
+                                <option value="">Select game</option>
+                            </select>
+                        </div>
+                        @if($traders->isEmpty())
+                            <small class="text-danger d-block mt-1">No active traders yet. Create a trader and purchase order first.</small>
+                        @endif
+                    </div>
+
+                    <!-- Purchase source (edit mode, read-only) -->
+                    <div id="accountSourceInfo" class="alert alert-secondary small py-2" style="display: none;"></div>
+
                     <!-- Game Dropdown -->
                     <div class="form-group">
                         <label for="game">Game</label>
@@ -185,7 +217,7 @@
                     <!-- Cost -->
                     <div class="form-group">
                         <label for="cost">Cost</label>
-                        <input type="number" class="form-control" id="cost" name="cost" required>
+                        <input type="number" step="0.01" class="form-control" id="cost" name="cost" required>
                     </div>
 
                     <!-- Birth Date -->
@@ -350,6 +382,32 @@
                 </div>
                 <div class="modal-body">
                     @csrf
+                    <!-- Every imported row is linked to this trader / purchase order / game line -->
+                    <div class="border rounded p-2 mb-3 bg-light">
+                        <div class="mb-2">
+                            <label for="importTrader" class="form-label">Trader</label>
+                            <select class="form-control source-trader" id="importTrader" required>
+                                <option value="">Select trader</option>
+                                @foreach($traders as $trader)
+                                    <option value="{{ $trader->id }}">{{ $trader->name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="mb-2">
+                            <label for="importPurchaseOrder" class="form-label">Purchase Order</label>
+                            <select class="form-control source-po" id="importPurchaseOrder" disabled required>
+                                <option value="">Select purchase order</option>
+                            </select>
+                        </div>
+                        <div class="mb-0">
+                            <label for="importLine" class="form-label">Game line</label>
+                            <select class="form-control source-line" id="importLine" name="purchase_order_item_id" disabled required>
+                                <option value="">Select game</option>
+                            </select>
+                            <small class="form-text text-muted" id="importLineHint"></small>
+                        </div>
+                    </div>
+
                     <div class="mb-3">
                         <label for="importFile" class="form-label">Select Excel/CSV File</label>
                         <input type="file" class="form-control" id="importFile" name="file" 
@@ -367,12 +425,11 @@
                         <ul class="mb-0">
                             <li><strong>Mail</strong> - Email address (must be unique)</li>
                             <li><strong>Password</strong> - Account password</li>
-                            <li><strong>Game</strong> - Game title (must exist in system)</li>
                             <li><strong>Region</strong> - Region code (e.g., US, EU)</li>
-                            <li><strong>Cost</strong> - Account cost</li>
                             <li><strong>Birthdate</strong> - Birth date (YYYY-MM-DD)</li>
                             <li><strong>Login Code</strong> - Login code</li>
                         </ul>
+                        <p class="mb-0 mt-1 small">Game and cost come from the selected purchase order line. The file can't have more rows than the line's remaining quantity.</p>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -455,14 +512,103 @@
             }
         }
 
+        // Trader -> Purchase Order -> Game line cascading selects (shared by add and import)
+        const sourceLinesUrl = @js(route('manager.traders.lines', ['trader' => '__ID__']));
+        const sourceCache = {};
+
+        function resetSelect($select, placeholder) {
+            $select.empty().append($('<option>', { value: '', text: placeholder })).prop('disabled', true);
+        }
+
+        function initSourceSelects($trader, $po, $line, onLineChange) {
+            let orders = [];
+
+            $trader.on('change', function () {
+                resetSelect($po, 'Select purchase order');
+                resetSelect($line, 'Select game');
+                onLineChange(null);
+                const traderId = $(this).val();
+                if (!traderId) return;
+
+                const render = function (data) {
+                    orders = data.purchase_orders || [];
+                    if (!orders.length) {
+                        $po.find('option').first().text('No active purchase orders for this trader');
+                        return;
+                    }
+                    orders.forEach(function (order) {
+                        $po.append($('<option>', { value: order.id, text: order.po_number + ' (' + order.purchase_date + ')' }));
+                    });
+                    $po.prop('disabled', false);
+                };
+
+                if (sourceCache[traderId]) {
+                    render(sourceCache[traderId]);
+                    return;
+                }
+                $po.find('option').first().text('Loading…');
+                $.getJSON(sourceLinesUrl.replace('__ID__', traderId))
+                    .done(function (data) { sourceCache[traderId] = data; $po.find('option').first().text('Select purchase order'); render(data); })
+                    .fail(function () {
+                        $po.find('option').first().text('Select purchase order');
+                        Swal.fire({ toast: true, position: 'top-end', icon: 'error', title: 'Could not load purchase orders', showConfirmButton: false, timer: 3000 });
+                    });
+            });
+
+            $po.on('change', function () {
+                resetSelect($line, 'Select game');
+                onLineChange(null);
+                const order = orders.find(function (o) { return String(o.id) === String($po.val()); });
+                if (!order) return;
+                order.items.forEach(function (item) {
+                    $line.append($('<option>', {
+                        value: item.id,
+                        text: item.game_title + ' — ' + item.remaining + ' of ' + item.quantity + ' remaining @ ' + item.cost_per_account,
+                        disabled: item.remaining < 1
+                    }).data('item', item));
+                });
+                $line.prop('disabled', false);
+            });
+
+            $line.on('change', function () {
+                onLineChange($line.find('option:selected').data('item') || null);
+            });
+        }
+
+        initSourceSelects($('#accountTrader'), $('#accountPurchaseOrder'), $('#accountLine'), function (item) {
+            $('#game').val(item ? String(item.game_id) : '').trigger('change');
+            $('#cost').val(item ? item.cost_per_account : '');
+        });
+
+        initSourceSelects($('#importTrader'), $('#importPurchaseOrder'), $('#importLine'), function (item) {
+            $('#importLineHint').text(item
+                ? 'Imported ' + item.imported + ' / ' + item.quantity + ' — up to ' + item.remaining + ' row(s) can be imported, cost ' + item.cost_per_account + ' each.'
+                : '');
+        });
+
+        $('#importModal').on('show.bs.modal', function () {
+            $('#importTrader').val('').trigger('change');
+        });
+
+        // Game and cost are always derived from the purchase order line (or locked for linked accounts)
+        function setGameCostLocked(locked) {
+            $('#game').prop('disabled', locked).prop('required', !locked).trigger('change.select2');
+            $('#cost').prop('readonly', locked).prop('required', !locked);
+        }
+
         // Handle Add Account Button
         $(document).on('click','#addAccountButton',function() {
             $('#accountModalLabel').text('Add New Account');
-            $('#accountForm').attr('action', "{{ route('manager.accounts.store') }}").attr('method', 'POST');
+            $('#accountForm').attr('action', "{{ route('manager.accounts.store') }}").attr('method', 'POST').removeAttr('data-method').removeData('method');
             $('#accountForm')[0].reset(); // Reset the form
             $('#stock-availability').show();
             $('#is_full, #ps5_only').prop('checked', false).prop('disabled', false);
             $('.slot-checkbox').prop('checked', false).prop('disabled', false);
+            $('#accountSourceSelects').show();
+            $('#accountSourceInfo').hide().text('');
+            $('#accountLine').prop('required', true);
+            $('#accountTrader').val('').trigger('change');
+            setGameCostLocked(true);
             syncAccountTypeAvailability();
         });
 
@@ -481,6 +627,13 @@
             $('#cost').val($(this).data('cost'));
             $('#birthdate').val($(this).data('birthdate'));
             $('#login_code').val($(this).data('login_code'));
+
+            // Purchase source is read-only after creation
+            const linked = String($(this).data('linked')) === '1';
+            $('#accountSourceSelects').hide();
+            $('#accountLine').prop('required', false).prop('disabled', true);
+            $('#accountSourceInfo').toggle(linked).text(linked ? 'Source: ' + $(this).data('source') + ' (game and cost are locked)' : '');
+            setGameCostLocked(linked);
         });
 
         // Handle Stock Edit Button
@@ -889,15 +1042,16 @@
                     location.reload(); // Reload to reflect changes
                 },
                 error: function(xhr) {
-                    let errors = xhr.responseJSON.errors;
-                    for (let key in errors) {
-                        Swal.fire({
-                            title: 'Error',
-                            text: errors[key][0],
-                            icon: 'error',
-                            confirmButtonText: 'OK'
-                        });
-                    }
+                    const res = xhr.responseJSON || {};
+                    const text = res.errors
+                        ? Object.values(res.errors).map(function (messages) { return messages[0]; }).join('\n')
+                        : (res.error || res.message || 'Could not save the account. Please try again.');
+                    Swal.fire({
+                        title: 'Error',
+                        text: text,
+                        icon: 'error',
+                        confirmButtonText: 'OK'
+                    });
                 }
             });
         });
@@ -949,7 +1103,11 @@
             let formData = new FormData(this);
             let fileInput = $('#importFile')[0];
             
-            // Validate file selection
+            // Validate purchase order line and file selection
+            if (!$('#importLine').val()) {
+                Swal.fire('Error', 'Select a trader, purchase order and game line first.', 'error');
+                return;
+            }
             if (!fileInput.files.length) {
                 Swal.fire('Error', 'Please select a file to import.', 'error');
                 return;

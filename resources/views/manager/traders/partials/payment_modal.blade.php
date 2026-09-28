@@ -4,7 +4,7 @@
         <form id="paymentForm" class="modal-content" enctype="multipart/form-data" novalidate>
             <div class="modal-header">
                 <h5 class="modal-title" id="paymentModalTitle">Add Payment — {{ $trader->name }}</h5>
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
                 <div class="form-row">
@@ -41,7 +41,7 @@
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                 <button type="submit" class="btn btn-success" id="paymentSaveBtn">Save Payment</button>
             </div>
         </form>

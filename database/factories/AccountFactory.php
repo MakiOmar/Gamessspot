@@ -4,6 +4,7 @@ namespace Database\Factories;
 
 use App\Models\Account;
 use App\Models\Game;
+use App\Models\TraderPurchaseOrderItem;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 class AccountFactory extends Factory
@@ -37,5 +38,13 @@ class AccountFactory extends Factory
             'ps5_secondary_stock' => $this->faker->numberBetween(0, 100),
             'game_id' => Game::inRandomOrder()->first()->id, // Assign a random existing game
         ];
+    }
+
+    /**
+     * Account bought through a trader purchase order line.
+     */
+    public function forPurchaseOrderItem(TraderPurchaseOrderItem $item): static
+    {
+        return $this->state(fn () => Account::sourceAttributesFromItem($item->loadMissing('purchaseOrder')));
     }
 }

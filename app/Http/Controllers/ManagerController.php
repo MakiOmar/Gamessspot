@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Support\Facades\Auth;
 use App\Models\Game;
+use App\Models\TraderPurchaseOrderItem;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Cache;
@@ -300,6 +301,13 @@ class ManagerController extends Controller
     public function destroy($id)
     {
         $game = Game::findOrFail($id);
+
+        if (TraderPurchaseOrderItem::where('game_id', $game->id)->exists()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'This game is used in trader purchase orders and cannot be deleted.',
+            ], 422);
+        }
 
         try {
             DB::transaction(function () use ($game) {
