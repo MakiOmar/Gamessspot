@@ -52,9 +52,30 @@ class TradersModuleTest extends TestCase
 
     protected function linkAccount(TraderPurchaseOrder $order, int $itemIndex = 0): Account
     {
-        $item = $order->items()->orderBy('id')->get()[$itemIndex]->load('purchaseOrder');
+        $item = $order->items()->orderBy('id')->get()[$itemIndex];
 
-        return Account::factory()->create(Account::sourceAttributesFromItem($item));
+        return Account::factory()->forPurchaseOrderItem($item)->create();
+    }
+
+    protected function accountPayload(array $overrides = array()): array
+    {
+        return array_merge(array(
+            'mail' => 'buyer' . uniqid() . '@example.com',
+            'password' => 'secret123',
+            'region' => 'US',
+            'birthdate' => '1990-01-01',
+            'login_code' => 'ABC123',
+        ), $overrides);
+    }
+
+    protected function csvUpload(array $emails): UploadedFile
+    {
+        $lines = array('mail,password,region,birthdate,login_code');
+        foreach ($emails as $email) {
+            $lines[] = "{$email},pass123,US,1990-01-01,CODE1";
+        }
+
+        return UploadedFile::fake()->createWithContent('accounts.csv', implode("\n", $lines) . "\n");
     }
 
     public function test_every_trader_page_returns_ok_for_admin(): void
@@ -247,6 +268,191 @@ class TradersModuleTest extends TestCase
 
         $this->get(route('manager.trader-payments.attachment', $payment))->assertOk();
         $this->assertSame(250.0, app(TraderLedgerService::class)->totals($trader)['payments']);
+    }
+
+    public function test_manual_account_store_requires_a_purchase_order_line(): void
+    {
+        $admin = $this->createUserWithRole('admin');
+        $game = Game::factory()->create();
+
+        $this->actingAs($admin, 'admin')
+            ->postJson(route('manager.accounts.store'), $this->accountPayload(array('game_id' => $game->id, 'cost' => 10)))
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('purchase_order_item_id');
+    }
+
+    public function test_manual_account_store_stamps_source_from_line_and_ignores_posted_game_and_cost(): void
+    {
+        $admin = $this->createUserWithRole('admin');
+        $trader = Trader::factory()->create();
+        $game = Game::factory()->create();
+        $order = $this->createOrder($trader, array($this->line($game, 2, 175.25)), '2026-09-03');
+        $item = $order->items()->first();
+
+        $this->actingAs($admin, 'admin')->postJson(route('manager.accounts.store'), $this->accountPayload(array(
+            'mail' => 'linked@example.com',
+            'purchase_order_item_id' => $item->id,
+            'game_id' => Game::factory()->create()->id,
+            'cost' => 1,
+            'trader_id' => 999999,
+        )))->assertOk();
+
+        $account = Account::where('mail', 'linked@example.com')->firstOrFail();
+        $this->assertSame($game->id, $account->game_id);
+        $this->assertSame($trader->id, $account->trader_id);
+        $this->assertSame($order->id, $account->purchase_order_id);
+        $this->assertSame($item->id, $account->purchase_order_item_id);
+        $this->assertSame('2026-09-03', $account->purchase_date->toDateString());
+        $this->assertSame('175.25', (string) $account->original_cost);
+        $this->assertEquals(175.25, (float) $account->cost);
+    }
+
+    public function test_manual_account_store_is_blocked_when_line_is_full(): void
+    {
+        $admin = $this->createUserWithRole('admin');
+        $order = $this->createOrder(Trader::factory()->create(), array($this->line(Game::factory()->create(), 1, 10)));
+        $this->linkAccount($order);
+
+        $this->actingAs($admin, 'admin')->postJson(route('manager.accounts.store'), $this->accountPayload(array(
+            'purchase_order_item_id' => $order->items()->first()->id,
+        )))->assertStatus(422)->assertJsonValidationErrors('purchase_order_item_id');
+    }
+
+    public function test_bulk_import_stamps_source_on_every_row(): void
+    {
+        $admin = $this->createUserWithRole('admin');
+        $trader = Trader::factory()->create();
+        $game = Game::factory()->create();
+        $order = $this->createOrder($trader, array($this->line($game, 5, 80)));
+        $item = $order->items()->first();
+        $emails = array('imp1' . uniqid() . '@example.com', 'imp2' . uniqid() . '@example.com', 'imp3' . uniqid() . '@example.com');
+
+        $this->actingAs($admin, 'admin')->post(route('manager.accounts.import'), array(
+            'purchase_order_item_id' => $item->id,
+            'file' => $this->csvUpload($emails),
+        ), array('Accept' => 'application/json'))
+            ->assertOk()
+            ->assertJsonPath('imported', 3)
+            ->assertJsonPath('line_imported', 3);
+
+        $accounts = Account::whereIn('mail', $emails)->get();
+        $this->assertCount(3, $accounts);
+        foreach ($accounts as $account) {
+            $this->assertSame($game->id, $account->game_id);
+            $this->assertSame($trader->id, $account->trader_id);
+            $this->assertSame($order->id, $account->purchase_order_id);
+            $this->assertSame($item->id, $account->purchase_order_item_id);
+            $this->assertSame('80.00', (string) $account->original_cost);
+        }
+    }
+
+    public function test_bulk_import_is_blocked_when_rows_exceed_remaining_quantity(): void
+    {
+        $admin = $this->createUserWithRole('admin');
+        $order = $this->createOrder(Trader::factory()->create(), array($this->line(Game::factory()->create(), 3, 80)));
+        $this->linkAccount($order);
+        $emails = array('over1' . uniqid() . '@example.com', 'over2' . uniqid() . '@example.com', 'over3' . uniqid() . '@example.com');
+
+        $this->actingAs($admin, 'admin')->post(route('manager.accounts.import'), array(
+            'purchase_order_item_id' => $order->items()->first()->id,
+            'file' => $this->csvUpload($emails),
+        ), array('Accept' => 'application/json'))
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('file');
+
+        $this->assertSame(0, Account::whereIn('mail', $emails)->count());
+        $this->assertStringContainsString('2 remaining', json_encode(
+            $this->post(route('manager.accounts.import'), array(
+                'purchase_order_item_id' => $order->items()->first()->id,
+                'file' => $this->csvUpload($emails),
+            ), array('Accept' => 'application/json'))->json('errors.file')
+        ));
+    }
+
+    public function test_account_update_cannot_change_source_game_or_cost_of_linked_account(): void
+    {
+        $admin = $this->createUserWithRole('admin');
+        $trader = Trader::factory()->create();
+        $game = Game::factory()->create();
+        $order = $this->createOrder($trader, array($this->line($game, 2, 60)));
+        $account = $this->linkAccount($order);
+
+        $this->actingAs($admin, 'admin')->putJson(route('manager.accounts.update', $account->id), $this->accountPayload(array(
+            'mail' => $account->mail,
+            'game_id' => Game::factory()->create()->id,
+            'cost' => 1,
+            'trader_id' => Trader::factory()->create()->id,
+            'purchase_order_id' => null,
+            'original_cost' => 5,
+            'region' => 'EU',
+        )))->assertOk();
+
+        $account->refresh();
+        $this->assertSame('EU', $account->region);
+        $this->assertSame($game->id, $account->game_id);
+        $this->assertEquals(60, (float) $account->cost);
+        $this->assertSame($trader->id, $account->trader_id);
+        $this->assertSame($order->id, $account->purchase_order_id);
+        $this->assertSame('60.00', (string) $account->original_cost);
+    }
+
+    public function test_legacy_account_update_can_still_change_game_and_cost(): void
+    {
+        $admin = $this->createUserWithRole('admin');
+        $game = Game::factory()->create();
+        $account = Account::factory()->create(array('game_id' => Game::factory()->create()->id, 'cost' => 10));
+
+        $this->actingAs($admin, 'admin')->putJson(route('manager.accounts.update', $account->id), $this->accountPayload(array(
+            'mail' => $account->mail,
+            'game_id' => $game->id,
+            'cost' => 25,
+            'trader_id' => Trader::factory()->create()->id,
+        )))->assertOk();
+
+        $account->refresh();
+        $this->assertSame($game->id, $account->game_id);
+        $this->assertEquals(25, (float) $account->cost);
+        $this->assertNull($account->trader_id);
+    }
+
+    public function test_deleting_linked_account_logs_trader_and_purchase_order(): void
+    {
+        $admin = $this->createUserWithRole('admin');
+        $trader = Trader::factory()->create();
+        $order = $this->createOrder($trader, array($this->line(Game::factory()->create(), 1, 42)));
+        $account = $this->linkAccount($order);
+
+        $this->actingAs($admin, 'admin')->deleteJson(route('manager.accounts.destroy', $account->id))->assertOk();
+
+        $log = SystemActivityLog::where('action', 'account.deleted')->where('subject_id', $account->id)->latest('id')->firstOrFail();
+        $this->assertSame($trader->name, $log->meta['trader_name']);
+        $this->assertSame($order->po_number, $log->meta['po_number']);
+        $this->assertSame('42.00', $log->meta['original_cost']);
+    }
+
+    public function test_accounts_page_and_search_show_clickable_source(): void
+    {
+        $admin = $this->createUserWithRole('admin');
+        $trader = Trader::factory()->create(array('name' => 'Source Trader ' . uniqid()));
+        $order = $this->createOrder($trader, array($this->line(Game::factory()->create(), 1, 42)));
+        $account = $this->linkAccount($order);
+
+        $this->actingAs($admin, 'admin')->get(route('manager.accounts'))->assertOk();
+
+        $rows = $this->getJson(route('manager.accounts.search', array('search' => $account->mail)))->assertOk()->json('rows');
+        $this->assertStringContainsString(route('manager.traders.show', $trader->id), $rows);
+        $this->assertStringContainsString(route('manager.purchase-orders.show', $order->id), $rows);
+        $this->assertStringContainsString($order->po_number, $rows);
+    }
+
+    public function test_game_used_in_purchase_order_cannot_be_deleted(): void
+    {
+        $admin = $this->createUserWithRole('admin');
+        $game = Game::factory()->create();
+        $this->createOrder(Trader::factory()->create(), array($this->line($game, 1, 10)));
+
+        $this->actingAs($admin, 'admin')->deleteJson(route('manager.games.destroy', $game->id))->assertStatus(422);
+        $this->assertNotNull($game->fresh());
     }
 
     public function test_opening_balance_update_changes_balance(): void
