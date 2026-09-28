@@ -29,7 +29,9 @@ class AppServiceProvider extends ServiceProvider
             );
         }
 
-        if ( $this->app->environment('production') ) {
+        // Behind a TLS-terminating proxy (e.g. staging Traefik) the request looks like plain http,
+        // so generated URLs would be blocked as mixed content on https pages.
+        if ( $this->app->environment('production') || str_starts_with((string) config('app.url'), 'https://') ) {
             \URL::forceScheme('https');
         }
     }
