@@ -22,25 +22,18 @@ class SyncPosCatalogCommand extends Command
 
     public function handle(PosCatalogSync $sync): int
     {
+        $sync->withRetries();
         $onlyGames = (bool) $this->option('games');
         $onlyCards = (bool) $this->option('cards');
         $ids = array_filter(array_map('intval', (array) $this->option('id')));
         $failed = 0;
 
         if (! $onlyCards) {
-            $failed += $this->syncModels(
-                Game::query()->when($ids, fn ($q) => $q->whereIn('id', $ids)),
-                fn (Game $game) => $sync->pushGame($game),
-                'game'
-            );
+            $failed += $this->syncGames($sync, $ids);
         }
 
         if (! $onlyGames) {
-            $failed += $this->syncModels(
-                CardCategory::query()->when($ids, fn ($q) => $q->whereIn('id', $ids)),
-                fn (CardCategory $category) => $sync->pushCardCategory($category),
-                'card category'
-            );
+            $failed += $this->syncCardCategories($sync, $ids);
         }
 
         if ($failed > 0) {
@@ -54,26 +47,60 @@ class SyncPosCatalogCommand extends Command
         return self::SUCCESS;
     }
 
-    private function syncModels($query, callable $push, string $label): int
+    /**
+     * @param  list<int>  $ids
+     */
+    private function syncGames(PosCatalogSync $sync, array $ids): int
     {
+        $synced = 0;
+        $skipped = 0;
         $failed = 0;
-        $done = 0;
 
-        $query->orderBy('id')->chunkById(50, function ($models) use ($push, $label, &$failed, &$done) {
-            foreach ($models as $model) {
-                try {
-                    $push($model);
-                    $done++;
-                } catch (\Throwable $e) {
-                    $failed++;
-                    Log::warning('pos:sync-catalog failed', ['type' => $label, 'id' => $model->id, 'message' => $e->getMessage()]);
-                    $this->error(ucfirst($label).' #'.$model->id.': '.$e->getMessage());
+        Game::query()->when($ids, fn ($q) => $q->whereIn('id', $ids))
+            ->orderBy('id')
+            ->chunkById(50, function ($games) use ($sync, &$synced, &$skipped, &$failed) {
+                foreach ($games as $game) {
+                    try {
+                        $sync->pushGame($game) ? $synced++ : $skipped++;
+                    } catch (\Throwable $e) {
+                        $failed++;
+                        $this->reportFailure('game', (int) $game->id, $e);
+                    }
                 }
-            }
-        });
+            });
 
-        $this->line('Synced '.$done.' '.$label.'(s).');
+        $this->line("Synced {$synced} game(s), {$skipped} with no offers to push, {$failed} failed.");
 
         return $failed;
+    }
+
+    /**
+     * @param  list<int>  $ids
+     */
+    private function syncCardCategories(PosCatalogSync $sync, array $ids): int
+    {
+        $synced = 0;
+        $failed = 0;
+
+        CardCategory::query()->when($ids, fn ($q) => $q->whereIn('id', $ids))
+            ->orderBy('id')
+            ->chunkById(PosCatalogSync::BATCH_MAX, function ($categories) use ($sync, &$synced, &$failed) {
+                try {
+                    $synced += $sync->pushCardCategories($categories);
+                } catch (\Throwable $e) {
+                    $failed += $categories->count();
+                    $this->reportFailure('card categories', $categories->pluck('id')->implode(','), $e);
+                }
+            });
+
+        $this->line("Synced {$synced} card category(s), {$failed} failed.");
+
+        return $failed;
+    }
+
+    private function reportFailure(string $label, int|string $id, \Throwable $e): void
+    {
+        Log::warning('pos:sync-catalog failed', ['type' => $label, 'id' => $id, 'message' => $e->getMessage()]);
+        $this->error(ucfirst($label).' #'.$id.': '.$e->getMessage());
     }
 }

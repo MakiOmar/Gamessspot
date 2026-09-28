@@ -36,6 +36,9 @@ return [
         'enabled' => filter_var(env('POS_CATALOG_SYNC', true), FILTER_VALIDATE_BOOL),
         'business_id' => (int) env('POS_BUSINESS_ID', 1),
         'timeout' => (int) env('POS_CATALOG_SYNC_TIMEOUT', 20),
+        // pos:sync-catalog only: waits on POS 429/409 before giving up on an item.
+        'max_retries' => (int) env('POS_CATALOG_SYNC_MAX_RETRIES', 5),
+        'max_retry_wait' => (int) env('POS_CATALOG_SYNC_MAX_RETRY_WAIT', 60),
     ],
 
 ];

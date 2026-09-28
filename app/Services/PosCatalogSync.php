@@ -5,8 +5,10 @@ namespace App\Services;
 use App\Models\CardCategory;
 use App\Models\Game;
 use App\Models\GamePosProduct;
+use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Sleep;
 use RuntimeException;
 
 /**
@@ -22,6 +24,25 @@ class PosCatalogSync
     private const TOKEN_CACHE_KEY = 'api_token';
 
     private const NAME_MAX = 191;
+
+    /** POS rejects upsert batches larger than this. */
+    public const BATCH_MAX = 32;
+
+    /** 429 = POS rate limit, 409 = POS catalog lock busy; both clear up on their own. */
+    private const RETRYABLE_STATUSES = [409, 429];
+
+    /** Off by default so inline manager saves never wait; queued jobs use their own backoff. */
+    private int $maxRetries = 0;
+
+    /**
+     * Wait out 409/429 responses up to POS_CATALOG_SYNC_MAX_RETRIES times (for long backfills).
+     */
+    public function withRetries(): static
+    {
+        $this->maxRetries = max(0, (int) config('services.pos_catalog.max_retries', 5));
+
+        return $this;
+    }
 
     public static function enabled(): bool
     {
@@ -83,11 +104,14 @@ class PosCatalogSync
         return mb_substr($title, 0, self::NAME_MAX - mb_strlen($suffix)).$suffix;
     }
 
-    public function pushGame(Game $game): void
+    /**
+     * @return bool false when the game has nothing to push (no sold or previously linked offers)
+     */
+    public function pushGame(Game $game): bool
     {
         $offers = $this->offersForGame($game);
         if ($offers === []) {
-            return;
+            return false;
         }
 
         $results = $this->upsert('game', $offers, (string) $game->code);
@@ -105,6 +129,8 @@ class PosCatalogSync
                 ]
             );
         }
+
+        return true;
     }
 
     /**
@@ -129,19 +155,58 @@ class PosCatalogSync
 
     public function pushCardCategory(CardCategory $category, bool $active = true): void
     {
-        $sku = self::cardSku((int) $category->id);
-        $results = $this->upsert('card', [[
-            'sku' => $sku,
+        $item = $this->cardItem($category, $active);
+        $results = $this->upsert('card', [$item], onlyExisting: ! $category->exists);
+
+        if ($category->exists && isset($results[$item['sku']])) {
+            $this->storeCardLink($category, $results[$item['sku']], $active);
+        }
+    }
+
+    /**
+     * Backfill many active card categories with one POS request per BATCH_MAX categories.
+     *
+     * @param  iterable<CardCategory>  $categories
+     * @return int number of categories pushed
+     */
+    public function pushCardCategories(iterable $categories): int
+    {
+        $pushed = 0;
+
+        foreach (collect($categories)->chunk(self::BATCH_MAX) as $chunk) {
+            $items = $chunk->map(fn (CardCategory $category) => $this->cardItem($category, true))->values()->all();
+            $results = $this->upsert('card', $items);
+
+            foreach ($chunk as $category) {
+                $result = $results[self::cardSku((int) $category->id)] ?? null;
+                if ($result) {
+                    $this->storeCardLink($category, $result, true);
+                }
+            }
+            $pushed += $chunk->count();
+        }
+
+        return $pushed;
+    }
+
+    /**
+     * @return array{sku:string,name:string,price:float,active:bool}
+     */
+    private function cardItem(CardCategory $category, bool $active): array
+    {
+        return [
+            'sku' => self::cardSku((int) $category->id),
             'name' => mb_substr(trim((string) $category->name), 0, self::NAME_MAX),
             'price' => max(0, (float) $category->price),
             'active' => $active,
-        ]], onlyExisting: ! $category->exists);
+        ];
+    }
 
-        $result = $results[$sku] ?? null;
-        if (! $result || ! $category->exists) {
-            return;
-        }
-
+    /**
+     * @param  array{product_id:int,variation_id:int}  $result
+     */
+    private function storeCardLink(CardCategory $category, array $result, bool $active): void
+    {
         // Avoid re-firing the observer (and another sync) for link-only columns.
         CardCategory::withoutEvents(function () use ($category, $result, $active) {
             $category->forceFill([
@@ -170,11 +235,7 @@ class PosCatalogSync
             'only_existing' => $onlyExisting,
         ];
 
-        $response = $this->post($payload);
-        if ($response->status() === 401) {
-            Cache::forget(self::TOKEN_CACHE_KEY);
-            $response = $this->post($payload);
-        }
+        $response = $this->send($payload);
 
         if (! $response->successful() || ! $response->json('success')) {
             throw new RuntimeException('POS catalog upsert failed with status '.$response->status().'.');
@@ -194,9 +255,48 @@ class PosCatalogSync
     }
 
     /**
+     * POST with one token refresh on 401 and, after withRetries(), bounded waits on 409/429 (honours Retry-After).
+     *
      * @param  array<string, mixed>  $payload
      */
-    private function post(array $payload): \Illuminate\Http\Client\Response
+    private function send(array $payload): Response
+    {
+        $tokenRefreshed = false;
+        $retries = 0;
+
+        while (true) {
+            $response = $this->post($payload);
+
+            if ($response->status() === 401 && ! $tokenRefreshed) {
+                Cache::forget(self::TOKEN_CACHE_KEY);
+                $tokenRefreshed = true;
+
+                continue;
+            }
+
+            if (! in_array($response->status(), self::RETRYABLE_STATUSES, true) || $retries >= $this->maxRetries) {
+                return $response;
+            }
+
+            Sleep::for($this->retryDelaySeconds($response, $retries))->seconds();
+            $retries++;
+        }
+    }
+
+    private function retryDelaySeconds(Response $response, int $retries): int
+    {
+        $maxWait = max(1, (int) config('services.pos_catalog.max_retry_wait', 60));
+        $retryAfter = $response->header('Retry-After');
+
+        $seconds = is_numeric($retryAfter) ? (int) $retryAfter : 2 ** $retries;
+
+        return min($maxWait, max(1, $seconds));
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     */
+    private function post(array $payload): Response
     {
         $base = rtrim(SettingsService::getPosBaseUrl(), '/');
         $businessId = (int) config('services.pos_catalog.business_id', 1);

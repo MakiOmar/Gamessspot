@@ -592,8 +592,8 @@ Each game offer (`ps4|ps5` × `primary|secondary|offline|full`) and each gift-ca
 - Saving a game (title, code, prices, offer status) or a card category (name, price) queues `SyncPosCatalogJob` after commit. It calls POS `POST /api/accounts/catalog/upsert/{business_id}`. A POS failure is logged and never blocks the save.
 - Offers that are switched off are pushed as inactive only when already linked; deletes deactivate existing products and never create new ones.
 - Manager "Send to POS" sends one line per order with `_pos_product_id` set to the linked product (inactive links still count). Unlinked offers fall back to the shared `pos.*_id` placeholders from settings.
-- Backfill: `php artisan pos:sync-catalog` (`--games`, `--cards`, `--id=12 --id=13`).
-- Env: `POS_CATALOG_SYNC` (default `true`), `POS_BUSINESS_ID` (default `1`), `POS_CATALOG_SYNC_TIMEOUT` seconds (default `20`). Deploy POS first.
+- Backfill: `php artisan pos:sync-catalog` (`--games`, `--cards`, `--id=12 --id=13`). Sends one request per game and one per 32 card categories. On POS `429` (rate limit) or `409` (busy) it waits `Retry-After` seconds (else 1, 2, 4… s) and retries; games with no sold or linked offers are reported as skipped, not synced. Manager saves and queued jobs never wait in-process (jobs retry with their own backoff).
+- Env: `POS_CATALOG_SYNC` (default `true`), `POS_BUSINESS_ID` (default `1`), `POS_CATALOG_SYNC_TIMEOUT` seconds (default `20`), `POS_CATALOG_SYNC_MAX_RETRIES` (default `5`), `POS_CATALOG_SYNC_MAX_RETRY_WAIT` seconds per wait (default `60`). Deploy POS first.
 
 ---
 

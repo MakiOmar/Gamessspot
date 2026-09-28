@@ -12,6 +12,7 @@ use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
+use Illuminate\Support\Sleep;
 use Tests\TestCase;
 
 class PosCatalogSyncTest extends TestCase
@@ -155,6 +156,78 @@ class PosCatalogSyncTest extends TestCase
 
         $this->assertModelExists($game);
         $this->assertSame(0, GamePosProduct::where('game_id', $game->id)->count());
+    }
+
+    public function test_backfill_waits_out_rate_limit_using_retry_after(): void
+    {
+        Sleep::fake();
+        $game = $this->makeGame();
+        $okItems = [
+            ['sku' => "ACCOUNTS-GAME-{$game->id}-PS5-PRIMARY", 'product_id' => 10, 'variation_id' => 20],
+            ['sku' => "ACCOUNTS-GAME-{$game->id}-PS5-SECONDARY", 'product_id' => 11, 'variation_id' => 21],
+        ];
+        Http::fakeSequence('*/api/accounts/catalog/upsert/*')
+            ->push(['message' => 'Too Many Attempts.'], 429, ['Retry-After' => '7'])
+            ->push(['message' => 'Too Many Attempts.'], 429)
+            ->push(['success' => true, 'items' => $okItems]);
+
+        app(PosCatalogSync::class)->withRetries()->pushGame($game);
+
+        Http::assertSentCount(3);
+        Sleep::assertSequence([Sleep::for(7)->seconds(), Sleep::for(2)->seconds()]);
+        $this->assertSame(2, GamePosProduct::where('game_id', $game->id)->count());
+    }
+
+    public function test_inline_push_does_not_wait_on_rate_limit(): void
+    {
+        Sleep::fake();
+        Http::fake(['*' => Http::response(['message' => 'Too Many Attempts.'], 429, ['Retry-After' => '30'])]);
+
+        try {
+            app(PosCatalogSync::class)->pushGame($this->makeGame());
+            $this->fail('Expected the 429 to surface.');
+        } catch (\RuntimeException $e) {
+            $this->assertStringContainsString('429', $e->getMessage());
+        }
+
+        Http::assertSentCount(1);
+        Sleep::assertNeverSlept();
+    }
+
+    public function test_backfill_gives_up_after_max_retries(): void
+    {
+        config(['services.pos_catalog.max_retries' => 2]);
+        Sleep::fake();
+        Http::fake(['*' => Http::response(['message' => 'Too Many Attempts.'], 429)]);
+        $game = $this->makeGame();
+
+        $this->artisan('pos:sync-catalog', ['--games' => true, '--id' => [$game->id]])
+            ->expectsOutputToContain('Synced 0 game(s), 0 with no offers to push, 1 failed.')
+            ->assertFailed();
+
+        Http::assertSentCount(3);
+        Sleep::assertSleptTimes(2);
+    }
+
+    public function test_backfill_batches_card_categories_and_skips_games_without_offers(): void
+    {
+        $this->fakePos();
+        $idle = $this->makeGame(['ps5_primary_status' => false, 'ps5_secondary_status' => false]);
+        $first = CardCategory::create(['name' => 'PSN 10 USD', 'price' => 500]);
+        $second = CardCategory::create(['name' => 'PSN 20 USD', 'price' => 1000]);
+
+        $this->artisan('pos:sync-catalog', ['--games' => true, '--id' => [$idle->id]])
+            ->expectsOutputToContain('Synced 0 game(s), 1 with no offers to push, 0 failed.')
+            ->assertSuccessful();
+        Http::assertNothingSent();
+
+        $this->artisan('pos:sync-catalog', ['--cards' => true, '--id' => [$first->id, $second->id]])
+            ->expectsOutputToContain('Synced 2 card category(s), 0 failed.')
+            ->assertSuccessful();
+
+        Http::assertSentCount(1);
+        Http::assertSent(fn (Request $request) => $request['kind'] === 'card' && count($request['items']) === 2);
+        $this->assertSame(7001, $second->fresh()->pos_variation_id);
     }
 
     public function test_game_api_exposes_active_offer_links_by_shop_platform(): void
