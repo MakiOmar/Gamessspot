@@ -40,10 +40,28 @@ class Account extends Model
         'ps5_primary_stock',
         'ps5_secondary_stock',
         'ps5_offline_stock',
+        'trader_id',
+        'purchase_order_id',
+        'purchase_order_item_id',
+        'purchase_date',
+        'original_cost',
+    );
+
+    /**
+     * Purchase source columns: written once at creation, never by the edit form.
+     */
+    public const SOURCE_FIELDS = array(
+        'trader_id',
+        'purchase_order_id',
+        'purchase_order_item_id',
+        'purchase_date',
+        'original_cost',
     );
 
     protected $casts = [
         'is_full' => 'boolean',
+        'purchase_date' => 'date',
+        'original_cost' => 'decimal:2',
     ];
 
     /**
@@ -286,5 +304,45 @@ class Account extends Model
     public function game()
     {
         return $this->belongsTo(Game::class, 'game_id');
+    }
+
+    public function trader()
+    {
+        return $this->belongsTo(Trader::class);
+    }
+
+    public function purchaseOrder()
+    {
+        return $this->belongsTo(TraderPurchaseOrder::class, 'purchase_order_id');
+    }
+
+    public function purchaseOrderItem()
+    {
+        return $this->belongsTo(TraderPurchaseOrderItem::class, 'purchase_order_item_id');
+    }
+
+    public function hasPurchaseSource(): bool
+    {
+        return $this->purchase_order_item_id !== null;
+    }
+
+    /**
+     * Stamp trader / PO / game / cost / date from a purchase order line.
+     *
+     * @return array<string, mixed>
+     */
+    public static function sourceAttributesFromItem(TraderPurchaseOrderItem $item): array
+    {
+        $order = $item->purchaseOrder;
+
+        return array(
+            'game_id' => $item->game_id,
+            'cost' => $item->cost_per_account,
+            'trader_id' => $order->trader_id,
+            'purchase_order_id' => $order->id,
+            'purchase_order_item_id' => $item->id,
+            'purchase_date' => $order->purchase_date,
+            'original_cost' => $item->cost_per_account,
+        );
     }
 }

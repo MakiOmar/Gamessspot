@@ -20,7 +20,7 @@ class AuthServiceProvider extends ServiceProvider
     public function boot(): void
     {
         foreach (array_keys(config('permissions.abilities', array())) as $ability) {
-            if ($ability === 'view-game-accounts') {
+            if (in_array($ability, array('view-game-accounts', 'view-traders'), true)) {
                 continue;
             }
 
@@ -39,6 +39,15 @@ class AuthServiceProvider extends ServiceProvider
             return $user->roles->contains(
                 fn ($role) => $role->hasCapability('view-game-accounts')
                     || $role->hasCapability('manage-accounts')
+            );
+        });
+
+        Gate::define('view-traders', function ($user) {
+            $user->loadMissing('roles');
+
+            return $user->roles->contains(
+                fn ($role) => $role->hasCapability('view-traders')
+                    || $role->hasCapability('manage-traders')
             );
         });
     }

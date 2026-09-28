@@ -37,6 +37,9 @@ class RolePermissionService
                 'delete-device-repairs',
                 'submit-device-request',
                 'track-device-status',
+                'view-traders',
+                'manage-traders',
+                'void-trader-transactions',
             ),
             'sales' => array(
                 'access-dashboard',
@@ -62,6 +65,8 @@ class RolePermissionService
                 'create-order-reports',
                 'manage-device-repairs',
                 'manage-reviews',
+                'view-traders',
+                'manage-traders',
             ),
             'accountant' => array(
                 'access-dashboard',

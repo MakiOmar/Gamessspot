@@ -6,7 +6,9 @@ use App\Models\Account; // Assuming Account is the model
 use Illuminate\Http\Request;
 use App\Models\Game;
 use App\Exports\AccountsExport;
-use App\Imports\AccountsImport;
+use App\Models\Trader;
+use App\Services\PurchaseOrderAccountService;
+use Illuminate\Validation\ValidationException;
 use Maatwebsite\Excel\Facades\Excel;
 use Illuminate\Support\Facades\Cache;
 use App\Services\CacheManager;
@@ -39,10 +41,13 @@ class AccountController extends Controller
         
         // ✅ Cache account listings with pagination
         $accounts = CacheManager::getAccountListing($page, function () {
-            return Account::orderBy('created_at', 'asc')->paginate(10);
+            return Account::with(array('game', 'trader:id,name', 'purchaseOrder:id,po_number'))
+                ->orderBy('created_at', 'asc')
+                ->paginate(10);
         });
 
         $games = Game::all(); // Fetch all games
+        $traders = Trader::active()->orderBy('name')->get(array('id', 'name'));
 
         // Get the flag emojis from the config
         $flags = config('flags.flags'); // This retrieves the array of flags
@@ -52,31 +57,45 @@ class AccountController extends Controller
         $fromCache = CacheManager::wasCacheHit($cacheKey);
 
         // Return the view with the accounts data
-        return view('manager.accounts', compact('accounts', 'games', 'flags', 'cacheKey', 'cacheMetadata', 'fromCache'));
+        return view('manager.accounts', compact('accounts', 'games', 'traders', 'flags', 'cacheKey', 'cacheMetadata', 'fromCache'));
     }
     public function export()
     {
         return Excel::download(new AccountsExport(), 'accounts.xlsx');
     }
 
-    public function import(Request $request)
+    public function import(Request $request, PurchaseOrderAccountService $intake)
     {
         $request->validate([
-            'file' => 'required|file|mimes:xlsx,xls,csv|max:10240' // 10MB max
+            'file' => 'required|file|mimes:xlsx,xls,csv|max:10240', // 10MB max
+            'purchase_order_item_id' => 'required|integer|exists:trader_purchase_order_items,id',
+        ], [
+            'purchase_order_item_id.required' => 'Select a trader, purchase order and game before importing.',
         ]);
 
         try {
-            Excel::import(new AccountsImport, $request->file('file'));
-            
+            $result = $intake->importForLine((int) $request->input('purchase_order_item_id'), $request->file('file'));
+
             // ✅ No need to manually clear cache - AccountObserver handles it
             // Observer will automatically invalidate cache when accounts are created
-            
-            return response()->json([
-                'success' => 'Accounts imported successfully!'
-            ]);
+
+            $message = "Imported {$result['imported']} account(s). Line progress: Imported {$result['line_imported']} / {$result['line_quantity']}.";
+            if ($result['skipped'] > 0) {
+                $message .= " {$result['skipped']} row(s) were skipped due to errors.";
+            }
+
+            return response()->json(array_merge(array('success' => $message), $result));
+        } catch (ValidationException $e) {
+            throw $e;
         } catch (\Exception $e) {
+            Log::error('Account import failed', array(
+                'purchase_order_item_id' => $request->input('purchase_order_item_id'),
+                'user_id' => $request->user('admin')?->id,
+                'exception' => $e,
+            ));
+
             return response()->json([
-                'error' => 'Import failed: ' . $e->getMessage()
+                'error' => 'Import failed. Please check the file format and try again; the error was logged for support.',
             ], 422);
         }
     }
@@ -85,12 +104,12 @@ class AccountController extends Controller
     {
         $templateData = [
             [
-                'Mail', 'Password', 'Game', 'Region', 'Cost', 'Birthdate', 'Login Code', 'Is Full',
+                'Mail', 'Password', 'Region', 'Birthdate', 'Login Code', 'Is Full',
                 'PS4 Primary Stock', 'PS4 Secondary Stock', 'PS4 Offline Stock',
                 'PS5 Primary Stock', 'PS5 Secondary Stock', 'PS5 Offline Stock'
             ],
             [
-                'example@email.com', 'password123', 'Game Title', 'US', '25.00', '1990-01-01', 'ABC123', '0',
+                'example@email.com', 'password123', 'US', '1990-01-01', 'ABC123', '0',
                 '1', '1', '2', '1', '1', '1'
             ]
         ];
@@ -112,7 +131,7 @@ class AccountController extends Controller
     {
         $query = $request->input('search');
 
-        $accounts = Account::with('game')
+        $accounts = Account::with(array('game', 'trader:id,name', 'purchaseOrder:id,po_number'))
         ->where('mail', 'like', "%{$query}%")
         ->orWhereHas(
             'game',
@@ -137,16 +156,15 @@ class AccountController extends Controller
 
         return response()->json(['total_cost' => $totalCost]);
     }
-    public function store(Request $request)
+    public function store(Request $request, PurchaseOrderAccountService $intake)
     {
-        // Validate the request data
+        // Validate the request data (game and cost come from the purchase order line)
         $request->validate(
             [
                 'mail'          => 'required|email|unique:accounts,mail',
                 'password'      => 'required|string',
-                'game_id'       => 'required|exists:games,id',
+                'purchase_order_item_id' => 'required|integer|exists:trader_purchase_order_items,id',
                 'region'        => 'required|string|max:2',
-                'cost'          => 'required|numeric',
                 'birthdate'     => 'required|date',
                 'login_code'    => 'required|string',
                 'ps4_primary'   => 'nullable|boolean',
@@ -164,6 +182,7 @@ class AccountController extends Controller
                 'mail.required' => 'The email field is required.',
                 'mail.email' => 'Please provide a valid email address.',
                 'mail.unique' => 'This email address is already in use.',
+                'purchase_order_item_id.required' => 'Select a trader, purchase order and game.',
             ]
         );
 
@@ -189,15 +208,14 @@ class AccountController extends Controller
             ], 422);
         }
 
-        // Create the new account with adjusted stock values
-        $account = Account::create(
+        // Create the new account with adjusted stock values; trader / PO / game / cost are stamped from the line
+        $account = $intake->createForLine(
+            (int) $request->input('purchase_order_item_id'),
             array_merge(
                 [
                     'mail'       => $request->mail,
                     'password'   => $request->password,
-                    'game_id'    => $request->game_id,
                     'region'     => $request->region,
-                    'cost'       => $request->cost,
                     'birthdate'  => $request->birthdate,
                     'login_code' => $request->login_code,
                     'is_full'    => $isFull,
@@ -226,17 +244,21 @@ class AccountController extends Controller
     {
         $account = Account::findOrFail($id);
 
-        $request->validate([
+        $isLinked = $account->hasPurchaseSource();
+
+        $validated = $request->validate([
             'mail' => 'required|email|unique:accounts,mail,' . $id,
             'password' => 'required|string',
-            'game_id' => 'required|exists:games,id',
+            'game_id' => ($isLinked ? 'nullable' : 'required') . '|exists:games,id',
             'region' => 'required|string|max:2',
-            'cost' => 'required|numeric',
+            'cost' => ($isLinked ? 'nullable' : 'required') . '|numeric',
             'birthdate' => 'required|date',
             'login_code' => 'required|string',
         ]);
 
-        $account->update($request->all());
+        // Purchase source is permanent; linked accounts also keep the line's game and cost
+        $locked = $isLinked ? array('game_id', 'cost') : array();
+        $account->update(array_diff_key($validated, array_flip(array_merge(Account::SOURCE_FIELDS, $locked))));
 
         // Invalidate caches impacted by account update
         CacheManager::invalidateAccounts();
@@ -285,6 +307,15 @@ class AccountController extends Controller
     public function destroy($id)
     {
         $account = Account::findOrFail($id);
+
+        if ($account->hasPurchaseSource()) {
+            $poNumber = $account->purchaseOrder?->po_number ?? ('#' . $account->purchase_order_id);
+
+            return response()->json([
+                'success' => false,
+                'message' => "This account is linked to purchase order {$poNumber} and cannot be deleted.",
+            ], 422);
+        }
 
         try {
             $account->delete();

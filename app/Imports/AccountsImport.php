@@ -3,27 +3,35 @@
 namespace App\Imports;
 
 use App\Models\Account;
-use App\Models\Game;
+use App\Models\TraderPurchaseOrderItem;
 use Maatwebsite\Excel\Concerns\ToModel;
 use Maatwebsite\Excel\Concerns\WithHeadingRow;
 use Maatwebsite\Excel\Concerns\WithValidation;
 use Maatwebsite\Excel\Concerns\Importable;
+use Maatwebsite\Excel\Concerns\SkipsEmptyRows;
 use Maatwebsite\Excel\Concerns\SkipsOnError;
 use Maatwebsite\Excel\Concerns\SkipsErrors;
 
-class AccountsImport implements ToModel, WithHeadingRow, WithValidation, SkipsOnError
+/**
+ * Game, cost, trader, purchase order and purchase date come from the selected
+ * purchase order line, not from the spreadsheet.
+ */
+class AccountsImport implements ToModel, WithHeadingRow, WithValidation, SkipsOnError, SkipsEmptyRows
 {
     use Importable, SkipsErrors;
 
+    /**
+     * @var array<string, mixed>
+     */
+    private array $sourceAttributes;
+
+    public function __construct(TraderPurchaseOrderItem $item)
+    {
+        $this->sourceAttributes = Account::sourceAttributesFromItem($item);
+    }
+
     public function model(array $row)
     {
-        // Find game by title
-        $game = Game::where('title', $row['game'])->first();
-
-        if (!$game) {
-            throw new \Exception("Game '{$row['game']}' not found. Please create the game first.");
-        }
-
         // Use stock values from Excel file, with defaults if not provided
         $stocks = [
             'ps4_primary_stock' => isset($row['ps4_primary_stock']) ? (int) $row['ps4_primary_stock'] : 1,
@@ -45,13 +53,11 @@ class AccountsImport implements ToModel, WithHeadingRow, WithValidation, SkipsOn
         return new Account(array_merge([
             'mail' => $row['mail'],
             'password' => $row['password'],
-            'game_id' => $game->id,
             'region' => $row['region'],
-            'cost' => $row['cost'],
             'birthdate' => $row['birthdate'],
             'login_code' => $row['login_code'],
             'is_full' => $isFull,
-        ], $stocks));
+        ], $stocks, $this->sourceAttributes));
     }
 
     public function rules(): array
@@ -59,9 +65,7 @@ class AccountsImport implements ToModel, WithHeadingRow, WithValidation, SkipsOn
         return [
             '*.mail' => 'required|email|unique:accounts,mail',
             '*.password' => 'required|string',
-            '*.game' => 'required|string|exists:games,title',
             '*.region' => 'required|string|max:2',
-            '*.cost' => 'required|numeric',
             '*.birthdate' => 'required|date',
             '*.login_code' => 'required|string',
             '*.is_full' => 'nullable',
