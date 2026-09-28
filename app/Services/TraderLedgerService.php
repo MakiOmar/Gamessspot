@@ -79,7 +79,7 @@ class TraderLedgerService
         }
 
         $trader->purchaseOrders()
-            ->withCount('items')
+            ->select(array('id', 'trader_id', 'po_number', 'purchase_date', 'notes', 'total_quantity', 'total_cost', 'status', 'created_at'))
             ->orderBy('purchase_date')
             ->orderBy('id')
             ->get()
@@ -99,6 +99,7 @@ class TraderLedgerService
             });
 
         $trader->payments()
+            ->select(array('id', 'trader_id', 'payment_number', 'amount', 'payment_date', 'method', 'reference_number', 'status', 'created_at'))
             ->orderBy('payment_date')
             ->orderBy('id')
             ->get()
