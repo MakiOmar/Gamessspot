@@ -132,11 +132,13 @@ Account sell types via API: `primary`, `secondary`, `full`. Manager UI also supp
 | `platform` (path) | `4` = PS4, `5` = PS5 |
 | `product_type` (query) | `game` (default) or `subscription` |
 | `page` (query) | Pagination page (20 per page) |
+| `in_stock_only` (query) | `1` = only games with a sellable offer on this platform: `primary` / `secondary` enabled with stock (PS4 primary also needs an account with offline `0`), or `full` stock. Offline-only stock is excluded. Default lists any stock. Applied before pagination. |
 
 **Examples**
 
 ```http
 GET /api/games/platform/5
+GET /api/games/platform/5?in_stock_only=1
 GET /api/games/platform/5?product_type=subscription
 GET /api/games/platform/4?product_type=game&page=2
 ```

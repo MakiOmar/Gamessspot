@@ -825,8 +825,14 @@ class ManagerController extends Controller
                 "games.{$offline_status}",
                 "games.{$primary_status}",
                 "games.{$secondary_status}"
-            )
-            ->havingRaw( "SUM(accounts.ps{$platform}_offline_stock) > 0 OR SUM(accounts.ps{$platform}_primary_stock) > 0 OR SUM(accounts.ps{$platform}_secondary_stock) > 0 OR SUM(CASE WHEN (" . Account::fullSellEligibleSql() . ") THEN 1 ELSE 0 END) > 0" );
+            );
+
+        // in_stock_only narrows "any stock" to offers a shop customer can actually buy.
+        $psGamesQuery->havingRaw(
+            request()->boolean('in_stock_only')
+                ? $this->sellableOffersHavingSql( $platform )
+                : "SUM(accounts.ps{$platform}_offline_stock) > 0 OR SUM(accounts.ps{$platform}_primary_stock) > 0 OR SUM(accounts.ps{$platform}_secondary_stock) > 0 OR SUM(CASE WHEN (" . Account::fullSellEligibleSql() . ") THEN 1 ELSE 0 END) > 0"
+        );
 
         // Limited list (featured combined / count=N) vs paginated catalog
         if ( null !== $limit ) {
@@ -949,6 +955,21 @@ class ManagerController extends Controller
         }
 
         return response()->json( $psGames );
+    }
+
+    /**
+     * HAVING clause matching calculateTypeAvailability(): at least one of primary,
+     * secondary or full is enabled and has stock (offline is not sold in the shop).
+     */
+    private function sellableOffersHavingSql(int $platform): string
+    {
+        $primaryStockSql = 4 === $platform
+            ? 'SUM(CASE WHEN accounts.ps4_offline_stock = 0 AND accounts.ps4_primary_stock > 0 THEN 1 ELSE 0 END) > 0'
+            : "SUM(accounts.ps{$platform}_primary_stock) > 0";
+
+        return "(games.ps{$platform}_primary_status = 1 AND {$primaryStockSql})"
+            . " OR (games.ps{$platform}_secondary_status = 1 AND SUM(accounts.ps{$platform}_secondary_stock) > 0)"
+            . ' OR SUM(CASE WHEN (' . Account::fullSellEligibleSql() . ') THEN 1 ELSE 0 END) > 0';
     }
 
     /**
