@@ -37,6 +37,10 @@ class TraderService
         $original = array_intersect_key($trader->getOriginal(), array_flip($changes));
         $trader->save();
 
+        if (in_array('name', $changes, true)) {
+            CacheManager::invalidateAccounts();
+        }
+
         if (array_diff($changes, array('updated_by')) !== array()) {
             $this->activityLogger->log('trader.updated', 'trader', $trader->id, $trader->name, array(
                 'changed' => array_values(array_diff($changes, array('updated_by', 'updated_at'))),

@@ -13,6 +13,7 @@ class TraderPaymentService
 {
     public const ATTACHMENT_DISK = 'local';
     public const ATTACHMENT_DIRECTORY = 'trader-payments';
+    public const DUPLICATE_WINDOW_SECONDS = 10;
 
     public function __construct(
         private SystemActivityLogger $activityLogger,
@@ -29,6 +30,9 @@ class TraderPaymentService
 
         try {
             $payment = DB::transaction(function () use ($trader, $data, $path, $actorId) {
+                Trader::query()->lockForUpdate()->findOrFail($trader->id);
+                $this->assertNotDuplicate($trader, $data, $actorId);
+
                 $payment = $trader->payments()->create(array(
                     'amount' => round((float) $data['amount'], 2),
                     'payment_date' => $data['payment_date'],
@@ -98,6 +102,30 @@ class TraderPaymentService
         );
 
         return $payment;
+    }
+
+    /**
+     * Rejects an identical payment by the same user within the window (double submit / retried request).
+     *
+     * @param  array<string, mixed>  $data
+     */
+    private function assertNotDuplicate(Trader $trader, array $data, ?int $actorId): void
+    {
+        $duplicate = $trader->payments()
+            ->active()
+            ->where('amount', round((float) $data['amount'], 2))
+            ->whereDate('payment_date', $data['payment_date'])
+            ->where('method', $data['method'])
+            ->where('reference_number', $data['reference_number'] ?? null)
+            ->where('created_by', $actorId)
+            ->where('created_at', '>=', now()->subSeconds(self::DUPLICATE_WINDOW_SECONDS))
+            ->exists();
+
+        if ($duplicate) {
+            throw ValidationException::withMessages(array(
+                'amount' => 'Duplicate payment: an identical payment was just recorded for this trader.',
+            ));
+        }
     }
 
     public function attachmentExists(TraderPayment $payment): bool

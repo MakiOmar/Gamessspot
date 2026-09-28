@@ -143,6 +143,8 @@ class PurchaseOrderService
             return $order;
         });
 
+        CacheManager::invalidateAccounts();
+
         $this->activityLogger->log(
             'purchase_order.voided',
             'purchase_order',

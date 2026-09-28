@@ -532,6 +532,38 @@ class TradersModuleTest extends TestCase
         $this->assertStringNotContainsString('secret internal detail', $response->getContent());
     }
 
+    public function test_identical_payment_within_window_is_rejected(): void
+    {
+        $admin = $this->createUserWithRole('admin');
+        $trader = Trader::factory()->create();
+        $payload = array('amount' => 300, 'payment_date' => '2026-09-20', 'method' => 'cash', 'reference_number' => 'R-1');
+
+        $this->actingAs($admin, 'admin');
+        $this->postJson(route('manager.trader-payments.store', $trader), $payload)->assertOk();
+        $this->postJson(route('manager.trader-payments.store', $trader), $payload)
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('amount');
+        $this->postJson(route('manager.trader-payments.store', $trader), array_merge($payload, array('reference_number' => 'R-2')))->assertOk();
+
+        $this->assertSame(2, $trader->payments()->count());
+    }
+
+    public function test_renaming_trader_clears_cached_account_listing(): void
+    {
+        $admin = $this->createUserWithRole('admin');
+        $trader = Trader::factory()->create();
+        \App\Services\CacheManager::getAccountListing(1, fn () => 'cached-page');
+        $key = \App\Services\CacheManager::getAccountListingKey(1);
+        $this->assertTrue(\Illuminate\Support\Facades\Cache::has($key));
+
+        $this->actingAs($admin, 'admin')->putJson(route('manager.traders.update', $trader), array(
+            'name' => 'Renamed ' . uniqid(),
+            'status' => 'active',
+        ))->assertOk();
+
+        $this->assertFalse(\Illuminate\Support\Facades\Cache::has($key));
+    }
+
     public function test_opening_balance_update_changes_balance(): void
     {
         $admin = $this->createUserWithRole('admin');
