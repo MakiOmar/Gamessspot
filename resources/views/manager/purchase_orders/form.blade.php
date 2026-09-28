@@ -25,7 +25,7 @@
                 </div>
                 <div class="form-group col-md-3">
                     <label for="poDate">Purchase date <span class="text-danger">*</span></label>
-                    <input type="date" id="poDate" class="form-control" required
+                    <input type="date" id="poDate" class="form-control" required max="{{ now()->toDateString() }}"
                            value="{{ $order?->purchase_date?->toDateString() ?? now()->toDateString() }}">
                 </div>
                 <div class="form-group col-md-5">

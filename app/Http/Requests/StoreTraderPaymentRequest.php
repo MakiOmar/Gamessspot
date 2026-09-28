@@ -20,11 +20,21 @@ class StoreTraderPaymentRequest extends FormRequest
     {
         return array(
             'amount' => array('required', 'numeric', 'min:0.01', 'max:999999999'),
-            'payment_date' => array('required', 'date'),
+            'payment_date' => array('required', 'date', 'before_or_equal:today'),
             'method' => array('required', Rule::in(array_keys(TraderPayment::METHODS))),
             'reference_number' => array('nullable', 'string', 'max:100'),
             'notes' => array('nullable', 'string', 'max:2000'),
             'attachment' => array('nullable', 'file', 'mimes:jpg,jpeg,png,webp,pdf', 'max:5120'),
+        );
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public function messages(): array
+    {
+        return array(
+            'payment_date.before_or_equal' => 'The payment date cannot be in the future.',
         );
     }
 

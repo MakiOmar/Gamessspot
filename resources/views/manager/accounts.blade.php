@@ -1136,13 +1136,15 @@
                     });
                 },
                 error: function(xhr) {
+                    // Server messages may echo spreadsheet content, so escape each one before rendering as HTML
+                    const escapeHtml = function (value) { return $('<div>').text(String(value)).html(); };
                     let errorMessage = 'Import failed. Please check your file format.';
-                    
+
                     if (xhr.responseJSON && xhr.responseJSON.error) {
-                        errorMessage = xhr.responseJSON.error;
+                        errorMessage = escapeHtml(xhr.responseJSON.error);
                     } else if (xhr.responseJSON && xhr.responseJSON.errors) {
                         let errors = xhr.responseJSON.errors;
-                        errorMessage = Object.values(errors).flat().join('<br>');
+                        errorMessage = Object.values(errors).flat().map(escapeHtml).join('<br>');
                     }
                     
                     Swal.fire({

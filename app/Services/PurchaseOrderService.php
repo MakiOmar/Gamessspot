@@ -82,6 +82,7 @@ class PurchaseOrderService
             $hasImported = $existing->sum('accounts_count') > 0;
 
             $this->assertHeaderEditable($order, $data, $hasImported);
+            $this->assertTraderAssignable($order, (int) $data['trader_id']);
 
             $submittedIds = collect($data['items'])->pluck('id')->filter()->map(fn ($id) => (int) $id)->all();
             $removed = $existing->except($submittedIds);
@@ -247,6 +248,19 @@ class PurchaseOrderService
         $order->total_quantity = (int) $items->sum('quantity');
         $order->total_cost = round((float) $items->sum('total_cost'), 2);
         $order->save();
+    }
+
+    private function assertTraderAssignable(TraderPurchaseOrder $order, int $traderId): void
+    {
+        if ($traderId === (int) $order->trader_id) {
+            return;
+        }
+
+        if (! Trader::whereKey($traderId)->active()->exists()) {
+            throw ValidationException::withMessages(array(
+                'trader_id' => 'A purchase order cannot be moved to an inactive trader.',
+            ));
+        }
     }
 
     /**

@@ -14,7 +14,7 @@
                     </div>
                     <div class="form-group col-md-6">
                         <label for="paymentDate">Payment date <span class="text-danger">*</span></label>
-                        <input type="date" id="paymentDate" name="payment_date" class="form-control" value="{{ now()->toDateString() }}" required>
+                        <input type="date" id="paymentDate" name="payment_date" class="form-control" value="{{ now()->toDateString() }}" max="{{ now()->toDateString() }}" required>
                     </div>
                 </div>
                 <div class="form-row">

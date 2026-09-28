@@ -10,6 +10,7 @@ use App\Services\PurchaseOrderService;
 use App\Services\TraderLedgerService;
 use App\Services\TraderProfileService;
 use App\Services\TraderService;
+use App\Support\LikePattern;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -28,7 +29,7 @@ class TraderController extends Controller
         $query = $this->ledger->withTotals(Trader::query());
 
         if ($request->filled('search')) {
-            $term = '%' . str_replace(array('%', '_'), array('\\%', '\\_'), (string) $request->input('search')) . '%';
+            $term = LikePattern::contains((string) $request->input('search'));
             $query->where(function ($q) use ($term) {
                 $q->where('name', 'like', $term)
                     ->orWhere('phone', 'like', $term)

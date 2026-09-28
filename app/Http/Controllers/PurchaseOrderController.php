@@ -8,6 +8,7 @@ use App\Models\Game;
 use App\Models\Trader;
 use App\Models\TraderPurchaseOrder;
 use App\Services\PurchaseOrderService;
+use App\Support\LikePattern;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -51,7 +52,7 @@ class PurchaseOrderController extends Controller
         $accounts = $purchaseOrder->accounts()
             ->with('game:id,title')
             ->when($request->filled('email'), function ($q) use ($request) {
-                $q->where('mail', 'like', '%' . str_replace(array('%', '_'), array('\\%', '\\_'), (string) $request->input('email')) . '%');
+                $q->where('mail', 'like', LikePattern::contains((string) $request->input('email')));
             })
             ->orderByDesc('id')
             ->paginate(25)

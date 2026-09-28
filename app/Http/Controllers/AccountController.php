@@ -88,10 +88,14 @@ class AccountController extends Controller
         } catch (ValidationException $e) {
             throw $e;
         } catch (\Exception $e) {
-            Log::error('Account import failed', array('error' => $e->getMessage()));
+            Log::error('Account import failed', array(
+                'purchase_order_item_id' => $request->input('purchase_order_item_id'),
+                'user_id' => $request->user('admin')?->id,
+                'exception' => $e,
+            ));
 
             return response()->json([
-                'error' => 'Import failed: ' . $e->getMessage()
+                'error' => 'Import failed. Please check the file format and try again; the error was logged for support.',
             ], 422);
         }
     }

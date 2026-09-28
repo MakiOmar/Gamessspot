@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Account;
 use App\Models\Game;
 use App\Models\Trader;
+use App\Support\LikePattern;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -51,7 +52,7 @@ class TraderProfileService
             ->with(array('game:id,title', 'purchaseOrder:id,po_number'));
 
         if ($request->filled('email')) {
-            $query->where('mail', 'like', '%' . $this->escapeLike((string) $request->input('email')) . '%');
+            $query->where('mail', 'like', LikePattern::contains((string) $request->input('email')));
         }
 
         if ($request->filled('game_id')) {
@@ -89,10 +90,5 @@ class TraderProfileService
             'games' => Game::whereIn('id', $gameIds)->orderBy('title')->get(array('id', 'title')),
             'orders' => $trader->purchaseOrders()->orderByDesc('id')->get(array('id', 'po_number')),
         );
-    }
-
-    private function escapeLike(string $value): string
-    {
-        return str_replace(array('\\', '%', '_'), array('\\\\', '\\%', '\\_'), $value);
     }
 }

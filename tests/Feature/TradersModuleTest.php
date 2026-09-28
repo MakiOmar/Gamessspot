@@ -479,6 +479,59 @@ class TradersModuleTest extends TestCase
         \Illuminate\Support\Facades\DB::transaction(fn () => $service->lockItemForImport($itemId));
     }
 
+    public function test_purchase_order_cannot_be_moved_to_inactive_trader(): void
+    {
+        $admin = $this->createUserWithRole('admin');
+        $game = Game::factory()->create();
+        $order = $this->createOrder(Trader::factory()->create(), array($this->line($game, 1, 10)));
+        $inactive = Trader::factory()->create(array('status' => Trader::STATUS_INACTIVE));
+
+        $this->actingAs($admin, 'admin')->putJson(route('manager.purchase-orders.update', $order), array(
+            'trader_id' => $inactive->id,
+            'purchase_date' => '2026-09-01',
+            'items' => array(array_merge(array('id' => $order->items()->first()->id), $this->line($game, 1, 10))),
+        ))->assertStatus(422)->assertJsonValidationErrors('trader_id');
+
+        $this->assertNotSame($inactive->id, $order->fresh()->trader_id);
+    }
+
+    public function test_future_purchase_and_payment_dates_are_rejected(): void
+    {
+        $admin = $this->createUserWithRole('admin');
+        $trader = Trader::factory()->create();
+        $tomorrow = now()->addDay()->toDateString();
+
+        $this->actingAs($admin, 'admin');
+        $this->postJson(route('manager.purchase-orders.store'), array(
+            'trader_id' => $trader->id,
+            'purchase_date' => $tomorrow,
+            'items' => array($this->line(Game::factory()->create(), 1, 10)),
+        ))->assertStatus(422)->assertJsonValidationErrors('purchase_date');
+
+        $this->postJson(route('manager.trader-payments.store', $trader), array(
+            'amount' => 10,
+            'payment_date' => $tomorrow,
+            'method' => 'cash',
+        ))->assertStatus(422)->assertJsonValidationErrors('payment_date');
+    }
+
+    public function test_import_failure_does_not_expose_exception_details(): void
+    {
+        $admin = $this->createUserWithRole('admin');
+        $order = $this->createOrder(Trader::factory()->create(), array($this->line(Game::factory()->create(), 2, 10)));
+        $this->mock(\App\Services\PurchaseOrderAccountService::class)
+            ->shouldReceive('importForLine')
+            ->andThrow(new \RuntimeException('SQLSTATE[42S02] secret internal detail'));
+
+        $response = $this->actingAs($admin, 'admin')->post(route('manager.accounts.import'), array(
+            'purchase_order_item_id' => $order->items()->first()->id,
+            'file' => $this->csvUpload(array('x' . uniqid() . '@example.com')),
+        ), array('Accept' => 'application/json'))->assertStatus(422);
+
+        $this->assertStringNotContainsString('SQLSTATE', $response->getContent());
+        $this->assertStringNotContainsString('secret internal detail', $response->getContent());
+    }
+
     public function test_opening_balance_update_changes_balance(): void
     {
         $admin = $this->createUserWithRole('admin');

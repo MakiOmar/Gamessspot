@@ -18,7 +18,7 @@ class PurchaseOrderRequest extends FormRequest
     {
         return array(
             'trader_id' => array('required', 'integer', 'exists:traders,id'),
-            'purchase_date' => array('required', 'date'),
+            'purchase_date' => array('required', 'date', 'before_or_equal:today'),
             'notes' => array('nullable', 'string', 'max:2000'),
             'items' => array('required', 'array', 'min:1', 'max:100'),
             'items.*.id' => array('nullable', 'integer'),
@@ -35,6 +35,7 @@ class PurchaseOrderRequest extends FormRequest
     {
         return array(
             'items.required' => 'Add at least one game line.',
+            'purchase_date.before_or_equal' => 'The purchase date cannot be in the future.',
             'items.*.game_id.distinct' => 'Each game can appear only once per purchase order.',
             'items.*.game_id.required' => 'Select a game for every line.',
         );
