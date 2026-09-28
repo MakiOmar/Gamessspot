@@ -20,7 +20,7 @@ class AuthServiceProvider extends ServiceProvider
     public function boot(): void
     {
         foreach (array_keys(config('permissions.abilities', array())) as $ability) {
-            if ($ability === 'view-game-accounts') {
+            if (in_array($ability, array('view-game-accounts', 'view-traders'), true)) {
                 continue;
             }
 

@@ -62,6 +62,18 @@ return array(
             'label' => 'Manage Store Profiles',
             'group' => 'Accounts & Stores',
         ),
+        'view-traders' => array(
+            'label' => 'View Traders',
+            'group' => 'Traders',
+        ),
+        'manage-traders' => array(
+            'label' => 'Manage Traders, Purchase Orders & Payments',
+            'group' => 'Traders',
+        ),
+        'void-trader-transactions' => array(
+            'label' => 'Void Purchase Orders & Payments',
+            'group' => 'Traders',
+        ),
         'view-reports' => array(
             'label' => 'View Reports',
             'group' => 'Reports',
