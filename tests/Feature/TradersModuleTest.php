@@ -415,19 +415,32 @@ class TradersModuleTest extends TestCase
         $this->assertNull($account->trader_id);
     }
 
-    public function test_deleting_linked_account_logs_trader_and_purchase_order(): void
+    public function test_linked_account_cannot_be_deleted(): void
     {
         $admin = $this->createUserWithRole('admin');
-        $trader = Trader::factory()->create();
-        $order = $this->createOrder($trader, array($this->line(Game::factory()->create(), 1, 42)));
+        $order = $this->createOrder(Trader::factory()->create(), array($this->line(Game::factory()->create(), 1, 42)));
         $account = $this->linkAccount($order);
+
+        $this->actingAs($admin, 'admin')
+            ->deleteJson(route('manager.accounts.destroy', $account->id))
+            ->assertStatus(422)
+            ->assertJsonFragment(array('message' => "This account is linked to purchase order {$order->po_number} and cannot be deleted."));
+
+        $this->assertNotNull($account->fresh());
+
+        $this->expectException(\DomainException::class);
+        $account->delete();
+    }
+
+    public function test_legacy_account_can_still_be_deleted(): void
+    {
+        $admin = $this->createUserWithRole('admin');
+        $account = Account::factory()->create(array('game_id' => Game::factory()->create()->id));
 
         $this->actingAs($admin, 'admin')->deleteJson(route('manager.accounts.destroy', $account->id))->assertOk();
 
-        $log = SystemActivityLog::where('action', 'account.deleted')->where('subject_id', $account->id)->latest('id')->firstOrFail();
-        $this->assertSame($trader->name, $log->meta['trader_name']);
-        $this->assertSame($order->po_number, $log->meta['po_number']);
-        $this->assertSame('42.00', $log->meta['original_cost']);
+        $this->assertNull($account->fresh());
+        $this->assertTrue(SystemActivityLog::where('action', 'account.deleted')->where('subject_id', $account->id)->exists());
     }
 
     public function test_accounts_page_and_search_show_clickable_source(): void

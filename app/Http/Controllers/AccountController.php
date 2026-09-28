@@ -304,6 +304,15 @@ class AccountController extends Controller
     {
         $account = Account::findOrFail($id);
 
+        if ($account->hasPurchaseSource()) {
+            $poNumber = $account->purchaseOrder?->po_number ?? ('#' . $account->purchase_order_id);
+
+            return response()->json([
+                'success' => false,
+                'message' => "This account is linked to purchase order {$poNumber} and cannot be deleted.",
+            ], 422);
+        }
+
         try {
             $account->delete();
 

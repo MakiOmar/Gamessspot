@@ -29,6 +29,10 @@ class AccountObserver
      */
     public function deleting(Account $account)
     {
+        if ($account->hasPurchaseSource()) {
+            throw new \DomainException("Account #{$account->id} is linked to a trader purchase order and cannot be deleted.");
+        }
+
         $orders = Order::query()
             ->where('account_id', $account->id)
             ->get(array('id', 'account_id', 'buyer_name', 'buyer_phone'));

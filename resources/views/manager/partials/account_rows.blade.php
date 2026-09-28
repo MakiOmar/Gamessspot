@@ -71,12 +71,19 @@
                 Edit Stock
             </button>
 
-            <button type="button"
-                class="btn btn-danger btn-sm deleteAccount"
-                data-id="{{ $account->id }}"
-                data-mail="{{ $account->mail }}">
-                Delete
-            </button>
+            @if ($account->hasPurchaseSource())
+                <!-- Accounts bought through a purchase order are permanent -->
+                <span class="d-inline-block" tabindex="0" title="Linked to purchase order {{ $account->purchaseOrder?->po_number }} — cannot be deleted">
+                    <button type="button" class="btn btn-danger btn-sm" disabled style="pointer-events: none;">Delete</button>
+                </span>
+            @else
+                <button type="button"
+                    class="btn btn-danger btn-sm deleteAccount"
+                    data-id="{{ $account->id }}"
+                    data-mail="{{ $account->mail }}">
+                    Delete
+                </button>
+            @endif
         </div>
     </td>
     @endcan
