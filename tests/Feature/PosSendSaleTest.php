@@ -117,6 +117,46 @@ class PosSendSaleTest extends TestCase
         }
     }
 
+    public function test_pos_product_not_found_is_shown_with_the_product_name(): void
+    {
+        $phone = '0108'.random_int(1000000, 9999999);
+        User::factory()->create(['phone' => $phone]);
+        $game = Game::factory()->create(['title' => 'Avatar']);
+        $order = $this->gameOrder($game, 'ps4_offline_stock', $phone, 'x@example.com');
+
+        Http::fake(['*/api/accounts/orders/create/*' => Http::response([
+            'message' => 'Order has been created successfully',
+            'created' => ['error_type' => 'order_product_not_found', 'order_number' => $order->id, 'product' => 'ps4_offline_stock SKU:0148'],
+        ])]);
+
+        $this->actingAs($this->admin, 'admin')
+            ->post(route('manager.orders.sendToPos'), ['order_ids' => [$order->id]])
+            ->assertRedirect(route('manager.orders'))
+            ->assertSessionHas('error', fn (string $message) => str_contains($message, 'could not find the product')
+                && str_contains($message, 'SKU:0148'));
+
+        $this->assertNull($order->fresh()->pos_order_id);
+    }
+
+    public function test_pos_server_error_includes_status_and_reason(): void
+    {
+        $phone = '0108'.random_int(1000000, 9999999);
+        User::factory()->create(['phone' => $phone]);
+        $game = Game::factory()->create();
+        $order = $this->gameOrder($game, 'ps5_primary_stock', $phone, 'y@example.com');
+
+        Http::fake(['*/api/accounts/orders/create/*' => Http::response([
+            'message' => 'Error occured!',
+            'error' => 'An error occurred while processing the order',
+        ], 500)]);
+
+        $this->actingAs($this->admin, 'admin')
+            ->post(route('manager.orders.sendToPos'), ['order_ids' => [$order->id]])
+            ->assertSessionHas('error', 'Failed to create order in POS system. Status: 500 — An error occurred while processing the order');
+
+        $this->assertNull($order->fresh()->pos_order_id);
+    }
+
     public function test_sold_item_parsing_covers_full_and_slot_offers(): void
     {
         $this->assertSame(['ps5', 'primary'], PosSaleProductResolver::parseSoldItem('ps5_primary_stock'));

@@ -1564,7 +1564,12 @@ class OrderController extends Controller
 
             // Check if response body is valid and contains the expected structure
             if (!$body || !isset($body->created) || !isset($body->created->id)) {
-                return redirect()->route('manager.orders')->with('error', 'Invalid response from POS system. Please try again or contact support.');
+                Log::warning('POS rejected Accounts sale', [
+                    'order_ids' => $unsentOrderIds,
+                    'response'  => mb_substr($response->body(), 0, 2000),
+                ]);
+
+                return redirect()->route('manager.orders')->with('error', $this->posSaleRejectionMessage($body->created ?? null));
             }
 
             $transaction_id = $body->created->id;
@@ -1577,8 +1582,37 @@ class OrderController extends Controller
             // Return a success message if all orders were sent successfully
             return redirect()->route('manager.orders')->with('success', 'Orders successfully sent to POS');
         } else {
-            return redirect()->route('manager.orders')->with('error', 'Failed to create order in POS system. Status: ' . $response->status());
+            Log::warning('POS sale request failed', [
+                'order_ids' => $unsentOrderIds,
+                'status'    => $response->status(),
+                'response'  => mb_substr($response->body(), 0, 2000),
+            ]);
+            $posReason = $response->json('error') ?: $response->json('message');
+            $suffix = is_string($posReason) && $posReason !== '' ? ' — ' . Str::limit($posReason, 200) : '';
+
+            return redirect()->route('manager.orders')->with('error', 'Failed to create order in POS system. Status: ' . $response->status() . $suffix);
         }
+    }
+
+    /**
+     * POS answers 200 with `created` set to an error object (error_type + product/msg) when it cannot build the sale.
+     */
+    private function posSaleRejectionMessage($created): string
+    {
+        $errorType = is_object($created) ? ($created->error_type ?? null) : null;
+
+        if ($errorType === 'order_product_not_found') {
+            return 'POS could not find the product for "' . Str::limit((string) ($created->product ?? 'unknown item'), 150)
+                . '". Sync this game or card category to POS (pos:sync-catalog) or fix the fallback POS product IDs in settings, then send again.';
+        }
+        if ($errorType === 'order_insuficient_product_qty') {
+            return 'POS does not have enough stock for this sale: ' . Str::limit((string) ($created->msg ?? 'insufficient quantity'), 200);
+        }
+        if (is_string($errorType) && $errorType !== '') {
+            return 'POS rejected the sale (' . Str::limit($errorType, 60) . '). Please contact support.';
+        }
+
+        return 'Invalid response from POS system. Please try again or contact support.';
     }
 
     public function receiveFromPos(Request $request)
