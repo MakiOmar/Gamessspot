@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\Auth;
 use App\Models\Game;
 use App\Models\GamePosProduct;
 use App\Models\TraderPurchaseOrderItem;
+use App\Support\LikePattern;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Cache;
@@ -816,6 +817,15 @@ class ManagerController extends Controller
             $psGamesQuery->where('games.is_featured', 1);
         }
 
+        // Shop search on title or code, applied before pagination so totals and pages match the results.
+        $term = mb_substr( trim( (string) request()->input( 'q', request()->input( 'search', '' ) ) ), 0, 120 );
+        if ( '' !== $term ) {
+            $pattern = LikePattern::contains( $term );
+            $psGamesQuery->where( function ( $query ) use ( $pattern ) {
+                $query->where( 'games.title', 'like', $pattern )->orWhere( 'games.code', 'like', $pattern );
+            } );
+        }
+
         $psGamesQuery
             ->groupBy(
                 'games.id',
@@ -847,7 +857,8 @@ class ManagerController extends Controller
             $psGamesRows = $psGamesQuery->limit( $limit )->get();
             $gameIds     = $psGamesRows->pluck('id')->toArray();
         } else {
-            $psGames = $psGamesQuery->paginate( 20 );
+            // Newest first keeps page contents stable and puts newly added games on page 1.
+            $psGames = $psGamesQuery->orderByDesc( 'games.id' )->paginate( 20 )->withQueryString();
             $gameIds = $psGames->pluck('id')->toArray();
         }
 
