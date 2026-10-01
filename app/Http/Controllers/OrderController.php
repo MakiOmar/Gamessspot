@@ -976,11 +976,13 @@ class OrderController extends Controller
                 ], 422);
             }
 
-            // Fetch the first matching account or fail
-            $account = $accountQuery->select('accounts.*')->first();
+            // Lock the chosen account so two sellers cannot take the same last stock concurrently
+            $account = $accountQuery->select('accounts.*')->lockForUpdate()->first();
 
             // Check if no account was found
             if (!$account) {
+                DB::rollBack();
+
                 return response()->json([
                     'message' => 'No available account matches the specified criteria.',
                 ], 422);
@@ -1064,10 +1066,15 @@ class OrderController extends Controller
             // Rollback the transaction in case of any error
             DB::rollBack();
 
-            // Return an error response
+            Log::error('Dashboard order creation failed', [
+                'seller_id' => Auth::id(),
+                'game_id'   => $validatedData['game_id'],
+                'sold_item' => $sold_item,
+                'exception' => $e,
+            ]);
+
             return response()->json([
                 'message' => 'Not possible to create the order. Please try again later.',
-                'error'   => $e->getMessage(),
             ], 500);
         }
     }
@@ -1223,10 +1230,14 @@ class OrderController extends Controller
         } catch (\Exception $e) {
             DB::rollBack();
 
+            Log::error('Card order creation failed', [
+                'seller_id' => Auth::id(),
+                'exception' => $e,
+            ]);
+
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to create order. Please try again.',
-                'error'   => $e->getMessage(),
             ], 500);
         }
     }
