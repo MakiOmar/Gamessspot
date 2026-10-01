@@ -88,6 +88,11 @@
                             <label class="form-check-label" for="isFeatured">Featured</label>
                         </div>
 
+                        <!-- Display order on shop listing pages (featured section and games list): lower shows first, empty = after ordered games -->
+                        <label for="displayOrder" class="mt-3">Display Order</label>
+                        <input type="number" id="displayOrder" name="display_order" class="form-control" style="border-radius: 10px;" min="0" max="1000000" step="1" placeholder="Leave empty for default (newest first)">
+                        <small class="form-text text-muted">Lower numbers show first on the shop. Games without a number come after, newest first.</small>
+
                         <!-- Game Description (WYSIWYG) -->
                         <label for="description" class="mt-3">Description</label>
                         <textarea id="description" name="description" class="form-control" rows="8" placeholder="Write the game description..."></textarea>
@@ -366,6 +371,7 @@
                     $('#gameCode').val(response.code);
                     $('#productType').val(response.product_type || 'game');
                     $('#isFeatured').prop('checked', !!response.is_featured);
+                    $('#displayOrder').val(response.display_order ?? '');
                     $('#fullPrice').val(response.full_price);
                     $('#ps4PrimaryPrice').val(response.ps4_primary_price);
                     setStatusSelect('#ps4PrimaryStatus', response.ps4_primary_status);

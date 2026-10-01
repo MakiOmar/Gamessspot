@@ -230,6 +230,7 @@ class ManagerController extends Controller
         'ps5_offline_status'   => 'required|boolean',
         'description'          => 'nullable|string',
         'is_featured'          => 'nullable|boolean',
+        'display_order'        => 'nullable|integer|min:0|max:1000000',
         'gallery_images'       => 'nullable|array|max:' . GalleryImage::MAX_PER_PRODUCT,
         'gallery_images.*'     => 'nullable|image:allow_svg|mimes:webp,jpeg,png,jpg,gif,svg|max:2048',
         'delete_gallery_ids'   => 'nullable|array',
@@ -239,6 +240,7 @@ class ManagerController extends Controller
         $data = $request->except('_token', 'ps4_image', 'ps5_image', 'gallery_images', 'delete_gallery_ids'); // Exclude image files from mass assignment
         $data['description'] = Game::sanitizeDescription($request->input('description'));
         $data['is_featured'] = $request->boolean('is_featured');
+        $data['display_order'] = $request->filled('display_order') ? (int) $request->input('display_order') : null;
         // Handle PS4 image update
         if ($request->hasFile('ps4_image')) {
             $ps4_image = $request->file('ps4_image');
@@ -382,11 +384,13 @@ class ManagerController extends Controller
         'ps5_offline_status'   => 'required|boolean',
         'description'          => 'nullable|string',
         'is_featured'          => 'nullable|boolean',
+        'display_order'        => 'nullable|integer|min:0|max:1000000',
         'gallery_images'       => 'nullable|array|max:' . GalleryImage::MAX_PER_PRODUCT,
         'gallery_images.*'     => 'nullable|image:allow_svg|mimes:webp,jpeg,png,jpg,gif,svg|max:2048',
         ]);
         $validatedData['description'] = Game::sanitizeDescription($request->input('description'));
         $validatedData['is_featured'] = $request->boolean('is_featured');
+        $validatedData['display_order'] = $request->filled('display_order') ? (int) $request->input('display_order') : null;
         unset($validatedData['gallery_images']);
 
         // Handle PS4 image upload
@@ -852,13 +856,18 @@ class ManagerController extends Controller
                 : "SUM(accounts.ps{$platform}_offline_stock) > 0 OR SUM(accounts.ps{$platform}_primary_stock) > 0 OR SUM(accounts.ps{$platform}_secondary_stock) > 0 OR SUM(CASE WHEN (" . Account::fullSellEligibleSql() . ") THEN 1 ELSE 0 END) > 0"
         );
 
+        // Manual display order first (lower = earlier), then unordered games newest first; id keeps pages stable.
+        $psGamesQuery
+            ->orderByRaw( 'games.display_order IS NULL' )
+            ->orderBy( 'games.display_order' )
+            ->orderByDesc( 'games.id' );
+
         // Limited list (featured combined / count=N) vs paginated catalog
         if ( null !== $limit ) {
             $psGamesRows = $psGamesQuery->limit( $limit )->get();
             $gameIds     = $psGamesRows->pluck('id')->toArray();
         } else {
-            // Newest first keeps page contents stable and puts newly added games on page 1.
-            $psGames = $psGamesQuery->orderByDesc( 'games.id' )->paginate( 20 )->withQueryString();
+            $psGames = $psGamesQuery->paginate( 20 )->withQueryString();
             $gameIds = $psGames->pluck('id')->toArray();
         }
 

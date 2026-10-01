@@ -73,6 +73,7 @@ class Game extends Model
         'code',
         'product_type',
         'is_featured',
+        'display_order',
         'full_price',
         'ps4_primary_price',
         'ps4_secondary_price',
@@ -93,6 +94,7 @@ class Game extends Model
 
     protected $casts = [
         'is_featured' => 'boolean',
+        'display_order' => 'integer',
         'ps4_primary_status' => 'boolean',
         'ps4_secondary_status' => 'boolean',
         'ps4_offline_status' => 'boolean',
