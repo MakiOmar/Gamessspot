@@ -95,6 +95,24 @@
         <meta name="msapplication-TileImage" content="{{ asset('favicon/ms-icon-144x144.png') }}">
     @endif
 
+
+    {{-- Sidebar scroll fallback (long menus) --}}
+    <style>
+
+/* Ensure long sidebar menus scroll when OverlayScrollbars is absent/broken */
+.main-sidebar .sidebar {
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  height: calc(100vh - (3.5rem + 1px)) !important;
+  max-height: calc(100vh - (3.5rem + 1px)) !important;
+  -webkit-overflow-scrolling: touch;
+}
+.main-sidebar .sidebar .os-viewport,
+.main-sidebar .sidebar.os-host {
+  overflow-y: auto !important;
+}
+
+    </style>
 </head>
 
 <body class="@yield('classes_body')" @yield('body_data')>
