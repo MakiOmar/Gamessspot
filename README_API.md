@@ -605,6 +605,12 @@ Each game offer (`ps4|ps5` × `primary|secondary|offline|full`) and each gift-ca
 
 ---
 
+## Behind a reverse proxy
+
+`TRUSTED_PROXIES` (comma-separated IPs/CIDRs, read by `config/trustedproxy.php`) lists the proxies whose `X-Forwarded-*` headers are trusted. On the VPS it holds the Docker private ranges plus Cloudflare's ranges, so `$request->ip()` is the visitor and not Traefik or a Cloudflare edge. Empty trusts no proxy.
+
+---
+
 ## Quick cURL examples
 
 Login:
