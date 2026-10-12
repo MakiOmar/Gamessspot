@@ -541,8 +541,13 @@ Allocates stock and creates an order. Use **either** a game/subscription sale **
 | `type` | `primary`, `secondary`, or `full` |
 | `platform` | `"4"` or `"5"` — for `full`, labels `sold_item` as `ps4_full` / `ps5_full`; stock effect is always the cross-platform bundle |
 | `game_id` | Works for `product_type` game **or** subscription |
+| `buyer_email` | Required (valid email) for game sales; optional for cards |
 | `wc_order_id` | Required unless using storefront fields |
-| `storefront_order_id` + `pos_transaction_id` | Optional storefront idempotency path |
+| `storefront_order_id` + `pos_transaction_id` | Storefront / POS path: `storefront_order_id` is any string up to 191 chars (POS call-center sales orders send `so-{id}`), `pos_transaction_id` is required and numeric, and the order is stamped `pos_order_id` (shows the **POS** badge; Send to POS skips it) |
+| `storefront_line_key` | Optional (max 191). Idempotency key per unit: a repeat call with the same `storefront_order_id` + `storefront_line_key` returns the existing allocation with `200` and `"duplicate": true` instead of selling another account |
+| `notes` | Optional (max 500). Saved on the order, e.g. `POS sales order SO2026/0012 / Agent name` for attribution (API orders have no seller) |
+
+`type: "offline"` is not accepted by this endpoint.
 
 **Success `201`**
 

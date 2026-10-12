@@ -731,6 +731,8 @@ class OrderController extends Controller
             'type'             => 'required|string|in:primary,secondary,full',
             'platform'         => 'required|string|max:255',
             'storefront_line_key' => 'nullable|string|max:191',
+            // Free-text attribution, e.g. "POS sales order SO2026/12 / agent name".
+            'notes'            => 'nullable|string|max:500',
         ];
 
         if ($isStorefront) {
@@ -828,7 +830,7 @@ class OrderController extends Controller
                 'buyer_phone'          => $validatedData['buyer_phone'],
                 'buyer_name'           => $validatedData['buyer_name'],
                 'price'                => $validatedData['price'],
-                'notes'                => '',
+                'notes'                => $validatedData['notes'] ?? '',
                 'sold_item'            => $sold_item,
                 'woocommerce_order_id' => $validatedData['wc_order_id'] ?? null,
             ];
@@ -1144,6 +1146,7 @@ class OrderController extends Controller
             'price'            => 'required|numeric|min:0',
             'buyer_email'      => 'nullable|email',
             'storefront_line_key' => 'nullable|string|max:191',
+            'notes'            => 'nullable|string|max:500',
         ];
         if ($isStorefront) {
             $rules['storefront_order_id'] = 'required|string|max:191';
@@ -1202,7 +1205,7 @@ class OrderController extends Controller
                 'buyer_phone'      => $validatedData['buyer_phone'],
                 'buyer_name'       => $validatedData['buyer_name'],
                 'price'            => $validatedData['price'],
-                'notes'            => '',
+                'notes'            => $validatedData['notes'] ?? '',
                 'sold_item'        => 'card',
                 'card_id'          => $card->id,
             ];
