@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Account;
 use App\Models\Game;
+use App\Models\Order;
 use App\Models\Role;
 use App\Models\SystemActivityLog;
 use App\Models\Trader;
@@ -640,5 +641,84 @@ class TradersModuleTest extends TestCase
         $this->actingAs($admin, 'admin');
         $this->get(route('manager.traders.index'))->assertOk()->assertSee($url, false);
         $this->get(route('manager.traders.show', $trader))->assertOk()->assertSee($url, false);
+    }
+
+    public function test_unsold_linked_account_can_be_removed_from_purchase_order_freeing_the_slot(): void
+    {
+        $admin = $this->createUserWithRole('admin');
+        $trader = Trader::factory()->create();
+        $order = $this->createOrder($trader, array($this->line(Game::factory()->create(), 2, 100)));
+        $account = $this->linkAccount($order);
+        $item = $order->items()->first();
+        $balanceBefore = app(TraderLedgerService::class)->totals($trader->fresh())['balance'];
+
+        $this->actingAs($admin, 'admin')
+            ->postJson(route('manager.accounts.remove-from-purchase-order', $account->id), array('reason' => 'Imported to the wrong order'))
+            ->assertOk()
+            ->assertJsonPath('success', true);
+
+        $this->assertDatabaseMissing('accounts', array('id' => $account->id));
+        $this->assertSame(2, app(PurchaseOrderService::class)->remainingForItem($item));
+        $this->assertEquals($balanceBefore, app(TraderLedgerService::class)->totals($trader->fresh())['balance']);
+
+        $log = SystemActivityLog::query()->where('action', 'account.removed_from_purchase_order')->latest('id')->first();
+        $this->assertNotNull($log);
+        $this->assertSame('Imported to the wrong order', $log->meta['reason']);
+        $this->assertSame($order->po_number, $log->meta['po_number']);
+    }
+
+    public function test_sold_linked_account_cannot_be_removed_and_reason_is_returned(): void
+    {
+        $admin = $this->createUserWithRole('admin');
+        $order = $this->createOrder(Trader::factory()->create(), array($this->line(Game::factory()->create(), 1, 100)));
+        $account = $this->linkAccount($order);
+        Order::factory()->create(array('account_id' => $account->id));
+
+        $this->actingAs($admin, 'admin')
+            ->postJson(route('manager.accounts.remove-from-purchase-order', $account->id), array('reason' => 'Duplicate'))
+            ->assertUnprocessable()
+            ->assertJsonPath('errors.account.0', "This account has 1 sale(s) and cannot be removed from purchase order {$order->po_number}.");
+
+        $this->assertDatabaseHas('accounts', array('id' => $account->id, 'purchase_order_id' => $order->id));
+    }
+
+    public function test_remove_from_purchase_order_requires_reason_and_void_permission(): void
+    {
+        $order = $this->createOrder(Trader::factory()->create(), array($this->line(Game::factory()->create(), 1, 100)));
+        $account = $this->linkAccount($order);
+        $url = route('manager.accounts.remove-from-purchase-order', $account->id);
+
+        $this->actingAs($this->createUserWithRole('account manager'), 'admin')
+            ->postJson($url, array('reason' => 'Duplicate'))
+            ->assertForbidden();
+
+        $this->actingAs($this->createUserWithRole('admin'), 'admin')
+            ->postJson($url, array('reason' => ''))
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('reason');
+
+        $this->assertDatabaseHas('accounts', array('id' => $account->id));
+    }
+
+    public function test_legacy_account_cannot_use_remove_from_purchase_order(): void
+    {
+        $account = Account::factory()->create();
+
+        $this->actingAs($this->createUserWithRole('admin'), 'admin')
+            ->postJson(route('manager.accounts.remove-from-purchase-order', $account->id), array('reason' => 'Duplicate'))
+            ->assertUnprocessable()
+            ->assertJsonPath('errors.account.0', 'This account is not linked to a purchase order.');
+    }
+
+    public function test_accounts_and_purchase_order_pages_show_remove_button_for_admin(): void
+    {
+        $admin = $this->createUserWithRole('admin');
+        $order = $this->createOrder(Trader::factory()->create(), array($this->line(Game::factory()->create(), 1, 100)));
+        $account = $this->linkAccount($order);
+        $url = route('manager.accounts.remove-from-purchase-order', $account->id);
+
+        $this->actingAs($admin, 'admin');
+        $this->get(route('manager.purchase-orders.show', $order))->assertOk()->assertSee($url, false);
+        $this->get(route('manager.accounts.search', array('search' => $account->mail)))->assertOk()->assertSee(str_replace('/', '\/', $url), false);
     }
 }

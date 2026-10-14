@@ -1310,4 +1310,23 @@
         });
     });
 </script>
+@can('void-trader-transactions')
+@include('manager.traders.partials.helpers_js')
+<script>
+    jQuery(function ($) {
+        // Undo a wrong import: reason prompt, then remove the account and free its purchase order slot
+        $(document).on('click', '.removeFromPo', function () {
+            const $btn = $(this);
+            TraderUi.confirmVoid($btn.data('url'), '', function () {
+                setTimeout(function () { location.reload(); }, 600);
+            }, {
+                title: 'Remove ' + TraderUi.escapeHtml($btn.data('mail')) + ' from ' + TraderUi.escapeHtml($btn.data('po')) + '?',
+                text: 'The account is deleted and its slot on the purchase order is freed, so the correct account can be imported. The order total and trader balance do not change. Only unsold accounts can be removed.',
+                placeholder: 'Reason (required)',
+                confirmText: 'Remove'
+            });
+        });
+    });
+</script>
+@endcan
 @endpush

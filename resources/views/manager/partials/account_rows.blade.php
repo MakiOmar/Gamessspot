@@ -72,10 +72,22 @@
             </button>
 
             @if ($account->hasPurchaseSource())
-                <!-- Accounts bought through a purchase order are permanent -->
-                <span class="d-inline-block" tabindex="0" title="Linked to purchase order {{ $account->purchaseOrder?->po_number }} — cannot be deleted">
-                    <button type="button" class="btn btn-danger btn-sm" disabled style="pointer-events: none;">Delete</button>
-                </span>
+                @can('void-trader-transactions')
+                    <!-- Undo a wrong import: removes the unsold account and frees its purchase order slot (reason required) -->
+                    <button type="button"
+                        class="btn btn-danger btn-sm removeFromPo"
+                        data-url="{{ route('manager.accounts.remove-from-purchase-order', $account->id) }}"
+                        data-mail="{{ $account->mail }}"
+                        data-po="{{ $account->purchaseOrder?->po_number }}"
+                        title="Remove from purchase order {{ $account->purchaseOrder?->po_number }}">
+                        Remove
+                    </button>
+                @else
+                    <!-- Accounts bought through a purchase order can only be removed by users who can void trader transactions -->
+                    <span class="d-inline-block" tabindex="0" title="Linked to purchase order {{ $account->purchaseOrder?->po_number }} — only an admin can remove it">
+                        <button type="button" class="btn btn-danger btn-sm" disabled style="pointer-events: none;">Delete</button>
+                    </span>
+                @endcan
             @else
                 <button type="button"
                     class="btn btn-danger btn-sm deleteAccount"

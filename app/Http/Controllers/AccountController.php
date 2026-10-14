@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Account; // Assuming Account is the model
+use App\Http\Requests\VoidTraderTransactionRequest;
 use Illuminate\Http\Request;
 use App\Models\Game;
 use App\Exports\AccountsExport;
@@ -296,6 +297,20 @@ class AccountController extends Controller
         CacheManager::invalidateGames();
 
         return response()->json(['success' => 'Account stock levels updated successfully!']);
+    }
+
+    /**
+     * Undo a wrong import: remove an unsold account from its purchase order (admin-only, reason required).
+     */
+    public function removeFromPurchaseOrder(VoidTraderTransactionRequest $request, PurchaseOrderAccountService $accounts, $id)
+    {
+        $account = Account::findOrFail($id);
+        $accounts->remove($account, $request->validated('reason'));
+
+        return response()->json(array(
+            'success' => true,
+            'message' => "Account {$account->mail} removed from its purchase order.",
+        ));
     }
 
     /**

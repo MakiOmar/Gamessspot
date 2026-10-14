@@ -126,6 +126,9 @@
                     <th>Purchase date</th>
                     <th class="text-right">Original cost</th>
                     <th>Added</th>
+                    @can('void-trader-transactions')
+                        <th></th>
+                    @endcan
                 </tr>
             </thead>
             <tbody>
@@ -137,11 +140,21 @@
                         <td>{{ $account->purchase_date?->toDateString() }}</td>
                         <td class="text-right">{{ number_format((float) $account->original_cost, 2) }}</td>
                         <td>{{ $account->created_at?->toDateTimeString() }}</td>
+                        @can('void-trader-transactions')
+                            {{-- Undo a wrong import (unsold accounts only, reason required) --}}
+                            <td class="text-right">
+                                <button type="button" class="btn btn-sm btn-outline-danger removeFromPo"
+                                        data-url="{{ route('manager.accounts.remove-from-purchase-order', $account->id) }}"
+                                        data-mail="{{ $account->mail }}">
+                                    <i class="bi bi-x-circle"></i> Remove
+                                </button>
+                            </td>
+                        @endcan
                     </tr>
                 @empty
                     {{-- Empty state --}}
                     <tr>
-                        <td colspan="6" class="text-center text-muted py-4">
+                        <td colspan="7" class="text-center text-muted py-4">
                             {{ request()->filled('email') ? 'No accounts match this email.' : 'No accounts imported for this purchase order yet.' }}
                         </td>
                     </tr>
@@ -162,6 +175,19 @@ jQuery(function ($) {
     $('#voidOrderBtn').on('click', function () {
         TraderUi.confirmVoid(@js(route('manager.purchase-orders.void', $order)), 'purchase order ' + @js($order->po_number), function () {
             setTimeout(function () { location.reload(); }, 600);
+        });
+    });
+
+    // Undo a wrong import: removes the account and frees its slot on this order
+    $(document).on('click', '.removeFromPo', function () {
+        var $btn = $(this);
+        TraderUi.confirmVoid($btn.data('url'), '', function () {
+            setTimeout(function () { location.reload(); }, 600);
+        }, {
+            title: 'Remove ' + TraderUi.escapeHtml($btn.data('mail')) + ' from ' + @js($order->po_number) + '?',
+            text: 'The account is deleted and its slot is freed, so the correct account can be imported. The order total and trader balance do not change. Only unsold accounts can be removed.',
+            placeholder: 'Reason (required)',
+            confirmText: 'Remove'
         });
     });
 });

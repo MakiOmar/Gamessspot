@@ -4,6 +4,8 @@ namespace App\Services;
 
 use App\Imports\AccountsImport;
 use App\Models\Account;
+use App\Models\Order;
+use App\Models\TraderPurchaseOrder;
 use App\Models\TraderPurchaseOrderItem;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
@@ -12,12 +14,72 @@ use Maatwebsite\Excel\Concerns\WithHeadingRow;
 use Maatwebsite\Excel\Facades\Excel;
 
 /**
- * Creates accounts against a purchase order line while enforcing the line's remaining quantity.
+ * Creates (and removes wrongly imported) accounts against a purchase order line while enforcing the line's remaining quantity.
  */
 class PurchaseOrderAccountService
 {
-    public function __construct(private PurchaseOrderService $purchaseOrders)
+    public function __construct(
+        private PurchaseOrderService $purchaseOrders,
+        private SystemActivityLogger $activityLogger
+    ) {
+    }
+
+    /**
+     * Undo a wrong import: delete an unsold account that came from a purchase order line, freeing that slot.
+     * The order total (what the trader is owed) is unchanged; the reason and source go to the activity log.
+     */
+    public function remove(Account $account, string $reason): void
     {
+        $meta = DB::transaction(function () use ($account, $reason) {
+            if ($account->purchase_order_id === null) {
+                throw ValidationException::withMessages(array('account' => 'This account is not linked to a purchase order.'));
+            }
+
+            // Same lock order as imports (order row first) so a concurrent import cannot reuse the slot mid-removal.
+            $order = TraderPurchaseOrder::query()->lockForUpdate()->with('trader:id,name')->findOrFail($account->purchase_order_id);
+            $account = Account::query()->lockForUpdate()->findOrFail($account->id);
+
+            if (! $account->hasPurchaseSource()) {
+                throw ValidationException::withMessages(array('account' => 'This account is not linked to a purchase order.'));
+            }
+
+            $sales = Order::query()->where('account_id', $account->id)->count();
+            if ($sales > 0) {
+                throw ValidationException::withMessages(array(
+                    'account' => "This account has {$sales} sale(s) and cannot be removed from purchase order {$order->po_number}.",
+                ));
+            }
+
+            $meta = array(
+                'account_id' => $account->id,
+                'reason' => $reason,
+                'mail' => $account->mail,
+                'game_id' => $account->game_id,
+                'trader_id' => $order->trader_id,
+                'trader_name' => $order->trader?->name,
+                'purchase_order_id' => $order->id,
+                'po_number' => $order->po_number,
+                'purchase_order_item_id' => $account->purchase_order_item_id,
+                'original_cost' => $account->original_cost !== null ? (string) $account->original_cost : null,
+            );
+
+            // Unlink first: AccountObserver refuses to delete accounts that still carry a purchase source.
+            $account->forceFill(array_fill_keys(Account::SOURCE_FIELDS, null))->saveQuietly();
+            $account->delete();
+
+            return $meta;
+        });
+
+        CacheManager::invalidateAccounts();
+        CacheManager::invalidateGames();
+
+        $this->activityLogger->log(
+            'account.removed_from_purchase_order',
+            'account',
+            (int) $meta['account_id'],
+            $meta['mail'] ?: ('Account #' . $meta['account_id']),
+            $meta
+        );
     }
 
     /**

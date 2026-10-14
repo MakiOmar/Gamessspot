@@ -678,6 +678,9 @@ Route::prefix('manager')->group(function () {
             Route::post('/trader-payments/{payment}/void', [TraderPaymentController::class, 'void'])
                 ->whereNumber('payment')
                 ->name('manager.trader-payments.void');
+            Route::post('/accounts/{id}/remove-from-purchase-order', [AccountController::class, 'removeFromPurchaseOrder'])
+                ->whereNumber('id')
+                ->name('manager.accounts.remove-from-purchase-order');
         });
 
         // Sell log: read access (includes call center — search/view order details only)

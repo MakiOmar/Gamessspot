@@ -36,18 +36,19 @@ window.TraderUi = window.TraderUi || (function ($) {
         }
     }
 
-    // Void flow: SweetAlert asking for a mandatory reason, then POST.
-    function confirmVoid(url, label, onDone) {
+    // Void flow: SweetAlert asking for a mandatory reason, then POST. `options` overrides title/text/confirmText.
+    function confirmVoid(url, label, onDone, options) {
+        options = options || {};
         Swal.fire({
-            title: 'Void ' + label + '?',
-            text: 'Voided records stay visible but no longer affect the balance. This cannot be undone.',
+            title: options.title || ('Void ' + label + '?'),
+            text: options.text || 'Voided records stay visible but no longer affect the balance. This cannot be undone.',
             icon: 'warning',
             input: 'textarea',
-            inputPlaceholder: 'Cancellation reason (required)',
+            inputPlaceholder: options.placeholder || 'Cancellation reason (required)',
             inputAttributes: { maxlength: 500 },
             showCancelButton: true,
             confirmButtonColor: '#d33',
-            confirmButtonText: 'Void',
+            confirmButtonText: options.confirmText || 'Void',
             showLoaderOnConfirm: true,
             inputValidator: function (value) {
                 if (!value || value.trim().length < 3) return 'Please enter a reason (at least 3 characters).';
@@ -55,7 +56,7 @@ window.TraderUi = window.TraderUi || (function ($) {
             preConfirm: function (reason) {
                 return $.post(url, { reason: reason }).catch(function (xhr) {
                     var res = xhr.responseJSON || {};
-                    var msg = res.message || 'Void failed';
+                    var msg = res.message || ((options.confirmText || 'Void') + ' failed');
                     if (res.errors) msg = Object.values(res.errors)[0][0];
                     Swal.showValidationMessage(msg);
                 });
@@ -63,7 +64,7 @@ window.TraderUi = window.TraderUi || (function ($) {
             allowOutsideClick: function () { return !Swal.isLoading(); }
         }).then(function (result) {
             if (result.isConfirmed && result.value) {
-                toast('success', result.value.message || 'Voided');
+                toast('success', result.value.message || 'Done');
                 if (onDone) onDone(result.value);
             }
         });
