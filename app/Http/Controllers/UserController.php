@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use App\Services\CacheManager;
+use App\Support\PhoneUserResolver;
 
 class UserController extends Controller
 {
@@ -227,14 +228,17 @@ class UserController extends Controller
             'email' => 'required|email|max:255',
             'phone' => 'required|string|max:20',
             'password' => 'nullable|string|min:8',
+            'update_existing' => 'nullable|boolean',
         ]);
+        $updateExisting = $request->boolean('update_existing', true);
+        unset($validated['update_existing']);
 
-        // Check if user already exists by phone
-        $existingUser = User::where('phone', $validated['phone'])->first();
+        // Match any stored format of the same number (010…, +2010…, 002010…).
+        $existingUser = PhoneUserResolver::findByPhone($validated['phone']);
         
         if ($existingUser) {
             // User exists, update email if it's different
-            if ($existingUser->email !== $validated['email']) {
+            if ($updateExisting && $existingUser->email !== $validated['email']) {
                 // Check if the new email is already taken by another user
                 $emailTakenByOther = User::where('email', $validated['email'])
                     ->where('id', '!=', $existingUser->id)
