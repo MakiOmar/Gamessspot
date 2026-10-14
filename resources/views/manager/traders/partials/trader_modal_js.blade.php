@@ -51,5 +51,50 @@ jQuery(function ($) {
             .fail(function (xhr) { TraderUi.ajaxError(xhr, 'Could not save trader'); })
             .always(function () { TraderUi.setBusy($btn, false); });
     });
+
+    function showDeleteBlocked(res) {
+        var items = $.map(res.reasons || [], function (reason) {
+            return '<li>' + TraderUi.escapeHtml(reason) + '</li>';
+        });
+        Swal.fire({
+            icon: 'error',
+            title: TraderUi.escapeHtml(res.message || 'Trader cannot be deleted'),
+            html: '<ul class="text-left mb-2">' + items.join('') + '</ul>'
+                + '<p class="small text-muted mb-0">Set the trader to Inactive instead to hide it from new purchases.</p>'
+        });
+    }
+
+    $(document).on('click', '.delete-trader', function () {
+        var url = $(this).data('url');
+        var name = $(this).data('name');
+        Swal.fire({
+            title: 'Delete trader "' + TraderUi.escapeHtml(name) + '"?',
+            text: 'This permanently removes the trader. It is only allowed when the trader has no purchase orders, accounts or payments.',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            confirmButtonText: 'Delete',
+            showLoaderOnConfirm: true,
+            preConfirm: function () {
+                return $.post(url, { _method: 'DELETE' }).catch(function (xhr) {
+                    return { failed: true, xhr: xhr };
+                });
+            },
+            allowOutsideClick: function () { return !Swal.isLoading(); }
+        }).then(function (result) {
+            if (!result.isConfirmed || !result.value) return;
+            if (result.value.failed) {
+                var xhr = result.value.xhr;
+                if (xhr.status === 422 && xhr.responseJSON && xhr.responseJSON.reasons) {
+                    showDeleteBlocked(xhr.responseJSON);
+                } else {
+                    TraderUi.ajaxError(xhr, 'Could not delete trader');
+                }
+                return;
+            }
+            TraderUi.toast('success', result.value.message || 'Trader deleted.');
+            setTimeout(function () { window.location = result.value.redirect || window.location.href; }, 600);
+        });
+    });
 });
 </script>

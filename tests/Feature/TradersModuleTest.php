@@ -576,4 +576,69 @@ class TradersModuleTest extends TestCase
 
         $this->assertSame(1234.5, app(TraderLedgerService::class)->totals($trader->fresh())['balance']);
     }
+
+    public function test_trader_without_history_can_be_deleted(): void
+    {
+        $admin = $this->createUserWithRole('admin');
+        $trader = Trader::factory()->withOpeningBalance(300)->create();
+
+        $this->actingAs($admin, 'admin')->deleteJson(route('manager.traders.destroy', $trader))
+            ->assertOk()
+            ->assertJsonPath('redirect', route('manager.traders.index'));
+
+        $this->assertDatabaseMissing('traders', array('id' => $trader->id));
+        $this->assertTrue(SystemActivityLog::where('action', 'trader.deleted')->where('subject_id', $trader->id)->exists());
+    }
+
+    public function test_trader_with_purchase_order_and_account_is_not_deleted_and_reasons_are_returned(): void
+    {
+        $admin = $this->createUserWithRole('admin');
+        $trader = Trader::factory()->create();
+        $order = $this->createOrder($trader, array($this->line(Game::factory()->create(), 2, 100)));
+        $this->linkAccount($order);
+
+        $this->actingAs($admin, 'admin')->deleteJson(route('manager.traders.destroy', $trader))
+            ->assertStatus(422)
+            ->assertJsonPath('reasons.0', 'Has 1 purchase order(s).')
+            ->assertJsonPath('reasons.1', 'Has 1 linked game account(s).');
+
+        $this->assertDatabaseHas('traders', array('id' => $trader->id));
+    }
+
+    public function test_trader_with_voided_purchase_order_or_payment_is_not_deleted(): void
+    {
+        $admin = $this->createUserWithRole('admin');
+        $trader = Trader::factory()->create();
+        $order = $this->createOrder($trader, array($this->line(Game::factory()->create(), 1, 100)));
+        app(PurchaseOrderService::class)->void($order, 'Duplicate', null);
+        TraderPayment::factory()->create(array('trader_id' => $trader->id, 'amount' => 50, 'status' => TraderPayment::STATUS_CANCELLED));
+
+        $this->actingAs($admin, 'admin')->deleteJson(route('manager.traders.destroy', $trader))
+            ->assertStatus(422)
+            ->assertJsonPath('reasons', array('Has 1 purchase order(s).', 'Has 1 payment(s).'));
+
+        $this->assertDatabaseHas('traders', array('id' => $trader->id));
+    }
+
+    public function test_delete_requires_manage_traders(): void
+    {
+        $trader = Trader::factory()->create();
+
+        $this->actingAs($this->createUserWithRole('sales'), 'admin')
+            ->deleteJson(route('manager.traders.destroy', $trader))
+            ->assertForbidden();
+
+        $this->assertDatabaseHas('traders', array('id' => $trader->id));
+    }
+
+    public function test_trader_pages_render_delete_button_for_admin(): void
+    {
+        $admin = $this->createUserWithRole('admin');
+        $trader = Trader::factory()->create();
+        $url = route('manager.traders.destroy', $trader);
+
+        $this->actingAs($admin, 'admin');
+        $this->get(route('manager.traders.index'))->assertOk()->assertSee($url, false);
+        $this->get(route('manager.traders.show', $trader))->assertOk()->assertSee($url, false);
+    }
 }

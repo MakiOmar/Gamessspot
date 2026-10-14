@@ -71,6 +71,51 @@ class TraderService
     }
 
     /**
+     * Reasons a trader cannot be deleted; empty when deletion is safe.
+     * Voided purchase orders and payments still count: they are part of the trader's history.
+     *
+     * @return array<int, string>
+     */
+    public function deletionBlockers(Trader $trader): array
+    {
+        $blockers = array();
+
+        $purchaseOrders = $trader->purchaseOrders()->count();
+        if ($purchaseOrders > 0) {
+            $blockers[] = "Has {$purchaseOrders} purchase order(s).";
+        }
+
+        $accounts = $trader->accounts()->count();
+        if ($accounts > 0) {
+            $blockers[] = "Has {$accounts} linked game account(s).";
+        }
+
+        $payments = $trader->payments()->count();
+        if ($payments > 0) {
+            $blockers[] = "Has {$payments} payment(s).";
+        }
+
+        return $blockers;
+    }
+
+    /**
+     * @return array<int, string> Blocking reasons; the trader is deleted only when this is empty.
+     */
+    public function delete(Trader $trader): array
+    {
+        $blockers = $this->deletionBlockers($trader);
+        if ($blockers !== array()) {
+            return $blockers;
+        }
+
+        $this->activityLogger->log('trader.deleted', 'trader', $trader->id, $trader->name);
+        $trader->delete();
+        CacheManager::invalidateAccounts();
+
+        return array();
+    }
+
+    /**
      * @param  array<string, mixed>  $data
      * @return array<string, mixed>
      */

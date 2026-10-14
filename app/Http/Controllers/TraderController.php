@@ -92,6 +92,23 @@ class TraderController extends Controller
         return response()->json(array('message' => 'Trader updated successfully.', 'trader' => $trader));
     }
 
+    public function destroy(Trader $trader): JsonResponse
+    {
+        $blockers = $this->traderService->delete($trader);
+
+        if ($blockers !== array()) {
+            return response()->json(array(
+                'message' => 'Trader "' . $trader->name . '" cannot be deleted.',
+                'reasons' => $blockers,
+            ), 422);
+        }
+
+        return response()->json(array(
+            'message' => 'Trader deleted.',
+            'redirect' => route('manager.traders.index'),
+        ));
+    }
+
     public function updateOpeningBalance(UpdateTraderOpeningBalanceRequest $request, Trader $trader): JsonResponse
     {
         $this->traderService->updateOpeningBalance(

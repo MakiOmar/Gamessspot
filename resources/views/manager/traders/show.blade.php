@@ -45,6 +45,12 @@
                 <button type="button" class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#paymentModal">
                     <i class="bi bi-cash-coin"></i> Add Payment
                 </button>
+                {{-- Server refuses when the trader has purchase orders, accounts or payments --}}
+                <button type="button" class="btn btn-sm btn-outline-danger delete-trader"
+                        data-url="{{ route('manager.traders.destroy', $trader) }}"
+                        data-name="{{ $trader->name }}">
+                    <i class="bi bi-trash"></i> Delete
+                </button>
             @endcan
         </div>
     </div>

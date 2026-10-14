@@ -42,7 +42,7 @@
                     <th class="text-center">POs</th>
                     <th class="text-center">Accounts</th>
                     <th>Status</th>
-                    <th style="width: 130px;">Actions</th>
+                    <th style="width: 180px;">Actions</th>
                 </tr>
             </thead>
             <tbody>
@@ -68,6 +68,12 @@
                                 <button type="button" class="btn btn-xs btn-outline-secondary edit-trader"
                                         data-trader="{{ json_encode($trader->only(array('id', 'name', 'phone', 'whatsapp', 'notes', 'status'))) }}">
                                     Edit
+                                </button>
+                                {{-- Server refuses when the trader has purchase orders, accounts or payments --}}
+                                <button type="button" class="btn btn-xs btn-outline-danger delete-trader"
+                                        data-url="{{ route('manager.traders.destroy', $trader) }}"
+                                        data-name="{{ $trader->name }}">
+                                    Delete
                                 </button>
                             @endcan
                         </td>
