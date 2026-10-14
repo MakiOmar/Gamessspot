@@ -517,11 +517,17 @@
         const sourceCache = {};
 
         function resetSelect($select, placeholder) {
-            $select.empty().append($('<option>', { value: '', text: placeholder })).prop('disabled', true);
+            $select.empty().append($('<option>', { value: '', text: placeholder })).prop('disabled', true).trigger('change.select2');
+        }
+
+        // Searchable dropdowns; dropdownParent keeps the search box focusable inside the Bootstrap modal
+        function makeSearchable($selects, $modal) {
+            $selects.select2({ width: '100%', dropdownParent: $modal });
         }
 
         function initSourceSelects($trader, $po, $line, onLineChange) {
             let orders = [];
+            makeSearchable($trader.add($po).add($line), $trader.closest('.modal'));
 
             $trader.on('change', function () {
                 resetSelect($po, 'Select purchase order');
@@ -534,12 +540,13 @@
                     orders = data.purchase_orders || [];
                     if (!orders.length) {
                         $po.find('option').first().text('No active purchase orders for this trader');
+                        $po.trigger('change.select2');
                         return;
                     }
                     orders.forEach(function (order) {
                         $po.append($('<option>', { value: order.id, text: order.po_number + ' (' + order.purchase_date + ')' }));
                     });
-                    $po.prop('disabled', false);
+                    $po.prop('disabled', false).trigger('change.select2');
                 };
 
                 if (sourceCache[traderId]) {
@@ -547,10 +554,12 @@
                     return;
                 }
                 $po.find('option').first().text('Loading…');
+                $po.trigger('change.select2');
                 $.getJSON(sourceLinesUrl.replace('__ID__', traderId))
                     .done(function (data) { sourceCache[traderId] = data; $po.find('option').first().text('Select purchase order'); render(data); })
                     .fail(function () {
                         $po.find('option').first().text('Select purchase order');
+                        $po.trigger('change.select2');
                         Swal.fire({ toast: true, position: 'top-end', icon: 'error', title: 'Could not load purchase orders', showConfirmButton: false, timer: 3000 });
                     });
             });
@@ -567,7 +576,7 @@
                         disabled: item.remaining < 1
                     }).data('item', item));
                 });
-                $line.prop('disabled', false);
+                $line.prop('disabled', false).trigger('change.select2');
             });
 
             $line.on('change', function () {
