@@ -775,6 +775,29 @@ class TradersModuleTest extends TestCase
         $this->assertDatabaseMissing('traders', array('id' => $trader->id));
     }
 
+    public function test_role_without_force_delete_permission_can_manage_but_not_force_delete(): void
+    {
+        $manager = $this->createUserWithRole('account manager');
+        $role = $manager->roles->first();
+        $role->capabilities = array_values(array_diff($role->capabilities, array('force-delete-traders')));
+        $role->save();
+        $manager = $manager->fresh()->load('roles');
+
+        $trader = Trader::factory()->create(array('name' => 'Protected'));
+        $this->linkAccount($this->createOrder($trader, array($this->line(Game::factory()->create(), 1, 100))));
+
+        $this->actingAs($manager, 'admin')
+            ->deleteJson(route('manager.traders.destroy', $trader))
+            ->assertStatus(422)
+            ->assertJsonMissingPath('force_delete');
+
+        $this->actingAs($manager, 'admin')
+            ->postJson(route('manager.traders.force-destroy', $trader), array('confirm_name' => 'Protected', 'reason' => 'Test data'))
+            ->assertForbidden();
+
+        $this->assertDatabaseHas('traders', array('id' => $trader->id));
+    }
+
     public function test_force_delete_requires_trader_permission_matching_name_and_reason(): void
     {
         $trader = Trader::factory()->create(array('name' => 'Keep, Me'));

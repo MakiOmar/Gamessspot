@@ -74,6 +74,10 @@ return array(
             'label' => 'Void Purchase Orders & Payments',
             'group' => 'Traders',
         ),
+        'force-delete-traders' => array(
+            'label' => 'Force Delete Traders (with all their data)',
+            'group' => 'Traders',
+        ),
         'view-reports' => array(
             'label' => 'View Reports',
             'group' => 'Reports',

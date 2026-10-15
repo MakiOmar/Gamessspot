@@ -40,6 +40,7 @@ class RolePermissionService
                 'view-traders',
                 'manage-traders',
                 'void-trader-transactions',
+                'force-delete-traders',
             ),
             'sales' => array(
                 'access-dashboard',
@@ -67,6 +68,7 @@ class RolePermissionService
                 'manage-reviews',
                 'view-traders',
                 'manage-traders',
+                'force-delete-traders',
             ),
             'accountant' => array(
                 'access-dashboard',

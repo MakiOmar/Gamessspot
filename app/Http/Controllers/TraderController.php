@@ -105,7 +105,7 @@ class TraderController extends Controller
                 'reasons' => $blockers,
             );
 
-            if ($request->user('admin')?->can('manage-traders')) {
+            if ($request->user('admin')?->can('force-delete-traders')) {
                 $response['force_delete'] = array(
                     'url' => route('manager.traders.force-destroy', $trader),
                     'summary' => $this->forceDeleteService->summary($trader),

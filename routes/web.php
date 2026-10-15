@@ -656,6 +656,7 @@ Route::prefix('manager')->group(function () {
             Route::put('/traders/{trader}', [TraderController::class, 'update'])->whereNumber('trader')->name('manager.traders.update');
             Route::delete('/traders/{trader}', [TraderController::class, 'destroy'])->whereNumber('trader')->name('manager.traders.destroy');
             Route::post('/traders/{trader}/force-delete', [TraderController::class, 'forceDestroy'])
+                ->middleware('can:force-delete-traders')
                 ->whereNumber('trader')
                 ->name('manager.traders.force-destroy');
             Route::put('/traders/{trader}/opening-balance', [TraderController::class, 'updateOpeningBalance'])
