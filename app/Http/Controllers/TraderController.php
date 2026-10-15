@@ -2,11 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\ForceDeleteTraderRequest;
 use App\Http\Requests\TraderRequest;
 use App\Http\Requests\UpdateTraderOpeningBalanceRequest;
 use App\Models\Trader;
 use App\Models\TraderPayment;
 use App\Services\PurchaseOrderService;
+use App\Services\TraderForceDeleteService;
 use App\Services\TraderLedgerService;
 use App\Services\TraderProfileService;
 use App\Services\TraderService;
@@ -20,7 +22,8 @@ class TraderController extends Controller
     public function __construct(
         private TraderService $traderService,
         private TraderLedgerService $ledger,
-        private TraderProfileService $profile
+        private TraderProfileService $profile,
+        private TraderForceDeleteService $forceDeleteService
     ) {
     }
 
@@ -92,19 +95,38 @@ class TraderController extends Controller
         return response()->json(array('message' => 'Trader updated successfully.', 'trader' => $trader));
     }
 
-    public function destroy(Trader $trader): JsonResponse
+    public function destroy(Request $request, Trader $trader): JsonResponse
     {
         $blockers = $this->traderService->delete($trader);
 
         if ($blockers !== array()) {
-            return response()->json(array(
+            $response = array(
                 'message' => 'Trader "' . $trader->name . '" cannot be deleted.',
                 'reasons' => $blockers,
-            ), 422);
+            );
+
+            if ($request->user('admin')?->can('void-trader-transactions')) {
+                $response['force_delete'] = array(
+                    'url' => route('manager.traders.force-destroy', $trader),
+                    'summary' => $this->forceDeleteService->summary($trader),
+                );
+            }
+
+            return response()->json($response, 422);
         }
 
         return response()->json(array(
             'message' => 'Trader deleted.',
+            'redirect' => route('manager.traders.index'),
+        ));
+    }
+
+    public function forceDestroy(ForceDeleteTraderRequest $request, Trader $trader): JsonResponse
+    {
+        $this->forceDeleteService->forceDelete($trader, $request->validated('reason'), $request->user('admin')?->id);
+
+        return response()->json(array(
+            'message' => 'Trader "' . $trader->name . '" and all related data were deleted.',
             'redirect' => route('manager.traders.index'),
         ));
     }

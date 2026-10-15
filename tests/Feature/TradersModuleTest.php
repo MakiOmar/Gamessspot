@@ -14,6 +14,7 @@ use App\Models\User;
 use App\Services\PurchaseOrderService;
 use App\Services\RolePermissionService;
 use App\Services\TraderLedgerService;
+use App\Services\TraderPaymentService;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
@@ -708,6 +709,78 @@ class TradersModuleTest extends TestCase
             ->postJson(route('manager.accounts.remove-from-purchase-order', $account->id), array('reason' => 'Duplicate'))
             ->assertUnprocessable()
             ->assertJsonPath('errors.account.0', 'This account is not linked to a purchase order.');
+    }
+
+    public function test_admin_force_delete_removes_trader_and_all_related_data_but_keeps_sales(): void
+    {
+        Storage::fake(TraderPaymentService::ATTACHMENT_DISK);
+        $admin = $this->createUserWithRole('admin');
+        $trader = Trader::factory()->create(array('name' => 'Wipe Me'));
+        $order = $this->createOrder($trader, array($this->line(Game::factory()->create(), 2, 100)));
+        $itemId = $order->items()->value('id');
+        $sold = $this->linkAccount($order);
+        $unsold = $this->linkAccount($order);
+        $sale = Order::factory()->create(array('account_id' => $sold->id));
+        $receipt = TraderPaymentService::ATTACHMENT_DIRECTORY . '/' . $trader->id . '/receipt.pdf';
+        Storage::disk(TraderPaymentService::ATTACHMENT_DISK)->put($receipt, 'pdf');
+        TraderPayment::factory()->create(array('trader_id' => $trader->id, 'amount' => 50, 'attachment_path' => $receipt));
+
+        $this->actingAs($admin, 'admin')
+            ->postJson(route('manager.traders.force-destroy', $trader), array('confirm_name' => 'Wipe Me', 'reason' => 'Test data'))
+            ->assertOk()
+            ->assertJsonPath('redirect', route('manager.traders.index'));
+
+        $this->assertDatabaseMissing('traders', array('id' => $trader->id));
+        $this->assertDatabaseMissing('trader_purchase_orders', array('id' => $order->id));
+        $this->assertDatabaseMissing('trader_purchase_order_items', array('id' => $itemId));
+        $this->assertDatabaseMissing('trader_payments', array('trader_id' => $trader->id));
+        $this->assertDatabaseMissing('accounts', array('id' => $sold->id));
+        $this->assertDatabaseMissing('accounts', array('id' => $unsold->id));
+        $this->assertDatabaseHas('orders', array('id' => $sale->id, 'account_id' => null));
+        Storage::disk(TraderPaymentService::ATTACHMENT_DISK)->assertMissing($receipt);
+
+        $log = SystemActivityLog::where('action', 'trader.force_deleted')->where('subject_id', $trader->id)->first();
+        $this->assertNotNull($log);
+        $this->assertSame('Test data', $log->meta['reason']);
+        $this->assertSame(2, $log->meta['accounts']);
+        $this->assertSame(1, $log->meta['sold_accounts']);
+    }
+
+    public function test_blocked_delete_offers_force_delete_only_to_admins(): void
+    {
+        $trader = Trader::factory()->create();
+        $order = $this->createOrder($trader, array($this->line(Game::factory()->create(), 1, 100)));
+        $this->linkAccount($order);
+
+        $this->actingAs($this->createUserWithRole('admin'), 'admin')
+            ->deleteJson(route('manager.traders.destroy', $trader))
+            ->assertStatus(422)
+            ->assertJsonPath('force_delete.url', route('manager.traders.force-destroy', $trader))
+            ->assertJsonPath('force_delete.summary', array(
+                'purchase_orders' => 1, 'payments' => 0, 'accounts' => 1, 'sold_accounts' => 0, 'sales' => 0,
+            ));
+
+        $this->actingAs($this->createUserWithRole('account manager'), 'admin')
+            ->deleteJson(route('manager.traders.destroy', $trader))
+            ->assertStatus(422)
+            ->assertJsonMissingPath('force_delete');
+    }
+
+    public function test_force_delete_requires_admin_matching_name_and_reason(): void
+    {
+        $trader = Trader::factory()->create(array('name' => 'Keep, Me'));
+        $url = route('manager.traders.force-destroy', $trader);
+
+        $this->actingAs($this->createUserWithRole('account manager'), 'admin')
+            ->postJson($url, array('confirm_name' => 'Keep, Me', 'reason' => 'Test data'))
+            ->assertForbidden();
+
+        $this->actingAs($this->createUserWithRole('admin'), 'admin')
+            ->postJson($url, array('confirm_name' => 'Keep', 'reason' => ''))
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(array('confirm_name', 'reason'));
+
+        $this->assertDatabaseHas('traders', array('id' => $trader->id));
     }
 
     public function test_accounts_and_purchase_order_pages_show_remove_button_for_admin(): void

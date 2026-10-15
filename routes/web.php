@@ -672,6 +672,9 @@ Route::prefix('manager')->group(function () {
         });
 
         Route::middleware('can:void-trader-transactions')->group(function () {
+            Route::post('/traders/{trader}/force-delete', [TraderController::class, 'forceDestroy'])
+                ->whereNumber('trader')
+                ->name('manager.traders.force-destroy');
             Route::post('/purchase-orders/{purchaseOrder}/void', [PurchaseOrderController::class, 'void'])
                 ->whereNumber('purchaseOrder')
                 ->name('manager.purchase-orders.void');
