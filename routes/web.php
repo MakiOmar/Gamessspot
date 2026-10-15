@@ -655,6 +655,9 @@ Route::prefix('manager')->group(function () {
             Route::post('/traders', [TraderController::class, 'store'])->name('manager.traders.store');
             Route::put('/traders/{trader}', [TraderController::class, 'update'])->whereNumber('trader')->name('manager.traders.update');
             Route::delete('/traders/{trader}', [TraderController::class, 'destroy'])->whereNumber('trader')->name('manager.traders.destroy');
+            Route::post('/traders/{trader}/force-delete', [TraderController::class, 'forceDestroy'])
+                ->whereNumber('trader')
+                ->name('manager.traders.force-destroy');
             Route::put('/traders/{trader}/opening-balance', [TraderController::class, 'updateOpeningBalance'])
                 ->whereNumber('trader')
                 ->name('manager.traders.opening-balance');
@@ -672,9 +675,6 @@ Route::prefix('manager')->group(function () {
         });
 
         Route::middleware('can:void-trader-transactions')->group(function () {
-            Route::post('/traders/{trader}/force-delete', [TraderController::class, 'forceDestroy'])
-                ->whereNumber('trader')
-                ->name('manager.traders.force-destroy');
             Route::post('/purchase-orders/{purchaseOrder}/void', [PurchaseOrderController::class, 'void'])
                 ->whereNumber('purchaseOrder')
                 ->name('manager.purchase-orders.void');

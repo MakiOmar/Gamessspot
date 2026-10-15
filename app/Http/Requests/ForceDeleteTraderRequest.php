@@ -10,7 +10,7 @@ class ForceDeleteTraderRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user('admin')?->can('void-trader-transactions') ?? false;
+        return $this->user('admin')?->can('manage-traders') ?? false;
     }
 
     /**

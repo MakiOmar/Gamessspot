@@ -746,32 +746,41 @@ class TradersModuleTest extends TestCase
         $this->assertSame(1, $log->meta['sold_accounts']);
     }
 
-    public function test_blocked_delete_offers_force_delete_only_to_admins(): void
+    public function test_blocked_delete_offers_force_delete_to_admins_and_account_managers(): void
     {
         $trader = Trader::factory()->create();
         $order = $this->createOrder($trader, array($this->line(Game::factory()->create(), 1, 100)));
         $this->linkAccount($order);
 
-        $this->actingAs($this->createUserWithRole('admin'), 'admin')
-            ->deleteJson(route('manager.traders.destroy', $trader))
-            ->assertStatus(422)
-            ->assertJsonPath('force_delete.url', route('manager.traders.force-destroy', $trader))
-            ->assertJsonPath('force_delete.summary', array(
-                'purchase_orders' => 1, 'payments' => 0, 'accounts' => 1, 'sold_accounts' => 0, 'sales' => 0,
-            ));
-
-        $this->actingAs($this->createUserWithRole('account manager'), 'admin')
-            ->deleteJson(route('manager.traders.destroy', $trader))
-            ->assertStatus(422)
-            ->assertJsonMissingPath('force_delete');
+        foreach (array('admin', 'account manager') as $role) {
+            $this->actingAs($this->createUserWithRole($role), 'admin')
+                ->deleteJson(route('manager.traders.destroy', $trader))
+                ->assertStatus(422)
+                ->assertJsonPath('force_delete.url', route('manager.traders.force-destroy', $trader))
+                ->assertJsonPath('force_delete.summary', array(
+                    'purchase_orders' => 1, 'payments' => 0, 'accounts' => 1, 'sold_accounts' => 0, 'sales' => 0,
+                ));
+        }
     }
 
-    public function test_force_delete_requires_admin_matching_name_and_reason(): void
+    public function test_account_manager_can_force_delete_trader(): void
+    {
+        $trader = Trader::factory()->create(array('name' => 'Manager Wipe'));
+        $this->linkAccount($this->createOrder($trader, array($this->line(Game::factory()->create(), 1, 100))));
+
+        $this->actingAs($this->createUserWithRole('account manager'), 'admin')
+            ->postJson(route('manager.traders.force-destroy', $trader), array('confirm_name' => 'Manager Wipe', 'reason' => 'Test data'))
+            ->assertOk();
+
+        $this->assertDatabaseMissing('traders', array('id' => $trader->id));
+    }
+
+    public function test_force_delete_requires_trader_permission_matching_name_and_reason(): void
     {
         $trader = Trader::factory()->create(array('name' => 'Keep, Me'));
         $url = route('manager.traders.force-destroy', $trader);
 
-        $this->actingAs($this->createUserWithRole('account manager'), 'admin')
+        $this->actingAs($this->createUserWithRole('sales'), 'admin')
             ->postJson($url, array('confirm_name' => 'Keep, Me', 'reason' => 'Test data'))
             ->assertForbidden();
 
