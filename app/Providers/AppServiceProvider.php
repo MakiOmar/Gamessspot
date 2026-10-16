@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\RateLimiter;
 
 class AppServiceProvider extends ServiceProvider
@@ -45,6 +46,10 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('api', function (Request $request) {
             return Limit::perMinute(60)->by($request->user()?->id ?: $request->ip());
         });
+
+        // Paginator links default to the raw request URL, which ignores forceScheme('https') above;
+        // behind the proxy that yields http:// page links that browsers block as mixed content.
+        Paginator::currentPathResolver(fn () => url()->current());
 
         // Register Model Observers for automatic cache invalidation
         $this->registerModelObservers();
