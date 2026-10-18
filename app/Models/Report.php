@@ -14,6 +14,13 @@ class Report extends Model
      *
      * @var array
      */
+    public const STATUSES = array( 'has_problem', 'needs_return', 'solved', 'archived' );
+
+    public static function isReportStatus(?string $status): bool
+    {
+        return in_array($status, self::STATUSES, true);
+    }
+
     protected $fillable = array(
         'order_id',
         'seller_id',
@@ -37,5 +44,35 @@ class Report extends Model
     public function seller()
     {
         return $this->belongsTo(User::class, 'seller_id');
+    }
+
+    public function actions()
+    {
+        return $this->hasMany(ReportAction::class)->latest('id');
+    }
+
+    public function latestAction()
+    {
+        return $this->hasOne(ReportAction::class)->latestOfMany();
+    }
+
+    /**
+     * Change status and log who did it in one step.
+     */
+    public function transitionTo(string $toStatus, string $action, ?int $userId): void
+    {
+        $fromStatus = $this->status;
+        $this->update(array( 'status' => $toStatus ));
+        $this->recordAction($action, $fromStatus, $toStatus, $userId);
+    }
+
+    public function recordAction(string $action, ?string $fromStatus, ?string $toStatus, ?int $userId): ReportAction
+    {
+        return $this->actions()->create(array(
+            'user_id'     => $userId,
+            'action'      => $action,
+            'from_status' => $fromStatus,
+            'to_status'   => $toStatus,
+        ));
     }
 }

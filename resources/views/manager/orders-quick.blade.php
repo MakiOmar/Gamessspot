@@ -38,6 +38,17 @@
 @section('content')
     <div class="container mt-5">
         <h1 class="text-center mb-4">Search Management</h1>
+        @if (! empty($searchedUser))
+            {{-- Matched customer without orders: still link to their history notes --}}
+            <div class="card mb-4">
+                <div class="card-body d-flex justify-content-between align-items-center">
+                    <div><strong>{{ $searchedUser->name }}</strong> &middot; {{ $searchedUser->phone }}</div>
+                    <a href="{{ route('manager.users.history.index', $searchedUser->id) }}" class="btn btn-secondary btn-sm">
+                        <i class="bi bi-journal-text"></i> History
+                    </a>
+                </div>
+            </div>
+        @endif
         @if ($orders && !empty($orders))
             @if ($buyer)
                 <div class="card mb-4">
@@ -65,7 +76,15 @@
                                     <tr>
                                         <td>{{ $buyer->buyer_phone }}</td>
                                         <td>{{ $buyer->buyer_name }}</td>
-                                        <td></td>
+                                        <td>
+                                            @if (isset($historyUserIds[$buyer->buyer_phone]))
+                                                <!-- Customer history notes -->
+                                                <a href="{{ route('manager.users.history.index', $historyUserIds[$buyer->buyer_phone]) }}"
+                                                   class="btn btn-secondary btn-sm">
+                                                    <i class="bi bi-journal-text"></i> History
+                                                </a>
+                                            @endif
+                                        </td>
                                     </tr>
                                 </tbody>
                             </table>
@@ -194,6 +213,13 @@
                                                     Unreport
                                                 </button>
                                             @else
+                                                @if (isset($historyUserIds[$order->buyer_phone]))
+                                                    <!-- Buyer history notes -->
+                                                    <a href="{{ route('manager.users.history.index', $historyUserIds[$order->buyer_phone]) }}"
+                                                       class="btn btn-secondary btn-sm">
+                                                        History
+                                                    </a>
+                                                @endif
                                                 @if (!Auth::user()->roles->contains('name', 'accountant'))
                                                     @can('undo-orders')
                                                     <button class="btn btn-danger btn-sm undo-order"

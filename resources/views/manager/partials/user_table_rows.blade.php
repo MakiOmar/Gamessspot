@@ -14,6 +14,12 @@
            title="View All Orders">
             <i class="bi bi-receipt"></i> Orders
         </a>
+        @can('manage-user-history')
+        <!-- Side notes about this user -->
+        <a href="{{ route('manager.users.history.index', $user->id) }}" class="btn btn-secondary btn-sm" title="User history notes">
+            <i class="bi bi-journal-text"></i> History
+        </a>
+        @endcan
         @if(auth()->id() !== $user->id)
         <!-- Delete Button -->
         <button type="button" class="btn btn-danger deleteUserButton" data-id="{{ $user->id }}">Delete</button>

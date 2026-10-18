@@ -26,6 +26,12 @@ class Order extends Model
         'woocommerce_order_id',
         'storefront_order_id',
         'storefront_line_key',
+        'login_code',
+        'stock_snapshot',
+    );
+
+    protected $casts = array(
+        'stock_snapshot' => 'array',
     );
 
     /**

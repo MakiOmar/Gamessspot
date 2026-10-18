@@ -167,7 +167,7 @@ class AccountController extends Controller
                 'purchase_order_item_id' => 'required|integer|exists:trader_purchase_order_items,id',
                 'region'        => 'required|string|max:2',
                 'birthdate'     => 'required|date',
-                'login_code'    => 'required|string',
+                'login_code'    => 'nullable|string',
                 'ps4_primary'   => 'nullable|boolean',
                 'ps4_secondary' => 'nullable|boolean',
                 'ps5_primary'   => 'nullable|boolean',
@@ -254,7 +254,8 @@ class AccountController extends Controller
             'region' => 'required|string|max:2',
             'cost' => ($isLinked ? 'nullable' : 'required') . '|numeric',
             'birthdate' => 'required|date',
-            'login_code' => 'required|string',
+            // Codes are consumed one per sale, so an account can legitimately run out.
+            'login_code' => 'nullable|string',
         ]);
 
         // Purchase source is permanent; linked accounts also keep the line's game and cost

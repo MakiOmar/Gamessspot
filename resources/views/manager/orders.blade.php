@@ -139,7 +139,15 @@
                             <th>Buyer Name</th>
                             <th>Price</th>
                             <th>Sold Item</th>
+                            @if (\App\Models\Report::isReportStatus($status ?? null))
+                            {{-- Report pages show both note sources plus who reported / last acted --}}
+                            <th>Sell log notes</th>
+                            <th>Report note</th>
+                            <th>Reported by</th>
+                            <th>Last action</th>
+                            @else
                             <th>Notes</th>
+                            @endif
                             <th>Date</th>
                             @can('manage-sell-log')
                             <th>Action</th>

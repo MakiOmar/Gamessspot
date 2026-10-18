@@ -52,6 +52,8 @@ class ReportsController extends Controller
             ]
         );
 
+        $report->recordAction('created', null, $report->status, Auth::id());
+
 
         // Return a success response
         return response()->json([
@@ -85,8 +87,7 @@ class ReportsController extends Controller
         $report = Report::find($request->report_id);
 
         if ($report && $report->status === 'has_problem') {
-            // Update the status to 'solved'
-            $report->update(array( 'status' => 'solved' ));
+            $report->transitionTo('solved', 'solved', Auth::id());
             return response()->json(array( 'success' => true ));
         }
 
@@ -108,7 +109,7 @@ class ReportsController extends Controller
 
         $report = Report::find($request->report_id);
         if ($report && in_array($report->status, ['has_problem', 'solved'], true)) {
-            $report->update(['status' => 'archived']);
+            $report->transitionTo('archived', 'archived', Auth::id());
             return response()->json(['success' => true]);
         } elseif ($report && in_array($report->status, ['archived'], true)) {
             return response()->json(['success' => true]);
@@ -132,7 +133,7 @@ class ReportsController extends Controller
 
         $report = Report::find($request->report_id);
         if ($report && $report->status === 'archived') {
-            $report->update(['status' => 'solved']);
+            $report->transitionTo('solved', 'unarchived', Auth::id());
             return response()->json(['success' => true]);
         }
 

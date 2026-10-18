@@ -41,6 +41,7 @@ class RolePermissionService
                 'manage-traders',
                 'void-trader-transactions',
                 'force-delete-traders',
+                'manage-user-history',
             ),
             'sales' => array(
                 'access-dashboard',

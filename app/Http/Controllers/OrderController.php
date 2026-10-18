@@ -23,12 +23,17 @@ use App\Services\PosSaleProductResolver;
 use Rawilk\Settings\Facades\Settings;
 use App\Jobs\SendInventoryWebhookJob;
 use App\Services\CacheManager;
+use App\Services\AccountLoginCodeService;
 use Illuminate\Support\Facades\Log;
 
 class OrderController extends Controller
 {
     protected $pagination = 10;
     protected $pos_base;
+
+    public function __construct(private AccountLoginCodeService $loginCodes)
+    {
+    }
 
     public function login()
     {
@@ -304,6 +309,7 @@ class OrderController extends Controller
 
         // Filter by status if it's not 'all'
         if ($status !== 'all') {
+            $orders->with(array( 'reports.seller', 'reports.latestAction.user' ));
             $orders->whereHas(
                 'reports',
                 function ($q) use ($status) {
@@ -426,8 +432,23 @@ class OrderController extends Controller
             $buyer = $orders[0];
         }
 
+        // buyer_phone => user id, so result rows can link to that customer's history notes
+        $historyUserIds = collect();
+        $searchedUser   = null;
+        if ($user->can('manage-user-history')) {
+            $phones = $orders->pluck('buyer_phone')->filter()->unique()->values();
+            if (preg_match('/^\+?\d+$/', (string) $query)) {
+                $phones->push($query);
+            }
+            $historyUserIds = User::whereIn('phone', $phones->unique()->values())->pluck('id', 'phone');
+            // Customer with no orders yet: still offer their history from the search page
+            if (! $buyer && isset($historyUserIds[$query])) {
+                $searchedUser = User::find($historyUserIds[$query], array( 'id', 'name', 'phone' ));
+            }
+        }
+
         // Return the updated rows for the table (assuming a partial view)
-        return view('manager.orders-quick', compact('orders', 'buyer'))->render();
+        return view('manager.orders-quick', compact('orders', 'buyer', 'historyUserIds', 'searchedUser'))->render();
     }
 
 
@@ -490,6 +511,10 @@ class OrderController extends Controller
 
                     // Increment the stock
                     $this->incrementAccountStock($order);
+
+                    if ($account && $order->login_code) {
+                        $this->loginCodes->giveBack($account->fresh(), $order->login_code);
+                    }
 
                     // Get the new stock count after increment
                     if ($account) {
@@ -563,7 +588,7 @@ class OrderController extends Controller
 
         // Full sell restores the cross-platform bundle (keeps ps4_primary as-is)
         if (preg_match('/^ps(\d+)_full$/', $order->sold_item, $matches)) {
-            $account->restoreFullSaleBundle();
+            $account->restoreFullSaleBundle($order->stock_snapshot);
             return;
         }
 
@@ -644,19 +669,25 @@ class OrderController extends Controller
 
     /**
      * Decrement stocks for a sold item (single type or full bundle).
+     *
+     * @return array|null Offline stock snapshot taken before a full sale (stored on the order for undo), null otherwise.
      */
-    private function decrementSoldItemStock(Account $account, string $soldItem, string $type, string $platform): void
+    private function decrementSoldItemStock(Account $account, string $soldItem, string $type, string $platform): ?array
     {
         if ($type === 'full') {
+            $snapshot = $account->offlineStockSnapshot();
             // Cross-platform bundle; skip syncSecondaryStocks (bundle already clears both secondaries)
             $account->applyFullSale();
-            return;
+
+            return $snapshot;
         }
 
         $account->decrement($soldItem, 1);
         $this->syncSecondaryStocks($account, $soldItem);
         $account->refresh();
         $account->disableFullFeatureIfNeeded();
+
+        return null;
     }
 
     // Helper method to update report status
@@ -664,7 +695,7 @@ class OrderController extends Controller
     {
         $report = Report::find($reportId);
         if ($report && $report->status === 'needs_return') {
-            $report->update(['status' => 'solved']);
+            $report->transitionTo('solved', 'solved', Auth::id());
         }
     }
 
@@ -820,10 +851,11 @@ class OrderController extends Controller
                 ], 422);
             }
 
-            $this->decrementSoldItemStock($account, $sold_item, $validatedData['type'], $platform);
+            $stockSnapshot = $this->decrementSoldItemStock($account, $sold_item, $validatedData['type'], $platform);
             $account->refresh();
 
             $order_data = [
+                'stock_snapshot'       => $stockSnapshot,
                 'seller_id'            => null,
                 'store_profile_id'     => $validatedData['store_profile_id'],
                 'account_id'           => $account->id,
@@ -991,8 +1023,12 @@ class OrderController extends Controller
             }
 
             // Reduce the corresponding stock for the account
-            $this->decrementSoldItemStock($account, $sold_item, $validatedData['type'], $platform);
+            $stockSnapshot = $this->decrementSoldItemStock($account, $sold_item, $validatedData['type'], $platform);
             $account->refresh();
+
+            $loginCode = AccountLoginCodeService::deliversCode($validatedData['type'])
+                ? $this->loginCodes->take($account)
+                : null;
 
             // Check if this was an "offline" order with only 1 stock left before decrement
             $recentOrder = null;
@@ -1031,6 +1067,8 @@ class OrderController extends Controller
                 'price'            => $validatedData['price'],
                 'notes'            => '',
                 'sold_item'        => $sold_item,
+                'login_code'       => $loginCode,
+                'stock_snapshot'   => $stockSnapshot,
                 'updated_at'       => now(),
                 'created_at'       => now(),
             ];
@@ -1060,6 +1098,8 @@ class OrderController extends Controller
                 'message'            => 'Order created successfully!',
                 'account_email'      => $account->mail,
                 'account_password'   => $account->password,
+                'login_code'         => $loginCode,
+                'delivers_login_code' => AccountLoginCodeService::deliversCode($validatedData['type']),
                 'recent_order'       => $recentOrder,
                 'additional_message' => $message,
                 'order_id'           => $order->id,
@@ -1248,7 +1288,7 @@ class OrderController extends Controller
     public function ordersWithStatus($status)
     {
         // Retrieve all orders with a related report that has status 'needs_return'
-        $orders = Order::with(array( 'seller', 'account.game' ))
+        $orders = Order::with(array( 'seller', 'account.game', 'reports.seller', 'reports.latestAction.user' ))
         ->whereHas(
             'reports',
             function ($query) use ($status) {

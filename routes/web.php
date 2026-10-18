@@ -9,6 +9,7 @@ use App\Http\Controllers\TraderController;
 use App\Http\Controllers\TraderPaymentController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\UserHistoryController;
 use App\Http\Controllers\StoreProfileController;
 use App\Http\Controllers\RoleAssignmentController;
 use App\Http\Controllers\ReportsController;
@@ -763,6 +764,13 @@ Route::prefix('manager')->group(function () {
                 Route::delete('/delete/{id}', [UserController::class, 'destroy'])->name('users.delete');
                 Route::post('/toggle-status/{id}', [UserController::class, 'toggleStatus'])->name('users.toggleStatus');
             });
+        });
+
+        // Per-user history notes (separate permission from manage-users so it can be granted on its own)
+        Route::middleware('can:manage-user-history')->prefix('users/{user}/history')->group(function () {
+            Route::get('/', [UserHistoryController::class, 'index'])->name('manager.users.history.index');
+            Route::post('/', [UserHistoryController::class, 'store'])->name('manager.users.history.store');
+            Route::delete('/{note}', [UserHistoryController::class, 'destroy'])->name('manager.users.history.destroy');
         });
 
         // Routes with 'can:manage-store-profiles' middleware

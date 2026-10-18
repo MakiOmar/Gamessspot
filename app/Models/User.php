@@ -103,6 +103,14 @@ class User extends Authenticatable
     }
 
     /**
+     * Staff-written side notes about this user (newest first).
+     */
+    public function historyNotes()
+    {
+        return $this->hasMany(UserNote::class)->latest('id');
+    }
+
+    /**
      * Check if the user has one or more roles by their names.
      *
      * @param array|string $roles Role names to check (can be a single name or an array of names).

@@ -86,6 +86,10 @@ return array(
             'label' => 'Manage Users',
             'group' => 'Users & System',
         ),
+        'manage-user-history' => array(
+            'label' => 'Manage User History Notes',
+            'group' => 'Users & System',
+        ),
         'manage-options' => array(
             'label' => 'Manage Options / Settings',
             'group' => 'Users & System',

@@ -14,6 +14,10 @@ This document explains how the account selling system works in the GamesSspot pl
 6. [Store Profile Restrictions](#store-profile-restrictions)
 7. [Stock Management](#stock-management)
 8. [Order Creation Flow](#order-creation-flow)
+9. [Login codes](#login-codes)
+10. [Full sales and offline stock](#full-sales-and-offline-stock)
+11. [Reports: who acted](#reports-who-acted)
+12. [User history notes](#user-history-notes)
 
 ---
 
@@ -45,7 +49,7 @@ Each `Account` record contains:
 - `region` - Account region (e.g., US, UK, etc.)
 - `cost` - Purchase cost of the account
 - `birthdate` - Account birthdate
-- `login_code` - Two-factor authentication code
+- `login_code` - Pool of login (2FA backup) codes, separated by spaces, commas or new lines. Optional; one code is consumed per dashboard sale (see [Login codes](#login-codes)).
 
 **Stock Fields (Inventory Counters):**
 - `ps4_primary_stock` - Available PS4 primary sales
@@ -327,7 +331,39 @@ notes              // Additional notes
 sold_item          // Which stock was decremented (e.g., "ps4_primary_stock")
 pos_order_id       // Point of sale system reference (optional)
 card_id            // If selling a gift card instead
+login_code         // Login code handed out with this sale (dashboard primary/secondary/full only)
+stock_snapshot     // Full sales: offline stocks just before the sale, used to restore them on undo
 ```
+
+---
+
+## Login codes
+
+- Codes live in `accounts.login_code`, separated by spaces, commas or new lines.
+- On the **Accounts dashboard sell screen** (`POST manager/orders/store`), a **primary, secondary or full** sale takes the first code, shows it in the sale modal with a Copy button (next to email and password) and removes it from the account. **Offline** sales never consume a code.
+- If no codes are left the sale still succeeds and the modal says "No login codes left for this account."
+- The code is stored on the order (`orders.login_code`). **Undo** puts it back at the front of the account's pool.
+- POS and website sales (`POST /api/orders/receive`) do not consume codes.
+- Implementation: `App\Services\AccountLoginCodeService`.
+
+## Full sales and offline stock
+
+- Selling **offline** slots no longer turns off the full-sell feature (`is_full`). Only primary/secondary sales do (`Account::isPristineIgnoringOffline()`).
+- A full sale no longer requires offline stock: dual accounts need PS4 secondary + PS5 primary + PS5 secondary, PS5-only accounts need PS5 primary + secondary (`Account::canSellAsFull()` / `fullSellEligibleSql()`). This applies to the dashboard, POS and website because they share these helpers.
+- Whatever offline stock is left goes with the full bundle. The order keeps a `stock_snapshot` of the offline stocks, and undo restores exactly that (already-sold offline slots stay sold).
+
+## Reports: who acted
+
+- Every report change is logged in `report_actions` (`report_id`, `user_id`, `action`, `from_status`, `to_status`, timestamps): `created`, `solved`, `archived`, `unarchived`, and solve-on-undo for needs-return reports.
+- Report pages (has problem, needs return, solved, archived) show **Sell log notes** (`orders.notes`), **Report note**, **Reported by** and **Last action** (e.g. "Solved by Ahmed, 2026-10-18 10:12"). Reports older than this change show a dash for last action.
+- Anyone with `view-reports` (including the account manager role) sees these columns.
+
+## User history notes
+
+- `user_notes` table: free-form side notes per user (`user_id`, `author_id`, `note`, soft deletes).
+- Permission **`manage-user-history`** (admin by default; grant other roles in Roles & Permissions).
+- Page: `GET manager/users/{user}/history` (add + list). `DELETE manager/users/{user}/history/{note}` is allowed for the note's author or an admin.
+- History buttons: users page rows, and the top-bar quick search results (customers matched by phone).
 
 ---
 

@@ -166,6 +166,34 @@ class Account extends Model
     }
 
     /**
+     * Pristine check that ignores offline slots: selling offline must not turn off the full-sell feature.
+     */
+    public function isPristineIgnoringOffline(): bool
+    {
+        $stocks = array(
+            (int) $this->ps4_primary_stock,
+            (int) $this->ps4_secondary_stock,
+            (int) $this->ps5_primary_stock,
+            (int) $this->ps5_secondary_stock,
+        );
+
+        return $stocks === array(1, 1, 1, 1) || $stocks === array(0, 0, 1, 1);
+    }
+
+    /**
+     * Offline stocks to keep on a full-sale order, so undo restores exactly what was left.
+     *
+     * @return array{ps4_offline_stock:int,ps5_offline_stock:int}
+     */
+    public function offlineStockSnapshot(): array
+    {
+        return array(
+            'ps4_offline_stock' => (int) $this->ps4_offline_stock,
+            'ps5_offline_stock' => (int) $this->ps5_offline_stock,
+        );
+    }
+
+    /**
      * PS5-only accounts have all PS4 stocks at zero (no DB column for ps5_only).
      */
     public function isPs5OnlyAccount(): bool
@@ -177,8 +205,9 @@ class Account extends Model
 
     /**
      * Whether this account can be sold as a full bundle right now.
-     * Dual: PS4 secondary+offline and all PS5 slots > 0 (PS4 primary is not part of the bundle).
-     * PS5-only: all PS5 slots > 0.
+     * Dual: PS4 secondary and PS5 primary+secondary > 0 (PS4 primary is not part of the bundle).
+     * PS5-only: PS5 primary+secondary > 0.
+     * Offline slots never block a full sale; whatever offline stock is left goes with the bundle.
      */
     public function canSellAsFull(): bool
     {
@@ -188,15 +217,12 @@ class Account extends Model
 
         if ($this->isPs5OnlyAccount()) {
             return (int) $this->ps5_primary_stock > 0
-                && (int) $this->ps5_secondary_stock > 0
-                && (int) $this->ps5_offline_stock > 0;
+                && (int) $this->ps5_secondary_stock > 0;
         }
 
         return (int) $this->ps4_secondary_stock > 0
-            && (int) $this->ps4_offline_stock > 0
             && (int) $this->ps5_primary_stock > 0
-            && (int) $this->ps5_secondary_stock > 0
-            && (int) $this->ps5_offline_stock > 0;
+            && (int) $this->ps5_secondary_stock > 0;
     }
 
     /**
@@ -223,9 +249,12 @@ class Account extends Model
 
     /**
      * Restore stocks after undoing a full sale (does not change ps4_primary).
-     * Re-enables is_full when stocks become pristine again.
+     * Offline stocks come from the order's snapshot when available, so slots sold before the
+     * full sale are not recreated. Re-enables is_full when primary/secondary are pristine again.
+     *
+     * @param  array{ps4_offline_stock?:int,ps5_offline_stock?:int}|null  $offlineSnapshot
      */
-    public function restoreFullSaleBundle(): void
+    public function restoreFullSaleBundle(?array $offlineSnapshot = null): void
     {
         if ($this->isPs5OnlyAccount()
             && (int) $this->ps5_primary_stock === 0
@@ -253,16 +282,21 @@ class Account extends Model
             }
         }
 
+        if ($offlineSnapshot !== null) {
+            $this->ps4_offline_stock = (int) ($offlineSnapshot['ps4_offline_stock'] ?? $this->ps4_offline_stock);
+            $this->ps5_offline_stock = (int) ($offlineSnapshot['ps5_offline_stock'] ?? $this->ps5_offline_stock);
+        }
+
         $this->save();
 
-        if ($this->isPristineForFullFeature()) {
+        if ($this->isPristineIgnoringOffline()) {
             $this->is_full = true;
             $this->save();
         }
     }
 
     /**
-     * Clear the full-sell feature after an individual slot sale (or when no longer pristine).
+     * Clear the full-sell feature after a primary/secondary sale. Offline sales keep it on.
      */
     public function disableFullFeatureIfNeeded(): void
     {
@@ -270,7 +304,7 @@ class Account extends Model
             return;
         }
 
-        if (!$this->isPristineForFullFeature()) {
+        if (!$this->isPristineIgnoringOffline()) {
             $this->is_full = false;
             $this->save();
         }
@@ -278,13 +312,14 @@ class Account extends Model
 
     /**
      * SQL fragment: accounts eligible to sell as full (feature on + bundle stocks).
+     * Mirrors canSellAsFull(): offline stock is not required.
      */
     public static function fullSellEligibleSql(string $table = 'accounts'): string
     {
-        return "{$table}.is_full = 1 AND {$table}.ps5_primary_stock > 0 AND {$table}.ps5_secondary_stock > 0 AND {$table}.ps5_offline_stock > 0"
+        return "{$table}.is_full = 1 AND {$table}.ps5_primary_stock > 0 AND {$table}.ps5_secondary_stock > 0"
             . ' AND ('
             . "({$table}.ps4_primary_stock = 0 AND {$table}.ps4_secondary_stock = 0 AND {$table}.ps4_offline_stock = 0)"
-            . " OR ({$table}.ps4_secondary_stock > 0 AND {$table}.ps4_offline_stock > 0)"
+            . " OR {$table}.ps4_secondary_stock > 0"
             . ')';
     }
 

@@ -146,6 +146,15 @@
                                 <button type="button" class="btn btn-outline-secondary ml-2" id="copyPassword">Copy</button>
                             </div>
                         </div>
+                        <!-- Login code: one code is taken per primary/secondary/full sale (never for offline) -->
+                        <div id="loginCodeContainer" style="display:none;">
+                            <label class="flex-grow-1">Login Code:</label>
+                            <div class="form-group d-flex align-items-center" id="loginCodeRow">
+                                <input type="text" class="form-control flex-grow-2" id="accountLoginCode" readonly>
+                                <button type="button" class="btn btn-outline-secondary ml-2" id="copyLoginCode">Copy</button>
+                            </div>
+                            <p class="text-danger small" id="noLoginCodeMessage" style="display:none;">No login codes left for this account.</p>
+                        </div>
                     </div>
                     <!-- Seller Details -->
                     <div id="sellerDetailsContainer" style="display:none;">
@@ -471,6 +480,18 @@
                                 // Populate the account modal with account details
                                 $('#accountEmail').val(response.account_email);
                                 $('#accountPassword').val(response.account_password);
+
+                                // Login code row only for sale types that deliver one
+                                if (response.delivers_login_code) {
+                                    var hasCode = !!response.login_code;
+                                    $('#accountLoginCode').val(response.login_code || '');
+                                    $('#loginCodeRow').toggleClass('d-none', !hasCode);
+                                    $('#noLoginCodeMessage').toggle(!hasCode);
+                                    $('#loginCodeContainer').show();
+                                } else {
+                                    $('#loginCodeContainer').hide();
+                                }
+
                                 $('#accountDetailsContainer').show();
                                 $('#noAccountMessage').hide();
 
@@ -554,6 +575,10 @@
 
             $('#copyPassword').on('click', function() {
                 copyToClipboard('#accountPassword');
+            });
+
+            $('#copyLoginCode').on('click', function() {
+                copyToClipboard('#accountLoginCode');
             });
 
             // Confirmation before closing the accountModal

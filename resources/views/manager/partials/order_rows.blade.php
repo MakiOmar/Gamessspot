@@ -1,5 +1,6 @@
 @php
     $readOnly = $readOnly ?? false;
+    $isReportView = \App\Models\Report::isReportStatus($status ?? null);
 @endphp
 @foreach ($orders as $order)
     <tr id="orderRow-{{ $order->id }}">
@@ -41,6 +42,23 @@
 
         <td>{{ $order->price }}</td>
         <td>{{ $order->sold_item }}</td>
+        @if ($isReportView)
+            {{-- Report pages: sell log note, report note, reporter and last report action side by side --}}
+            @php
+                $report = $order->reports;
+                $lastAction = $report?->latestAction;
+            @endphp
+            <td>{{ $order->notes ?: '—' }}</td>
+            <td>{{ $report?->note ?: '—' }}</td>
+            <td>{{ $report?->seller?->name ?? '—' }}</td>
+            <td>
+                @if ($lastAction)
+                    {{ $lastAction->label() }} by {{ $lastAction->user?->name ?? 'deleted user' }}, {{ $lastAction->created_at?->format('Y-m-d H:i') }}
+                @else
+                    —
+                @endif
+            </td>
+        @else
         <td>
             @if (! isset($status))
                 {{ $order->notes }}
@@ -48,6 +66,7 @@
             {{ optional($order->reports)->note }}
             @endif
         </td>
+        @endif
         <td>{{ $order->created_at }}</td>
         @unless($readOnly)
         <td>
