@@ -1,5 +1,12 @@
 <?php
 
+// Drive is not a Spatie destination: a failed Drive write would fail the whole backup.
+// App\Services\Backup\GoogleDriveBackupService copies the newest local archive after a successful run.
+$googleDriveEnabled = filter_var(env('BACKUP_GOOGLE_DRIVE_ENABLED', false), FILTER_VALIDATE_BOOL)
+    && filled(env('GOOGLE_DRIVE_CLIENT_ID'))
+    && filled(env('GOOGLE_DRIVE_CLIENT_SECRET'))
+    && filled(env('GOOGLE_DRIVE_REFRESH_TOKEN'));
+
 return [
 
     'backup' => [
@@ -331,6 +338,16 @@ return [
          * Set to `0` for none
          */
         'retry_delay' => 0,
+    ],
+
+    /*
+     * Off-site copy on Google Drive (disk "google"). Local archives are unchanged;
+     * Drive keeps only the last keep_days days (the newest archive is never deleted).
+     */
+    'google_drive' => [
+        'enabled' => $googleDriveEnabled,
+        'disk' => 'google',
+        'keep_days' => max(1, (int) env('BACKUP_GOOGLE_DRIVE_KEEP_DAYS', 14)),
     ],
 
 ];

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\SystemActivityLog;
 use App\Models\SystemOpsSetting;
+use App\Services\Backup\GoogleDriveBackupService;
 use App\Services\SystemActivityLogger;
 use App\Services\SystemBackupService;
 use Illuminate\Http\Request;
@@ -15,7 +16,8 @@ class SystemOpsController extends Controller
 {
     public function __construct(
         protected SystemBackupService $backupService,
-        protected SystemActivityLogger $activityLogger
+        protected SystemActivityLogger $activityLogger,
+        protected GoogleDriveBackupService $googleDrive
     ) {
     }
 
@@ -93,7 +95,12 @@ class SystemOpsController extends Controller
         $activities = $activityQuery->paginate(25, ['*'], 'activity_page')->appends($request->query());
         $actions = SystemActivityLog::query()->distinct()->orderBy('action')->pluck('action');
 
-        return view('manager.system_ops.index', compact('settings', 'backups', 'activities', 'actions'));
+        $drive = array(
+            'enabled' => $this->googleDrive->enabled(),
+            'keep_days' => $this->googleDrive->keepDays(),
+        );
+
+        return view('manager.system_ops.index', compact('settings', 'backups', 'activities', 'actions', 'drive'));
     }
 
     /**

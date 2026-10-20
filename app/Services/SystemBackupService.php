@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\SystemOpsSetting;
+use App\Services\Backup\GoogleDriveBackupService;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Log;
@@ -14,6 +15,10 @@ use ZipArchive;
 
 class SystemBackupService
 {
+    public function __construct(protected GoogleDriveBackupService $drive)
+    {
+    }
+
     /**
      * Create a database-only backup via Spatie.
      */
@@ -33,12 +38,47 @@ class SystemBackupService
         }
 
         SystemOpsSetting::current()->update(array('last_backup_at' => now()));
+        $drive = $this->copyToGoogleDrive();
 
         return array(
             'success' => true,
-            'message' => 'Database backup created successfully.',
+            'message' => 'Database backup created successfully.' . ($drive === false ? ' Google Drive copy failed; see System Ops.' : ''),
             'output' => $output,
         );
+    }
+
+    /**
+     * Off-site copy of the newest archive; a Drive failure is recorded and never fails the local backup.
+     *
+     * @return bool|null null when Google Drive backups are disabled
+     */
+    protected function copyToGoogleDrive(): ?bool
+    {
+        if (! $this->drive->enabled()) {
+            return null;
+        }
+
+        try {
+            $result = $this->drive->syncLatest('local', (string) config('backup.backup.name'));
+        } catch (\Throwable $e) {
+            Log::error('Google Drive backup copy failed', array('exception' => $e));
+            $this->recordDriveRun(false, GoogleDriveBackupService::describe($e));
+
+            return false;
+        }
+
+        $this->recordDriveRun(true, "Uploaded {$result['file']}; removed {$result['pruned']} old Drive copies.");
+
+        return true;
+    }
+
+    protected function recordDriveRun(bool $success, string $message): void
+    {
+        SystemOpsSetting::current()->update(array(
+            'drive_last_at' => now(),
+            'drive_last_status' => $success ? 'success' : 'failed',
+            'drive_last_message' => mb_substr(trim($message), 0, 1000),
+        ));
     }
 
     /**

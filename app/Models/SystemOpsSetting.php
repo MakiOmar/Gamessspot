@@ -10,11 +10,15 @@ class SystemOpsSetting extends Model
         'auto_backup_enabled',
         'auto_backup_interval',
         'last_backup_at',
+        'drive_last_at',
+        'drive_last_status',
+        'drive_last_message',
     );
 
     protected $casts = array(
         'auto_backup_enabled' => 'boolean',
         'last_backup_at' => 'datetime',
+        'drive_last_at' => 'datetime',
     );
 
     /**

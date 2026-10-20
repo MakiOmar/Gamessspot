@@ -51,6 +51,28 @@
                                 Last backup:
                                 {{ $settings->last_backup_at ? $settings->last_backup_at->toDateTimeString() : 'never' }}
                             </p>
+                            {{-- Off-site copy on Google Drive (configured via GOOGLE_DRIVE_* env keys) --}}
+                            <p class="small mb-2" id="driveBackupStatus">
+                                <span class="text-muted">Google Drive copy:</span>
+                                @if (! $drive['enabled'])
+                                    <span class="text-muted">not enabled</span>
+                                @elseif ($settings->drive_last_at)
+                                    {{ $settings->drive_last_at->toDateTimeString() }}
+                                    @if ($settings->drive_last_status === 'success')
+                                        <span class="badge badge-success">OK</span>
+                                    @else
+                                        <span class="badge badge-danger">Failed</span>
+                                        @if ($settings->drive_last_message)
+                                            <br><span class="text-danger">{{ $settings->drive_last_message }}</span>
+                                        @endif
+                                    @endif
+                                @else
+                                    no copy uploaded yet
+                                @endif
+                                @if ($drive['enabled'])
+                                    <br><span class="text-muted">Drive keeps copies for {{ $drive['keep_days'] }} day(s).</span>
+                                @endif
+                            </p>
                             <button type="submit" class="btn btn-primary btn-sm">Save schedule</button>
                         </form>
                     </div>

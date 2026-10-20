@@ -56,6 +56,18 @@ return [
             'throw' => false,
         ],
 
+        // yaza/laravel-google-drive-storage: the driver calls setAccessToken() for any present key and
+        // throws on an empty string, so blank optional keys must be dropped rather than left as ''.
+        'google' => array_filter([
+            'driver' => 'google',
+            'clientId' => env('GOOGLE_DRIVE_CLIENT_ID'),
+            'clientSecret' => env('GOOGLE_DRIVE_CLIENT_SECRET'),
+            'refreshToken' => env('GOOGLE_DRIVE_REFRESH_TOKEN'),
+            'accessToken' => env('GOOGLE_DRIVE_ACCESS_TOKEN'),
+            'folder' => env('GOOGLE_DRIVE_FOLDER'),
+            'teamDriveId' => env('GOOGLE_DRIVE_TEAM_DRIVE_ID'),
+        ], fn ($value) => $value !== null && $value !== ''),
+
     ],
 
     /*
