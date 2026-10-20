@@ -610,6 +610,9 @@ class ManagerController extends Controller
 
                 if ($storeProfileId !== null) {
                     $join->where('special_prices.store_profile_id', '=', $storeProfileId);
+                } else {
+                    // No store: base prices only. Joining every store's row would duplicate games and multiply SUM(stock).
+                    $join->whereRaw('1 = 0');
                 }
             })
             ->where('games.product_type', Game::TYPE_GAME)
