@@ -14,15 +14,48 @@ class CardCategory extends Model
 
     protected $table = 'card_categories';
 
-    protected $fillable = ['name', 'price', 'poster_image', 'description'];
+    /** Sell only codes added by staff (default). */
+    public const MODE_LOCAL_ONLY = 'local_only';
 
-    protected $hidden = ['pos_product_id', 'pos_active'];
+    /** Sell a local code, buy from Next Load when none is left. */
+    public const MODE_LOCAL_FIRST = 'local_first';
+
+    /** Always buy the code from Next Load at sale time. */
+    public const MODE_SUPPLIER_ONLY = 'supplier_only';
+
+    public const SUPPLIER_MODES = [self::MODE_LOCAL_ONLY, self::MODE_LOCAL_FIRST, self::MODE_SUPPLIER_ONLY];
+
+    protected $fillable = [
+        'name', 'price', 'poster_image', 'description',
+        'supplier_mode', 'next_load_product_id', 'supplier_cost', 'supplier_synced_at',
+    ];
+
+    protected $hidden = ['pos_product_id', 'pos_active', 'supplier_mode', 'next_load_product_id', 'supplier_cost', 'supplier_synced_at'];
 
     protected $casts = [
         'pos_product_id' => 'integer',
         'pos_variation_id' => 'integer',
         'pos_active' => 'boolean',
+        'next_load_product_id' => 'integer',
+        'supplier_synced_at' => 'datetime',
     ];
+
+    /** Sales may buy from Next Load (mode allows it and a product is linked). */
+    public function usesSupplier(): bool
+    {
+        return in_array($this->supplier_mode, [self::MODE_LOCAL_FIRST, self::MODE_SUPPLIER_ONLY], true)
+            && (int) $this->next_load_product_id > 0;
+    }
+
+    public function usesLocalStock(): bool
+    {
+        return $this->supplier_mode !== self::MODE_SUPPLIER_ONLY;
+    }
+
+    public function nextLoadOrders()
+    {
+        return $this->hasMany(NextLoadOrder::class, 'card_category_id');
+    }
 
     /**
      * POS variation the shop should sell, or null so it falls back to the shared gift-card product.

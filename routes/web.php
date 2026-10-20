@@ -17,6 +17,9 @@ use App\Http\Controllers\SpecialPriceController;
 use App\Http\Controllers\MasterController;
 use App\Http\Controllers\CardCategoryController;
 use App\Http\Controllers\CardController;
+use App\Http\Controllers\NextLoadController;
+use App\Http\Controllers\NextLoadLinkController;
+use App\Http\Controllers\NextLoadOrderController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DeviceRepairController;
 use App\Http\Controllers\PublicDeviceController;
@@ -801,6 +804,30 @@ Route::prefix('manager')->group(function () {
             Route::get('/cards/search', [CardCategoryController::class, 'searchSellCategories'])
             ->name('manager.sell-cards.search');
 
+        });
+
+        // Next Load gift card supplier (docs/NEXTLOAD.md)
+        Route::middleware('can:manage-next-load')->prefix('next-load')->name('manager.next-load.')->group(function () {
+            Route::get('/', [NextLoadController::class, 'index'])->name('index');
+            Route::post('/test', [NextLoadController::class, 'test'])->name('test');
+            Route::post('/sync-products', [NextLoadController::class, 'syncProducts'])->name('sync-products');
+            Route::get('/products', [NextLoadController::class, 'products'])->name('products');
+
+            Route::get('/links/new', [NextLoadLinkController::class, 'create'])->name('links.create');
+            Route::post('/links', [NextLoadLinkController::class, 'store'])->name('links.store');
+            Route::get('/links/{cardCategory}', [NextLoadLinkController::class, 'edit'])->whereNumber('cardCategory')->name('links.edit');
+            Route::put('/links/{cardCategory}', [NextLoadLinkController::class, 'update'])->whereNumber('cardCategory')->name('links.update');
+            Route::delete('/links/{cardCategory}', [NextLoadLinkController::class, 'destroy'])->whereNumber('cardCategory')->name('links.destroy');
+            Route::post('/links/{cardCategory}/restock', [NextLoadLinkController::class, 'restock'])->whereNumber('cardCategory')->name('links.restock');
+
+            Route::get('/orders', [NextLoadOrderController::class, 'index'])->name('orders.index');
+            Route::get('/orders/{nextLoadOrder}', [NextLoadOrderController::class, 'show'])->whereNumber('nextLoadOrder')->name('orders.show');
+            Route::post('/orders/{nextLoadOrder}/refresh', [NextLoadOrderController::class, 'refresh'])->whereNumber('nextLoadOrder')->name('orders.refresh');
+            Route::post('/orders/{nextLoadOrder}/release', [NextLoadOrderController::class, 'release'])->whereNumber('nextLoadOrder')->name('orders.release');
+            Route::post('/orders/{nextLoadOrder}/items/{item}/reveal', [NextLoadOrderController::class, 'reveal'])
+                ->whereNumber(array('nextLoadOrder', 'item'))
+                ->middleware('throttle:30,1')
+                ->name('orders.reveal');
         });
 
         // Resource routes

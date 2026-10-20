@@ -50,6 +50,14 @@
                 <td>
                     <button class="btn btn-warning btn-sm" onclick="openEditModal({{ $category->id }})">Edit</button>
                     <button class="btn btn-danger btn-sm" onclick="confirmDelete({{ $category->id }})">Delete</button>
+                    {{-- Next Load sourcing settings live on their own page --}}
+                    @can('manage-next-load')
+                        @if ($category->next_load_product_id)
+                            <a class="btn btn-info btn-sm" href="{{ route('manager.next-load.links.edit', $category->id) }}">Supplier: {{ str_replace('_', ' ', $category->supplier_mode) }}</a>
+                        @else
+                            <a class="btn btn-outline-info btn-sm" href="{{ route('manager.next-load.links.create') }}">Link supplier</a>
+                        @endif
+                    @endcan
                 </td>
             </tr>
             @endforeach

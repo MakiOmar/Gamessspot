@@ -34,3 +34,8 @@ if (config('queue.worker_via_scheduler')) {
 Schedule::command('accounts:sync-secondary-stock')->hourly();
 // System Ops automatic DB backup (interval enforced inside the command)
 Schedule::command('system-ops:run-scheduled-backup')->hourly();
+// Next Load supplier (no-ops while NEXTLOAD_ENABLED=false)
+Schedule::command('nextload:poll')->everyMinute()->withoutOverlapping();
+Schedule::command('nextload:balance')->everyFifteenMinutes()->withoutOverlapping();
+Schedule::command('nextload:sync-products')->hourly()->withoutOverlapping();
+Schedule::command('nextload:reconcile')->dailyAt('03:30')->withoutOverlapping();

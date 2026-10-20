@@ -8,6 +8,7 @@ use App\Support\HtmlSanitizer;
 use Illuminate\Http\Request;
 use App\Services\ImageUploadService;
 use App\Models\StoresProfile;
+use App\Services\NextLoad\NextLoadCatalog;
 
 class CardCategoryController extends Controller
 {
@@ -30,14 +31,31 @@ class CardCategoryController extends Controller
     /**
      * Public sellable categories. Never eager-load `cards`: unsold codes must not leave the server.
      */
-    public function getCategories()
+    public function getCategories(?string $search = null)
     {
-        return CardCategory::whereHas('cards', function ($query) {
-            $query->where('status', true);
+        $catalog = app(NextLoadCatalog::class);
+
+        return CardCategory::query()
+        ->when($search !== null && $search !== '', fn ($query) => $query->where('name', 'like', '%'.$search.'%'))
+        ->where(function ($query) {
+            $query->where(function ($local) {
+                $local->where('supplier_mode', '!=', CardCategory::MODE_SUPPLIER_ONLY)
+                    ->whereHas('cards', fn ($cards) => $cards->where('status', true));
+            })->orWhere(function ($supplier) {
+                $supplier->whereIn('supplier_mode', [CardCategory::MODE_LOCAL_FIRST, CardCategory::MODE_SUPPLIER_ONLY])
+                    ->whereNotNull('next_load_product_id');
+            });
         })
         ->withAvailableCount()
         ->with('galleryImages')
         ->get()
+        ->each(function (CardCategory $category) use ($catalog) {
+            $local = $category->usesLocalStock() ? (int) $category->available_count : 0;
+            // Supplier stock is only looked up when local codes cannot serve the sale.
+            $category->setAttribute('available_count', $local > 0 ? $local : $catalog->supplierStock($category));
+        })
+        ->filter(fn (CardCategory $category) => $category->available_count > 0)
+        ->values()
         ->map(function (CardCategory $category) {
             $category->setAttribute('gallery', $category->galleryApiPayload());
             $category->setAttribute('reviews', $category->reviewsApiPayload());
@@ -72,6 +90,8 @@ class CardCategoryController extends Controller
     {
         $cardCategory->load('galleryImages');
         $cardCategory->loadCount(['cards as available_count' => fn ($query) => $query->where('status', true)]);
+        $local = $cardCategory->usesLocalStock() ? (int) $cardCategory->available_count : 0;
+        $available = $local > 0 ? $local : app(NextLoadCatalog::class)->supplierStock($cardCategory);
 
         return response()->json([
             'success' => true,
@@ -86,20 +106,14 @@ class CardCategoryController extends Controller
                     : null,
                 'gallery' => $cardCategory->galleryApiPayload(),
                 'reviews' => $cardCategory->reviewsApiPayload(),
-                'cards_count' => (int) $cardCategory->available_count,
+                'cards_count' => $available,
             ],
         ]);
     }
 
     public function searchCategories($search)
     {
-        return CardCategory::whereHas('cards', function ($query) {
-            $query->where('status', true);
-        })
-        ->where('name', 'like', '%' . $search . '%')
-        ->withAvailableCount()
-        ->with('galleryImages')
-        ->get();
+        return $this->getCategories((string) $search);
     }
 
     public function searchSellCategories(Request $request)

@@ -9,7 +9,11 @@ class Card extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['code', 'cost', 'card_category_id', 'status'];
+    public const SOURCE_MANUAL = 'manual';
+
+    public const SOURCE_NEXT_LOAD = 'next_load';
+
+    protected $fillable = ['code', 'cost', 'card_category_id', 'status', 'source', 'next_load_order_item_id'];
 
     /** Codes are secrets: callers that must return one (sale responses) read `$card->code` explicitly. */
     protected $hidden = ['code', 'code_hash', 'cost'];
@@ -50,5 +54,10 @@ class Card extends Model
     public function category()
     {
         return $this->belongsTo(CardCategory::class, 'card_category_id');
+    }
+
+    public function nextLoadOrderItem()
+    {
+        return $this->belongsTo(NextLoadOrderItem::class, 'next_load_order_item_id');
     }
 }

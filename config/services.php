@@ -41,6 +41,22 @@ return [
         'max_retry_wait' => (int) env('POS_CATALOG_SYNC_MAX_RETRY_WAIT', 60),
     ],
 
+    // Next Load gift card supplier (docs/NEXTLOAD.md). Credentials are server-side only.
+    'nextload' => [
+        'enabled' => filter_var(env('NEXTLOAD_ENABLED', false), FILTER_VALIDATE_BOOL),
+        'base_url' => rtrim((string) env('NEXTLOAD_BASE_URL', 'https://stg.next-load.com/APIS/V1/'), '/').'/',
+        'email' => env('NEXTLOAD_EMAIL'),
+        'password' => env('NEXTLOAD_PASSWORD'),
+        'security_code' => env('NEXTLOAD_SECURITY_CODE'),
+        'timeout' => (int) env('NEXTLOAD_TIMEOUT', 30),
+        // Balance under this triggers a low-balance warning (supplier currency, 3 decimals).
+        'low_balance' => (string) env('NEXTLOAD_LOW_BALANCE', '0'),
+        // Local currency units per 1 supplier unit; converts supplier prices into card cost / loss checks.
+        'exchange_rate' => (string) env('NEXTLOAD_EXCHANGE_RATE', '1'),
+        // When false, never buy a code whose converted supplier price is above the category sale price.
+        'allow_loss' => filter_var(env('NEXTLOAD_ALLOW_LOSS', false), FILTER_VALIDATE_BOOL),
+    ],
+
     // WooCommerce inventory webhook (App\Services\WebhookService).
     'wordpress_webhook' => [
         'url' => env('WORDPRESS_WEBHOOK_URL'),

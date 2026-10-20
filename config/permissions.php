@@ -30,6 +30,10 @@ return array(
             'label' => 'Manage Categories',
             'group' => 'Catalog',
         ),
+        'manage-next-load' => array(
+            'label' => 'Manage Next Load Supplier (links, restock, supplier orders, reveal codes)',
+            'group' => 'Catalog',
+        ),
         'view-sell-log' => array(
             'label' => 'View Sell Log',
             'group' => 'Orders / Sell Log',

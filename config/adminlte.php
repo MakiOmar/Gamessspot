@@ -400,6 +400,13 @@ return [
                     'route' => 'manager.sell-cards',
                     'icon' => 'bi bi-circle',
                 ],
+                [
+                    'text' => 'Next Load Supplier',
+                    'route' => 'manager.next-load.index',
+                    'icon' => 'bi bi-circle',
+                    'can' => 'manage-next-load',
+                    'active' => ['manager/next-load*'],
+                ],
             ],
         ],
 

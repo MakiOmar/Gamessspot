@@ -22,6 +22,7 @@ class RolePermissionService
                 'edit-games',
                 'manage-gift-cards',
                 'manage-categories',
+                'manage-next-load',
                 'view-sell-log',
                 'manage-sell-log',
                 'undo-orders',

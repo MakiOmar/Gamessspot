@@ -26,7 +26,7 @@
 
         @if($categories->isEmpty())
             <div class="alert alert-warning" role="alert">
-                No card categories with available codes are currently found.
+                No card categories with available codes (local or from Next Load) are currently found.
             </div>
         @else
             <div class="row">
@@ -41,7 +41,13 @@
                                 @endif
                             </div>
                             <div class="card-body">
-                                <h5 class="card-title">{{ $category->name }}</h5>
+                                <h5 class="card-title">
+                                    {{ $category->name }}
+                                    {{-- Codes may be bought from Next Load at sale time --}}
+                                    @if ($category->usesSupplier())
+                                        <span class="badge bg-info text-dark" title="Bought from Next Load when no local code is left">Supplier</span>
+                                    @endif
+                                </h5>
                                 <p class="card-text">
                                     ${{ number_format($category->price, 2) }} ({{ $category->available_count }} available)
                                 </p>
@@ -100,7 +106,7 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="button" class="btn btn-primary" onclick="submitOrder()">Submit</button>
+                    <button type="button" class="btn btn-primary" id="submitOrderBtn" onclick="submitOrder()">Submit</button>
                 </div>
             </div>
         </div>
@@ -253,7 +259,10 @@
             // Manually replace the `buyer_phone` in the FormData
             formData.set('buyer_phone', phoneNumber);
             if (isValidPhoneNumberForOrder(iti)) {
-                
+                const submitBtn = document.getElementById('submitOrderBtn');
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status"></span>Processing…';
+
                 jQuery.ajax({
                     url: "{{ route('manager.orders.sell.card') }}",
                     type: 'POST',
@@ -266,6 +275,14 @@
                             document.getElementById('orderSuccessMessage').classList.remove('d-none');
                             showOrderModal(data.code);
                             jQuery('#orderModal').modal('hide');
+                        } else if (data.pending) {
+                            // 202: Next Load is still processing; the code goes to stock when delivered.
+                            jQuery('#orderModal').modal('hide');
+                            Swal.fire({
+                                icon: 'info',
+                                title: 'Supplier processing',
+                                text: data.message
+                            });
                         } else {
                             Swal.fire({
                                 icon: 'error',
@@ -275,12 +292,17 @@
                         }
                     },
                     error: function(xhr, status, error) {
+                        const res = xhr.responseJSON || {};
                         Swal.fire({
                             icon: 'error',
                             title: 'Error!',
-                            text: 'An unexpected error occurred. Please try again later.'
+                            text: res.message || 'An unexpected error occurred. Please try again later.'
                         });
                         console.error('Error:', error);
+                    },
+                    complete: function () {
+                        submitBtn.disabled = false;
+                        submitBtn.textContent = 'Submit';
                     }
                 });
             } else {

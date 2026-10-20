@@ -23,6 +23,9 @@ use App\Services\PosSaleProductResolver;
 use Rawilk\Settings\Facades\Settings;
 use App\Jobs\SendInventoryWebhookJob;
 use App\Services\CacheManager;
+use App\Services\CardSourcingService;
+use App\Services\NextLoad\NextLoadCatalog;
+use App\Models\CardCategory;
 use App\Services\AccountLoginCodeService;
 use Illuminate\Support\Facades\Log;
 
@@ -1168,10 +1171,14 @@ class OrderController extends Controller
             'category_id'  => 'required|exists:card_categories,id',
         ]);
 
-        // Return response
+        $category = CardCategory::withAvailableCount()->findOrFail($validatedData['category_id']);
+        $local = $category->usesLocalStock() ? (int) $category->available_count : 0;
+        $supplier = app(NextLoadCatalog::class)->supplierStock($category);
+
         return response()->json([
-            'stock'         => 5,
-            'is_available'  => true,
+            'stock'              => $local + $supplier,
+            'is_available'       => ($local + $supplier) > 0,
+            'supplier_available' => $supplier > 0,
         ]);
     }
 
@@ -1201,81 +1208,12 @@ class OrderController extends Controller
         $lineKey = $validatedData['storefront_line_key']
             ?? ('card|category:'.$validatedData['card_category_id']);
 
-        if ($isStorefront) {
-            $existing = Order::where('storefront_order_id', $validatedData['storefront_order_id'])
-                ->where('storefront_line_key', $lineKey)
-                ->first();
-            if ($existing) {
-                if (empty($existing->pos_order_id) && ! empty($validatedData['pos_transaction_id'])) {
-                    $existing->update(['pos_order_id' => (string) $validatedData['pos_transaction_id']]);
-                    $existing->refresh();
-                }
-                $card = Card::find($existing->card_id);
-
-                return response()->json([
-                    'success' => true,
-                    'message' => 'Order already allocated.',
-                    'duplicate' => true,
-                    'code' => $card?->code,
-                    'card_details' => ['code' => $card?->code],
-                    'order_id' => $existing->id,
-                    'pos_order_id' => $existing->pos_order_id,
-                ], 200);
-            }
-        }
-
-        DB::beginTransaction();
-
         try {
-            $card = Card::where('card_category_id', $validatedData['card_category_id'])
-                ->where('status', true)
-                ->lockForUpdate()
-                ->first();
+            // Local stock and/or Next Load, depending on the category sourcing mode.
+            $result = app(CardSourcingService::class)->sell($validatedData, $lineKey, $isStorefront, Auth::id());
 
-            if (! $card) {
-                DB::rollBack();
-
-                return response()->json([
-                    'success' => false,
-                    'message' => 'No active code found for this category.',
-                ], 422);
-            }
-
-            $orderData = [
-                'seller_id'        => $isStorefront ? null : Auth::id(),
-                'store_profile_id' => $validatedData['store_profile_id'],
-                'account_id'       => null,
-                'buyer_phone'      => $validatedData['buyer_phone'],
-                'buyer_name'       => $validatedData['buyer_name'],
-                'price'            => $validatedData['price'],
-                'notes'            => $validatedData['notes'] ?? '',
-                'sold_item'        => 'card',
-                'card_id'          => $card->id,
-            ];
-
-            if ($isStorefront) {
-                $orderData['storefront_order_id'] = $validatedData['storefront_order_id'];
-                $orderData['storefront_line_key'] = $lineKey;
-                $orderData['pos_order_id'] = (string) $validatedData['pos_transaction_id'];
-            } elseif (! empty($validatedData['pos_transaction_id'])) {
-                $orderData['pos_order_id'] = (string) $validatedData['pos_transaction_id'];
-            }
-
-            $order = Order::create($orderData);
-            $card->update(['status' => false]);
-            DB::commit();
-
-            return response()->json([
-                'success'  => true,
-                'message'  => 'Order created successfully!',
-                'code'     => $card->code,
-                'card_details' => ['code' => $card->code],
-                'order_id' => $order->id,
-                'pos_order_id' => $order->pos_order_id,
-            ], 201);
-        } catch (\Exception $e) {
-            DB::rollBack();
-
+            return response()->json($result['body'], $result['status']);
+        } catch (\Throwable $e) {
             Log::error('Card order creation failed', [
                 'seller_id' => Auth::id(),
                 'exception' => $e,
