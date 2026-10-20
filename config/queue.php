@@ -19,6 +19,12 @@ return [
     'default' => env('QUEUE_CONNECTION', 'sync'),
 
     /*
+    | Shared hosting (cron only, no supervisor) drains the queue from the scheduler.
+    | Turn off where a dedicated queue:work process runs (Docker accounts-queue).
+    */
+    'worker_via_scheduler' => filter_var(env('QUEUE_WORKER_VIA_SCHEDULER', true), FILTER_VALIDATE_BOOL),
+
+    /*
     |--------------------------------------------------------------------------
     | Queue Connections
     |--------------------------------------------------------------------------

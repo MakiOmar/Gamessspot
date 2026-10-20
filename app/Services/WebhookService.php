@@ -19,8 +19,8 @@ class WebhookService
     
     public function __construct()
     {
-        $this->webhookUrl = env('WORDPRESS_WEBHOOK_URL');
-        $this->webhookSecret = env('WORDPRESS_WEBHOOK_SECRET');
+        $this->webhookUrl = config('services.wordpress_webhook.url');
+        $this->webhookSecret = config('services.wordpress_webhook.secret');
     }
     
     /**

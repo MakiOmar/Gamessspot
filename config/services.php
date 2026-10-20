@@ -41,4 +41,10 @@ return [
         'max_retry_wait' => (int) env('POS_CATALOG_SYNC_MAX_RETRY_WAIT', 60),
     ],
 
+    // WooCommerce inventory webhook (App\Services\WebhookService).
+    'wordpress_webhook' => [
+        'url' => env('WORDPRESS_WEBHOOK_URL'),
+        'secret' => env('WORDPRESS_WEBHOOK_SECRET'),
+    ],
+
 ];
