@@ -166,14 +166,18 @@ class SystemBackupService
 
         $mysql = $this->findMysqlBinary();
         if ($mysql) {
-            $process = new Process(array(
+            $command = array(
                 $mysql,
                 '--host=' . ($config['host'] ?? '127.0.0.1'),
                 '--port=' . ($config['port'] ?? '3306'),
                 '--user=' . ($config['username'] ?? 'root'),
                 '--database=' . ($config['database'] ?? ''),
                 '--default-character-set=utf8mb4',
-            ));
+            );
+            if (! empty($config['dump']['skip_ssl'])) {
+                $command[] = '--skip-ssl';
+            }
+            $process = new Process($command);
             $process->setInput(File::get($sqlPath));
             $process->setTimeout(600);
             $env = array();

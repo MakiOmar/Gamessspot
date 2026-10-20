@@ -58,6 +58,12 @@ return [
             'prefix_indexes' => true,
             'strict'         => true,
             'engine'         => null,
+            // Spatie backup treats a present-but-false skip_ssl as "skip", so the key only exists when enabled.
+            'dump'           => array_filter(
+                array(
+                    'skip_ssl' => filter_var(env('DB_DUMP_SKIP_SSL', false), FILTER_VALIDATE_BOOL),
+                )
+            ),
             'options'        => extension_loaded('pdo_mysql') ? array_filter(
                 array(
                     PDO::MYSQL_ATTR_SSL_CA                 => env('MYSQL_ATTR_SSL_CA'),
