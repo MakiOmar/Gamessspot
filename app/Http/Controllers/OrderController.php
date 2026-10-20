@@ -168,6 +168,8 @@ class OrderController extends Controller
             ->orderBy('created_at', 'desc')
             ->take(10)
             ->get();
+            // Sold codes belong to this buyer's own history
+            $orders->each(fn (Order $order) => $order->card?->makeVisible('code'));
 
             return response()->json([
             'success' => true,
@@ -282,8 +284,9 @@ class OrderController extends Controller
                             $q->where('mail', 'like', "%$query%");
                         }
                     )
+                    // Card codes are encrypted: exact match only
                     ->orWhereHas('card', function ($q) use ($query) {
-                        $q->where('code', 'like', "%$query%");
+                        $q->where('code_hash', Card::hashCode((string) $query));
                     })
                     // Search by game title (related through account's game)
                     ->orWhereHas(

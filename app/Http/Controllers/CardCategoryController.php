@@ -27,17 +27,16 @@ class CardCategoryController extends Controller
         return view('manager.card-categories', compact('categories'));
     }
 
+    /**
+     * Public sellable categories. Never eager-load `cards`: unsold codes must not leave the server.
+     */
     public function getCategories()
     {
         return CardCategory::whereHas('cards', function ($query) {
             $query->where('status', true);
         })
-        ->with([
-            'cards' => function ($query) {
-                $query->where('status', true);
-            },
-            'galleryImages',
-        ])
+        ->withAvailableCount()
+        ->with('galleryImages')
         ->get()
         ->map(function (CardCategory $category) {
             $category->setAttribute('gallery', $category->galleryApiPayload());
@@ -71,9 +70,8 @@ class CardCategoryController extends Controller
      */
     public function showApi(CardCategory $cardCategory)
     {
-        $cardCategory->load(['galleryImages', 'cards' => function ($query) {
-            $query->where('status', true);
-        }]);
+        $cardCategory->load('galleryImages');
+        $cardCategory->loadCount(['cards as available_count' => fn ($query) => $query->where('status', true)]);
 
         return response()->json([
             'success' => true,
@@ -88,7 +86,7 @@ class CardCategoryController extends Controller
                     : null,
                 'gallery' => $cardCategory->galleryApiPayload(),
                 'reviews' => $cardCategory->reviewsApiPayload(),
-                'cards_count' => $cardCategory->cards->count(),
+                'cards_count' => (int) $cardCategory->available_count,
             ],
         ]);
     }
@@ -99,12 +97,8 @@ class CardCategoryController extends Controller
             $query->where('status', true);
         })
         ->where('name', 'like', '%' . $search . '%')
-        ->with([
-            'cards' => function ($query) {
-                $query->where('status', true);
-            },
-            'galleryImages',
-        ])
+        ->withAvailableCount()
+        ->with('galleryImages')
         ->get();
     }
 

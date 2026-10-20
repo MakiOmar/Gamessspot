@@ -40,7 +40,7 @@ class CardController extends Controller
     public function store(Request $request)
     {
         $validatedData = $request->validate([
-            'code' => 'required|string|unique:cards,code',
+            'code' => ['required', 'string', 'max:255', $this->uniqueCodeRule()],
             'cost' => 'required|numeric',
             'card_category_id' => 'required|exists:card_categories,id',
         ]);
@@ -88,7 +88,7 @@ class CardController extends Controller
     public function update(Request $request, Card $card)
     {
         $validatedData = $request->validate([
-        'code' => 'required|string|unique:cards,code,' . $card->id,
+        'code' => ['required', 'string', 'max:255', $this->uniqueCodeRule($card->id)],
         'cost' => 'required|numeric',
         'card_category_id' => 'required|exists:card_categories,id',
         ]);
@@ -113,5 +113,17 @@ class CardController extends Controller
     {
         $card->delete();
         return redirect()->route('cards.index')->with('success', 'Card deleted successfully.');
+    }
+
+    /**
+     * Codes are encrypted, so uniqueness is checked against `code_hash`.
+     */
+    private function uniqueCodeRule(?int $ignoreId = null): \Closure
+    {
+        return function (string $attribute, mixed $value, \Closure $fail) use ($ignoreId) {
+            if (is_string($value) && Card::codeExists($value, $ignoreId)) {
+                $fail('This card code already exists.');
+            }
+        };
     }
 }

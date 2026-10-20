@@ -43,7 +43,7 @@
                             <div class="card-body">
                                 <h5 class="card-title">{{ $category->name }}</h5>
                                 <p class="card-text">
-                                    ${{ number_format($category->price, 2) }} ({{ $category->cards->count() }} available)
+                                    ${{ number_format($category->price, 2) }} ({{ $category->available_count }} available)
                                 </p>
                                 <button type="button" class="btn btn-primary" onclick="openOrderForm({{ $category->id }}, '{{ $category->name }}')">
                                     Order Code

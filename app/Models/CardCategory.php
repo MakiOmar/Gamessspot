@@ -40,6 +40,14 @@ class CardCategory extends Model
         return $this->hasMany(Card::class, 'card_category_id');
     }
 
+    /**
+     * Adds `available_count` (unsold local codes) without loading the code rows.
+     */
+    public function scopeWithAvailableCount($query)
+    {
+        return $query->withCount(['cards as available_count' => fn ($q) => $q->where('status', true)]);
+    }
+
     public static function sanitizeDescription(?string $html): ?string
     {
         return HtmlSanitizer::sanitize($html);
