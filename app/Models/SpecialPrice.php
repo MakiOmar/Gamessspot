@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\CacheManager;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -20,6 +21,13 @@ class SpecialPrice extends Model
         'ps5_offline_price',
         'is_available',
     ];
+
+    protected static function booted(): void
+    {
+        // Store-specific game listings are cached with these prices applied.
+        static::saved(fn () => CacheManager::invalidateGames());
+        static::deleted(fn () => CacheManager::invalidateGames());
+    }
 
     // Relation to the Game model
     public function game()

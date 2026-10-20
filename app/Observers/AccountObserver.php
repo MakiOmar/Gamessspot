@@ -102,6 +102,8 @@ class AccountObserver
     {
         try {
             CacheManager::invalidateAccounts();
+            // Game listings embed per-game account stock (imports, secondary-stock sync, manual edits).
+            CacheManager::invalidateGames();
         } catch (\Exception $e) {
             // Silently fail - cache invalidation should not break the application
         }

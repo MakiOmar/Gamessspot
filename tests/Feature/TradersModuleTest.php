@@ -556,14 +556,14 @@ class TradersModuleTest extends TestCase
         $trader = Trader::factory()->create();
         \App\Services\CacheManager::getAccountListing(1, fn () => 'cached-page');
         $key = \App\Services\CacheManager::getAccountListingKey(1);
-        $this->assertTrue(\Illuminate\Support\Facades\Cache::has($key));
+        $this->assertSame('cached-page', \App\Services\CacheManager::get($key));
 
         $this->actingAs($admin, 'admin')->putJson(route('manager.traders.update', $trader), array(
             'name' => 'Renamed ' . uniqid(),
             'status' => 'active',
         ))->assertOk();
 
-        $this->assertFalse(\Illuminate\Support\Facades\Cache::has($key));
+        $this->assertNull(\App\Services\CacheManager::get($key));
     }
 
     public function test_opening_balance_update_changes_balance(): void

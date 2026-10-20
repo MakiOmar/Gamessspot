@@ -2,10 +2,39 @@
 
 namespace Tests\Feature;
 
+use App\Models\Role;
+use App\Models\User;
+use App\Services\RolePermissionService;
+use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Tests\TestCase;
 
 class PublicRoutesTest extends TestCase
 {
+    use DatabaseTransactions;
+
+    private const DIAGNOSTIC_ROUTES = array(
+        '/test-session',
+        '/debug-phone',
+        '/check-redis',
+        '/check-memcached',
+        '/cache-stats',
+        '/test-memcached',
+        '/check-cache',
+    );
+
+    protected function createUserWithRole(string $roleName): User
+    {
+        $role = Role::firstOrCreate(array('name' => $roleName));
+        $matrix = app(RolePermissionService::class)->defaultMatrix();
+        $role->capabilities = $matrix[$roleName] ?? array();
+        $role->save();
+
+        $user = User::factory()->create();
+        $user->roles()->sync(array($role->id));
+
+        return $user->fresh()->load('roles');
+    }
+
     /**
      * Test homepage route.
      * Note: This may return 404 if welcome view doesn't exist in tests
@@ -25,75 +54,34 @@ class PublicRoutesTest extends TestCase
     public function test_health_check_route_exists(): void
     {
         $response = $this->get('/up');
-        
-        // Route exists but returns 404 in tests (known Laravel 11 issue)
+
         // Route works correctly in production/development
         $this->assertContains($response->status(), [200, 404]);
     }
 
-    /**
-     * Test session test route.
-     * Note: Returns 404 in tests (Laravel 11 routing issue in test environment)
-     */
-    public function test_session_test_route_exists(): void
+    public function test_diagnostic_routes_redirect_guests(): void
     {
-        $response = $this->get('/test-session');
-        
-        // Route exists but returns 404 in tests (known Laravel 11 issue)
-        // Route works correctly in production/development
-        $this->assertContains($response->status(), [200, 404]);
+        foreach (self::DIAGNOSTIC_ROUTES as $uri) {
+            $this->get($uri)->assertRedirect();
+        }
     }
 
-    /**
-     * Test Redis check route.
-     * Note: Returns 404 in tests (Laravel 11 routing issue in test environment)
-     */
-    public function test_redis_check_route_exists(): void
+    public function test_diagnostic_routes_forbid_staff_without_manage_options(): void
     {
-        $response = $this->get('/check-redis');
-        
-        // Route exists but returns 404 in tests (known Laravel 11 issue)
-        // Route works correctly in production/development
-        $this->assertContains($response->status(), [200, 404]);
+        $user = $this->createUserWithRole('sales');
+
+        foreach (self::DIAGNOSTIC_ROUTES as $uri) {
+            $this->actingAs($user, 'admin')->get($uri)->assertForbidden();
+        }
     }
 
-    /**
-     * Test cache stats route.
-     * Note: Returns 404 in tests (Laravel 11 routing issue in test environment)
-     */
-    public function test_cache_stats_route_exists(): void
+    public function test_cache_stats_route_allows_admins(): void
     {
-        $response = $this->get('/cache-stats');
-        
-        // Route exists but returns 404 in tests (known Laravel 11 issue)
-        // Route works correctly in production/development
-        $this->assertContains($response->status(), [200, 404]);
-    }
+        $admin = $this->createUserWithRole('admin');
 
-    /**
-     * Test check cache route.
-     * Note: Returns 404 in tests (Laravel 11 routing issue in test environment)
-     */
-    public function test_check_cache_route_exists(): void
-    {
-        $response = $this->get('/check-cache');
-        
-        // Route exists but returns 404 in tests (known Laravel 11 issue)
-        // Route works correctly in production/development
-        $this->assertContains($response->status(), [200, 404]);
-    }
-
-    /**
-     * Test debug phone route.
-     * Note: Returns 404 in tests (Laravel 11 routing issue in test environment)
-     */
-    public function test_debug_phone_route_exists(): void
-    {
-        $response = $this->get('/debug-phone');
-        
-        // Route exists but returns 404 in tests (known Laravel 11 issue)
-        // Route works correctly in production/development
-        $this->assertContains($response->status(), [200, 404]);
+        $this->actingAs($admin, 'admin')
+            ->get('/cache-stats')
+            ->assertOk()
+            ->assertJsonStructure(array('cache_stats' => array('driver', 'invalidations_by_group')));
     }
 }
-

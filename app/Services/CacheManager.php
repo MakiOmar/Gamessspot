@@ -9,7 +9,10 @@ use Illuminate\Support\Facades\DB;
  * Centralized Cache Manager
  * 
  * Handles all caching operations with support for Redis, Memcached, and File drivers.
- * Uses a key registry approach instead of cache tags for compatibility with all drivers.
+ * Groups ("games:", "orders:", ...) are invalidated by bumping a per-group version
+ * counter that is part of every physical key, instead of tags or a shared key list.
+ * A bump is atomic, and a value computed from pre-invalidation data is written under
+ * the old version, which no reader uses any more.
  */
 class CacheManager
 {
@@ -32,11 +35,20 @@ class CacheManager
     const TTL_LONG = 600;       // 10 minutes
     const TTL_VERY_LONG = 3600; // 1 hour
     
-    /**
-     * Cache key registry - stores all active cache keys
-     * This allows us to invalidate groups without cache tags
-     */
-    const REGISTRY_KEY = 'cache:registry';
+    /** Group prefixes (without the trailing colon) that are invalidated as a whole. */
+    const GROUPS = ['dashboard', 'orders', 'users', 'accounts', 'cards', 'games', 'devices'];
+
+    /** Holds the current version number of each group. */
+    const VERSION_KEY_PREFIX = 'cache:version:';
+
+    /** Keys that the cache indicator's "clear" button may target. */
+    const CLEARABLE_LISTING_PREFIXES = ['users:list:', 'games:list:', 'accounts:list:', 'orders:list:', 'cards:list:'];
+
+    /** Hit/miss info for the current request, read back by the cache indicator. */
+    private const REQUEST_METADATA_LIMIT = 50;
+
+    /** @var array<string, array<string, mixed>> */
+    private static array $requestMetadata = [];
     
     /**
      * Remember a value in cache
@@ -49,37 +61,25 @@ class CacheManager
     public static function remember(string $key, int $ttl, callable $callback)
     {
         try {
-            // Register this key
-            self::registerKey($key);
-            
-            // Start timing
+            $physicalKey = self::physicalKey($key);
             $startTime = microtime(true);
-            
-            // Check if cache exists (for hit/miss tracking)
-            $cacheExists = Cache::has($key);
-            
-            if ($cacheExists) {
-                // Cache hit - get from cache
-                $result = Cache::get($key);
-                $executionTime = (microtime(true) - $startTime) * 1000; // Convert to milliseconds
-                
-                // Store metadata with cache hit timing
-                self::storeCacheMetadata($key, true, $executionTime);
-            } else {
-                // Cache miss - execute callback
-                $callbackStartTime = microtime(true);
-                $result = $callback();
-                $callbackTime = (microtime(true) - $callbackStartTime) * 1000;
-                
-                // Store in cache
-                Cache::put($key, $result, $ttl);
-                
-                $totalTime = (microtime(true) - $startTime) * 1000;
-                
-                // Store metadata with cache miss timing
-                self::storeCacheMetadata($key, false, $totalTime, $callbackTime);
+
+            // Single read: has() + get() could straddle an expiry and return null as a "hit".
+            $result = Cache::get($physicalKey);
+
+            if ($result !== null) {
+                self::storeCacheMetadata($key, true, (microtime(true) - $startTime) * 1000);
+
+                return $result;
             }
-            
+
+            $callbackStartTime = microtime(true);
+            $result = $callback();
+            $callbackTime = (microtime(true) - $callbackStartTime) * 1000;
+
+            Cache::put($physicalKey, $result, $ttl);
+            self::storeCacheMetadata($key, false, (microtime(true) - $startTime) * 1000, $callbackTime);
+
             return $result;
         } catch (\Exception $e) {
             // If cache fails, execute callback directly
@@ -88,7 +88,7 @@ class CacheManager
     }
     
     /**
-     * Store cache metadata (hit/miss info)
+     * Record hit/miss info for this request (no cache write on every hit).
      *
      * @param string $key
      * @param bool $wasHit
@@ -98,36 +98,82 @@ class CacheManager
      */
     protected static function storeCacheMetadata(string $key, bool $wasHit, float $executionTime = 0, ?float $queryTime = null): void
     {
-        try {
-            $metadata = [
-                'was_hit' => $wasHit,
-                'timestamp' => now()->timestamp,
-                'datetime' => now()->toDateTimeString(),
-                'execution_time_ms' => round($executionTime, 2),
-                'query_time_ms' => $queryTime !== null ? round($queryTime, 2) : null,
-                'cache_saving_ms' => $queryTime !== null ? round($queryTime - $executionTime, 2) : null,
-            ];
-            
-            // Store metadata with a short TTL
-            Cache::put("meta:{$key}", $metadata, 120); // 2 minutes
-        } catch (\Exception $e) {
-            // Silently fail - metadata is optional
+        if (count(self::$requestMetadata) >= self::REQUEST_METADATA_LIMIT) {
+            self::$requestMetadata = [];
         }
+
+        self::$requestMetadata[$key] = [
+            'was_hit' => $wasHit,
+            'timestamp' => now()->timestamp,
+            'datetime' => now()->toDateTimeString(),
+            'execution_time_ms' => round($executionTime, 2),
+            'query_time_ms' => $queryTime !== null ? round($queryTime, 2) : null,
+            'cache_saving_ms' => $queryTime !== null ? round($queryTime - $executionTime, 2) : null,
+        ];
     }
     
     /**
-     * Get cache metadata for a key
+     * Get cache metadata for a key read earlier in this request
      *
      * @param string $key
      * @return array|null
      */
     public static function getCacheMetadata(string $key): ?array
     {
-        try {
-            return Cache::get("meta:{$key}");
-        } catch (\Exception $e) {
-            return null;
+        return self::$requestMetadata[$key] ?? null;
+    }
+
+    /** True for listing keys the cache indicator may clear (never dashboard totals or versions). */
+    public static function isClearableListingKey(string $key): bool
+    {
+        foreach (self::CLEARABLE_LISTING_PREFIXES as $prefix) {
+            if (str_starts_with($key, $prefix)) {
+                return true;
+            }
         }
+
+        return false;
+    }
+
+    /** Group a logical key belongs to ("games:list:..." → "games"), or null. */
+    protected static function groupOf(string $key): ?string
+    {
+        $group = strstr($key, ':', true);
+
+        return $group !== false && in_array($group, self::GROUPS, true) ? $group : null;
+    }
+
+    /** Physical cache key: "games:list:page_1" → "games:v7:list:page_1". */
+    protected static function physicalKey(string $key): string
+    {
+        $group = self::groupOf($key);
+        if ($group === null) {
+            return $key;
+        }
+
+        return $group.':v'.self::groupVersion($group).substr($key, strlen($group));
+    }
+
+    protected static function groupVersion(string $group): int
+    {
+        return (int) Cache::get(self::VERSION_KEY_PREFIX.$group, 0);
+    }
+
+    /** Atomically retire every key in a group. */
+    protected static function bumpGroup(string $group): void
+    {
+        $versionKey = self::VERSION_KEY_PREFIX.$group;
+        Cache::add($versionKey, 0);
+        Cache::increment($versionKey);
+    }
+
+    /**
+     * Run an invalidation once the surrounding transaction commits (immediately when none is open),
+     * so a concurrent request cannot re-cache rows the transaction has not committed yet.
+     */
+    protected static function afterCommit(callable $invalidate): void
+    {
+        DB::afterCommit($invalidate);
     }
     
     /**
@@ -152,7 +198,7 @@ class CacheManager
     public static function get(string $key, $default = null)
     {
         try {
-            return Cache::get($key, $default);
+            return Cache::get(self::physicalKey($key), $default);
         } catch (\Exception $e) {
             return $default;
         }
@@ -169,8 +215,7 @@ class CacheManager
     public static function put(string $key, $value, int $ttl): bool
     {
         try {
-            self::registerKey($key);
-            return Cache::put($key, $value, $ttl);
+            return Cache::put(self::physicalKey($key), $value, $ttl);
         } catch (\Exception $e) {
             return false;
         }
@@ -185,104 +230,33 @@ class CacheManager
     public static function forget(string $key): bool
     {
         try {
-            self::unregisterKey($key);
+            unset(self::$requestMetadata[$key]);
 
-            // Also drop metadata associated with this key
-            Cache::forget("meta:{$key}");
-
-            return Cache::forget($key);
+            return Cache::forget(self::physicalKey($key));
         } catch (\Exception $e) {
             return false;
         }
     }
     
     /**
-     * Forget multiple cache keys by pattern
+     * Invalidate a whole group, e.g. "games:*". Only group-wide patterns are supported.
      *
      * @param string $pattern
-     * @return int Number of keys deleted
+     * @return int Number of groups invalidated
      */
     public static function forgetByPattern(string $pattern): int
     {
-        try {
-            $keys = self::getKeysByPattern($pattern);
-            $count = 0;
-            
-            foreach ($keys as $key) {
-                if (self::forget($key)) {
-                    $count++;
-                }
-            }
-            
-            return $count;
-        } catch (\Exception $e) {
+        $group = rtrim($pattern, ':*');
+        if (! in_array($group, self::GROUPS, true) || $pattern !== $group.':*') {
             return 0;
         }
-    }
-    
-    /**
-     * Register a cache key in the registry
-     *
-     * @param string $key
-     * @return void
-     */
-    protected static function registerKey(string $key): void
-    {
-        try {
-            $registry = Cache::get(self::REGISTRY_KEY, []);
-            
-            if (!in_array($key, $registry)) {
-                $registry[] = $key;
-                Cache::put(self::REGISTRY_KEY, $registry, self::TTL_VERY_LONG);
-            }
-        } catch (\Exception $e) {
-            // Silently fail - registry is optional
-        }
-    }
-    
-    /**
-     * Unregister a cache key from the registry
-     *
-     * @param string $key
-     * @return void
-     */
-    protected static function unregisterKey(string $key): void
-    {
-        try {
-            $registry = Cache::get(self::REGISTRY_KEY, []);
-            $registry = array_filter($registry, fn($k) => $k !== $key);
-            Cache::put(self::REGISTRY_KEY, array_values($registry), self::TTL_VERY_LONG);
-        } catch (\Exception $e) {
-            // Silently fail - registry is optional
-        }
-    }
-    
-    /**
-     * Get all keys matching a pattern
-     *
-     * @param string $pattern
-     * @return array
-     */
-    protected static function getKeysByPattern(string $pattern): array
-    {
-        try {
-            $registry = Cache::get(self::REGISTRY_KEY, []);
 
-            // If the pattern contains a wildcard, treat everything before the first
-            // asterisk as a prefix match to avoid brittle regular-expression logic.
-            if (str_contains($pattern, '*')) {
-                $prefix = strstr($pattern, '*', true) ?: '';
+        try {
+            self::bumpGroup($group);
 
-                return array_values(array_filter(
-                    $registry,
-                    fn($key) => str_starts_with($key, $prefix)
-                ));
-            }
-
-            // Exact match fallback
-            return in_array($pattern, $registry, true) ? [$pattern] : [];
+            return 1;
         } catch (\Exception $e) {
-            return [];
+            return 0;
         }
     }
     
@@ -333,10 +307,16 @@ class CacheManager
     public static function getTodayOrderCount()
     {
         return self::remember(
-            self::PREFIX_DASHBOARD . 'today_order_count',
+            self::todayOrderCountKey(),
             self::TTL_MEDIUM,
             fn() => \App\Models\Order::whereDate('created_at', now()->toDateString())->count()
         );
+    }
+
+    /** Date-scoped so yesterday's count is never served after midnight. */
+    protected static function todayOrderCountKey(): string
+    {
+        return self::PREFIX_DASHBOARD . 'today_order_count:' . now()->toDateString();
     }
     
     public static function getUniqueBuyerCount()
@@ -645,112 +625,87 @@ class CacheManager
     // CACHE INVALIDATION METHODS
     // ====================================================================
     
+    // Every invalidate* method defers to after commit and returns the number of groups retired.
+
     /**
      * Invalidate all dashboard caches
-     *
-     * @return int Number of keys invalidated
      */
     public static function invalidateDashboard(): int
     {
-        $count = 0;
-        $count += self::forgetByPattern(self::PREFIX_DASHBOARD . '*');
-        $count += self::forget(self::PREFIX_ORDERS . 'unique_buyer_phone_count') ? 1 : 0;
-        $count += self::forget(self::PREFIX_DEVICES . 'repair_stats') ? 1 : 0;
-        $count += self::forget(self::PREFIX_USERS . 'new_users_role_5_count') ? 1 : 0;
-        
-        return $count;
+        self::afterCommit(function () {
+            self::forgetByPattern(self::PREFIX_DASHBOARD . '*');
+            self::forget(self::PREFIX_ORDERS . 'unique_buyer_phone_count');
+            self::forget(self::PREFIX_DEVICES . 'repair_stats');
+            self::forget(self::PREFIX_USERS . 'new_users_role_5_count');
+        });
+
+        return 1;
     }
     
     /**
-     * Invalidate order-related caches
-     *
-     * @return int Number of keys invalidated
+     * Invalidate order-related caches (plus the dashboard widgets that aggregate orders)
      */
     public static function invalidateOrders(): int
     {
-        $count = 0;
-        $count += self::forgetByPattern(self::PREFIX_ORDERS . '*');
-        $count += self::forget(self::PREFIX_DASHBOARD . 'today_order_count') ? 1 : 0;
-        // Dashboard widgets that aggregate orders
-        $count += self::forget(self::PREFIX_DASHBOARD . 'top_selling_games') ? 1 : 0;
-        $count += self::forget(self::PREFIX_DASHBOARD . 'top_buyers') ? 1 : 0;
-        $count += self::forget(self::PREFIX_DASHBOARD . 'top_selling_stores') ? 1 : 0;
+        self::afterCommit(function () {
+            self::forgetByPattern(self::PREFIX_ORDERS . '*');
+            self::forget(self::todayOrderCountKey());
+            self::forget(self::PREFIX_DASHBOARD . 'top_selling_games');
+            self::forget(self::PREFIX_DASHBOARD . 'top_buyers');
+            self::forget(self::PREFIX_DASHBOARD . 'top_selling_stores');
+        });
 
-        return $count;
+        return 1;
     }
     
     /**
      * Invalidate user-related caches
-     *
-     * @return int Number of keys invalidated
      */
     public static function invalidateUsers(): int
     {
-        $count = 0;
-        $count += self::forgetByPattern(self::PREFIX_USERS . '*');
-        
-        return $count;
+        self::afterCommit(fn () => self::forgetByPattern(self::PREFIX_USERS . '*'));
+
+        return 1;
     }
     
     /**
      * Invalidate account-related caches
-     *
-     * @return int Number of keys invalidated
      */
     public static function invalidateAccounts(): int
     {
-        $count = 0;
-        $count += self::forgetByPattern(self::PREFIX_ACCOUNTS . '*');
-        
-        return $count;
+        self::afterCommit(fn () => self::forgetByPattern(self::PREFIX_ACCOUNTS . '*'));
+
+        return 1;
     }
     
     /**
      * Invalidate card-related caches
-     *
-     * @return int Number of keys invalidated
      */
     public static function invalidateCards(): int
     {
-        $count = 0;
-        $count += self::forgetByPattern(self::PREFIX_CARDS . '*');
-        
-        return $count;
+        self::afterCommit(fn () => self::forgetByPattern(self::PREFIX_CARDS . '*'));
+
+        return 1;
     }
     
     /**
-     * Invalidate game-related caches
-     *
-     * @param int|null $page Optional page number to invalidate specific page
-     * @return int Number of keys invalidated
+     * Invalidate game-related caches (listings embed per-game account stock and prices)
      */
-    public static function invalidateGames(?int $page = null): int
+    public static function invalidateGames(): int
     {
-        $count = 0;
-        
-        if ($page !== null) {
-            // Invalidate specific pages
-            $count += self::forget(self::PREFIX_GAMES . "ps4_page_{$page}") ? 1 : 0;
-            $count += self::forget(self::PREFIX_GAMES . "ps5_page_{$page}") ? 1 : 0;
-        } else {
-            // Invalidate all game caches
-            $count += self::forgetByPattern(self::PREFIX_GAMES . '*');
-        }
-        
-        return $count;
+        self::afterCommit(fn () => self::forgetByPattern(self::PREFIX_GAMES . '*'));
+
+        return 1;
     }
     
     /**
      * Invalidate device repair caches
-     *
-     * @return int Number of keys invalidated
      */
     public static function invalidateDeviceRepairs(): int
     {
-        $count = 0;
-        $count += self::forgetByPattern(self::PREFIX_DEVICES . '*');
-        
-        return $count;
+        self::afterCommit(fn () => self::forgetByPattern(self::PREFIX_DEVICES . '*'));
+
+        return 1;
     }
     
     /**
@@ -777,21 +732,15 @@ class CacheManager
     public static function getStats(): array
     {
         try {
-            $registry = Cache::get(self::REGISTRY_KEY, []);
-            
+            $versions = [];
+            foreach (self::GROUPS as $group) {
+                $versions[$group] = self::groupVersion($group);
+            }
+
             return [
-                'total_keys' => count($registry),
                 'driver' => config('cache.default'),
-                'registry_enabled' => true,
-                'keys_by_prefix' => [
-                    'dashboard' => count(array_filter($registry, fn($k) => str_starts_with($k, self::PREFIX_DASHBOARD))),
-                    'orders' => count(array_filter($registry, fn($k) => str_starts_with($k, self::PREFIX_ORDERS))),
-                    'users' => count(array_filter($registry, fn($k) => str_starts_with($k, self::PREFIX_USERS))),
-                    'accounts' => count(array_filter($registry, fn($k) => str_starts_with($k, self::PREFIX_ACCOUNTS))),
-                    'cards' => count(array_filter($registry, fn($k) => str_starts_with($k, self::PREFIX_CARDS))),
-                    'games' => count(array_filter($registry, fn($k) => str_starts_with($k, self::PREFIX_GAMES))),
-                    'devices' => count(array_filter($registry, fn($k) => str_starts_with($k, self::PREFIX_DEVICES))),
-                ]
+                // How many times each group has been invalidated since its counter was created.
+                'invalidations_by_group' => $versions,
             ];
         } catch (\Exception $e) {
             return ['error' => $e->getMessage()];

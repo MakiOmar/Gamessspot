@@ -11,18 +11,18 @@ This document describes the cache optimization system implemented for the applic
 A centralized service that handles all caching operations:
 
 - **Universal Compatibility**: Works with Redis, Memcached, and File cache drivers
-- **Key Registry System**: Tracks all cache keys for pattern-based invalidation (no cache tags required)
-- **Organized Prefixes**: Categorizes caches by type (dashboard, orders, users, accounts, cards, games, devices)
+- **Group version counters**: Each group (dashboard, orders, users, accounts, cards, games, devices) has a counter at `cache:version:{group}`. Logical key `games:list:ps4:page:1` is stored as `games:v{n}:list:ps4:page:1`; invalidating a group bumps `n`, so every old key is orphaned at once and expires by TTL. No key registry, no read-modify-write races.
+- **After-commit invalidation**: `invalidate*()` runs through `DB::afterCommit`, so a reader inside a still-open transaction can't re-cache stale rows. A rolled-back transaction leaves the cache untouched.
 - **Automatic Fallback**: If cache fails, executes the callback directly
-- **Comprehensive Logging**: Logs all cache operations for debugging
+- **Per-request hit/miss metadata** for the cache indicator (kept in memory, no extra cache writes)
 
 #### Key Features:
 
 ```php
-// Cache data with automatic registration
+// Cache data under the current group version
 CacheManager::remember('key', 600, fn() => ExpensiveQuery::get());
 
-// Invalidate by pattern (works on all drivers)
+// Invalidate a whole group ("{group}:*" only)
 CacheManager::forgetByPattern('dashboard:*');
 
 // Get specific cached statistics
@@ -43,7 +43,8 @@ Automatic cache invalidation when models change:
 |----------|-------|-------------|
 | `OrderObserver` | `Order` | Order caches, dashboard stats |
 | `UserObserver` | `User` | User caches, dashboard stats |
-| `AccountObserver` | `Account` | Account caches, dashboard stats |
+| `AccountObserver` | `Account` | Account caches, game listings (stock), dashboard stats |
+| `SpecialPrice::booted()` | `SpecialPrice` | Game listings (store prices) |
 | `CardObserver` | `Card` | Card caches, dashboard stats |
 | `GameObserver` | `Game` | Game caches (PS4/PS5 pages) |
 | `DeviceRepairObserver` | `DeviceRepair` | Device repair stats |
@@ -145,22 +146,7 @@ php artisan cache:clear-app --dashboard --orders --users
 php artisan cache:stats
 ```
 
-Output:
-```
-📊 Cache Statistics
-
-Metric              Value
-Total Keys          45
-Driver              REDIS
-Registry Enabled    YES
-
-📦 Keys by Prefix:
-Prefix      Key Count
-Dashboard   7
-Orders      3
-Users       2
-...
-```
+Output: the cache driver and the number of invalidations per group (current version counter).
 
 ## API Endpoints
 
@@ -170,28 +156,20 @@ Users       2
 GET /cache-stats
 ```
 
-Returns JSON with cache statistics:
+Admin only (`auth:admin` + `can:manage-options`, like the other diagnostics routes `/check-redis`, `/check-cache`, `/debug-phone`, …). Returns JSON:
 
 ```json
 {
   "status": "success",
   "cache_stats": {
-    "total_keys": 45,
     "driver": "redis",
-    "registry_enabled": true,
-    "keys_by_prefix": {
-      "dashboard": 7,
-      "orders": 3,
-      "users": 2,
-      "accounts": 5,
-      "cards": 3,
-      "games": 20,
-      "devices": 5
-    }
+    "invalidations_by_group": { "dashboard": 12, "orders": 40, "games": 9 }
   },
-  "timestamp": "2025-10-28 11:30:00"
+  "timestamp": "2026-10-20 11:30:00"
 }
 ```
+
+`POST /cache/clear-key` (cache indicator button) requires a logged-in staff user and only accepts listing keys (`users:list:`, `games:list:`, `accounts:list:`, `orders:list:`, `cards:list:`); other keys return 403.
 
 ## Controller Updates
 

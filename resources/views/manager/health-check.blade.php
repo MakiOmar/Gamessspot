@@ -618,9 +618,9 @@
                         <hr>
                         <h6 class="font-weight-bold mt-3">📊 Cache Statistics</h6>
                         <div class="info-row">
-                            <span class="info-label">Total Cache Keys:</span>
+                            <span class="info-label">Total Invalidations:</span>
                             <span class="info-value float-right">
-                                <span class="badge badge-info">{{ $healthData['cache']['stats']['total_keys'] }}</span>
+                                <span class="badge badge-info">{{ array_sum($healthData['cache']['stats']['invalidations_by_group']) }}</span>
                             </span>
                         </div>
                     @endif
@@ -633,17 +633,17 @@
         <div class="col-12 mb-4">
             <div class="card health-card">
                 <div class="card-header bg-success text-white">
-                    <h4><i class="fas fa-chart-bar"></i> Cache Keys by Category</h4>
+                    <h4><i class="fas fa-chart-bar"></i> Cache Invalidations by Category</h4>
                 </div>
                 <div class="card-body">
                     <p class="text-muted">
                         <i class="fas fa-info-circle"></i> 
-                        Shows the number of cache entries stored for each category. 
-                        The number represents cached entries, not the values they store.
+                        Shows how many times each category's cache has been invalidated
+                        (each change to games, accounts, orders, etc. retires that category's cached pages).
                     </p>
                     
                     <div class="row">
-                        @foreach($healthData['cache']['stats']['keys_by_prefix'] as $prefix => $count)
+                        @foreach($healthData['cache']['stats']['invalidations_by_group'] as $prefix => $count)
                         <div class="col-md-3 col-sm-6 mb-3">
                             <div class="card {{ $count > 0 ? 'border-success' : 'border-secondary' }}">
                                 <div class="card-body text-center">

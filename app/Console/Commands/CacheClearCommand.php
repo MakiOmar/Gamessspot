@@ -39,33 +39,33 @@ class CacheClearCommand extends Command
         $cleared = [];
         
         if ($this->option('dashboard')) {
-            $count = CacheManager::invalidateDashboard();
-            $cleared[] = "Dashboard ($count keys)";
+            CacheManager::invalidateDashboard();
+            $cleared[] = 'Dashboard';
         }
         
         if ($this->option('orders')) {
-            $count = CacheManager::invalidateOrders();
-            $cleared[] = "Orders ($count keys)";
+            CacheManager::invalidateOrders();
+            $cleared[] = 'Orders';
         }
         
         if ($this->option('users')) {
-            $count = CacheManager::invalidateUsers();
-            $cleared[] = "Users ($count keys)";
+            CacheManager::invalidateUsers();
+            $cleared[] = 'Users';
         }
         
         if ($this->option('accounts')) {
-            $count = CacheManager::invalidateAccounts();
-            $cleared[] = "Accounts ($count keys)";
+            CacheManager::invalidateAccounts();
+            $cleared[] = 'Accounts';
         }
         
         if ($this->option('cards')) {
-            $count = CacheManager::invalidateCards();
-            $cleared[] = "Cards ($count keys)";
+            CacheManager::invalidateCards();
+            $cleared[] = 'Cards';
         }
         
         if ($this->option('games')) {
-            $count = CacheManager::invalidateGames();
-            $cleared[] = "Games ($count keys)";
+            CacheManager::invalidateGames();
+            $cleared[] = 'Games';
         }
         
         if (empty($cleared)) {

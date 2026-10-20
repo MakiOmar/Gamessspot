@@ -28,8 +28,11 @@ Route::get('/', function () {
     return view('welcome');
 });
 
+// Diagnostics below expose config, sessions and user rows: admins with manage-options only.
+$diagnosticsMiddleware = ['auth:admin', 'can:manage-options'];
+
 // Test session functionality - Access: /test-session
-Route::get('/test-session', function () {
+Route::middleware($diagnosticsMiddleware)->get('/test-session', function () {
     $testValue = 'session_works_' . time();
     session(['test_key' => $testValue]);
     
@@ -64,7 +67,7 @@ Route::get('/test-session', function () {
 });
 
 // Debug route for testing phone number handling
-Route::get('/debug-phone', function () {
+Route::middleware($diagnosticsMiddleware)->get('/debug-phone', function () {
     $countryCode = '+20';
     $phoneNumber = '1234567890';
     $fullPhone = $countryCode . $phoneNumber;
@@ -83,7 +86,7 @@ Route::get('/debug-phone', function () {
 });
 
 // Redis Status Check Route - Access via: /check-redis
-Route::get('/check-redis', function () {
+Route::middleware($diagnosticsMiddleware)->get('/check-redis', function () {
     $status = array(
         'timestamp'      => now()->toDateTimeString(),
         'environment'    => app()->environment(),
@@ -204,7 +207,7 @@ Route::get('/check-redis', function () {
 });
 
 // Memcached Status Check Route - Access via: /check-memcached
-Route::get('/check-memcached', function () {
+Route::middleware($diagnosticsMiddleware)->get('/check-memcached', function () {
     $status = array(
         'timestamp'      => now()->toDateTimeString(),
         'environment'    => app()->environment(),
@@ -343,7 +346,7 @@ Route::get('/check-memcached', function () {
 });
 
 // Cache Statistics - Access via: /cache-stats
-Route::get('/cache-stats', function () {
+Route::middleware($diagnosticsMiddleware)->get('/cache-stats', function () {
     $stats = \App\Services\CacheManager::getStats();
     
     return response()->json([
@@ -355,13 +358,21 @@ Route::get('/cache-stats', function () {
 
 // Clear specific cache by key - POST via AJAX
 Route::post('/cache/clear-key', function (Illuminate\Http\Request $request) {
-    $key = $request->input('key');
+    $key = (string) $request->input('key');
     
-    if (!$key) {
+    if ($key === '') {
         return response()->json([
             'success' => false,
             'message' => 'Cache key is required'
         ], 400);
+    }
+
+    // Staff may refresh listing caches shown by the cache indicator, nothing else.
+    if (! \App\Services\CacheManager::isClearableListingKey($key)) {
+        return response()->json([
+            'success' => false,
+            'message' => 'This cache key cannot be cleared'
+        ], 403);
     }
     
     try {
@@ -378,10 +389,10 @@ Route::post('/cache/clear-key', function (Illuminate\Http\Request $request) {
             'message' => 'Error clearing cache: ' . $e->getMessage()
         ], 500);
     }
-})->middleware(['web', 'auth:admin']);
+})->middleware(['web', 'auth:admin', 'throttle:30,1']);
 
 // Quick Memcached Test - Access via: /test-memcached
-Route::get('/test-memcached', function () {
+Route::middleware($diagnosticsMiddleware)->get('/test-memcached', function () {
     $result = [
         'php_extension' => extension_loaded('memcached'),
         'timestamp' => now()->toDateTimeString(),
@@ -470,7 +481,7 @@ Route::get('/test-memcached', function () {
 });
 
 // Combined Cache Systems Check - Access via: /check-cache
-Route::get('/check-cache', function () {
+Route::middleware($diagnosticsMiddleware)->get('/check-cache', function () {
     $status = array(
         'timestamp'      => now()->toDateTimeString(),
         'environment'    => app()->environment(),

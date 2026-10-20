@@ -41,20 +41,18 @@ class CacheStatsCommand extends Command
         $this->table(
             ['Metric', 'Value'],
             [
-                ['Total Keys', $stats['total_keys']],
                 ['Driver', strtoupper($stats['driver'])],
-                ['Registry Enabled', $stats['registry_enabled'] ? 'YES' : 'NO'],
             ]
         );
         
         $this->line('');
-        $this->info('📦 Keys by Prefix:');
+        $this->info('📦 Invalidations by group:');
         $this->table(
-            ['Prefix', 'Key Count'],
+            ['Group', 'Invalidations'],
             array_map(
-                fn($prefix, $count) => [ucfirst($prefix), $count],
-                array_keys($stats['keys_by_prefix']),
-                array_values($stats['keys_by_prefix'])
+                fn($group, $count) => [ucfirst($group), $count],
+                array_keys($stats['invalidations_by_group']),
+                array_values($stats['invalidations_by_group'])
             )
         );
         
