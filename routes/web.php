@@ -9,6 +9,7 @@ use App\Http\Controllers\TraderController;
 use App\Http\Controllers\TraderPaymentController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\OrderExportController;
+use App\Http\Controllers\NextLoadDiagnosticsController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\UserHistoryController;
 use App\Http\Controllers\StoreProfileController;
@@ -31,6 +32,11 @@ use App\Http\Controllers\ReviewController;
 Route::get('/', function () {
     return view('welcome');
 });
+
+// Read-only Next Load API check; no login, gated by NEXTLOAD_DIAGNOSTICS_KEY (?key=…), 404 when unset.
+Route::get('/nextload/diagnostics', NextLoadDiagnosticsController::class)
+    ->middleware('throttle:6,1')
+    ->name('nextload.diagnostics');
 
 // Diagnostics below expose config, sessions and user rows: admins with manage-options only.
 $diagnosticsMiddleware = ['auth:admin', 'can:manage-options'];

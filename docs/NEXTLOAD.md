@@ -17,6 +17,7 @@ Gift cards only. Subscriptions (PS Plus, etc.) stay shared game accounts.
    | `NEXTLOAD_LOW_BALANCE` | `0` | Warn (log + activity log, at most every 6 h) when the balance is below this. `0` disables. |
    | `NEXTLOAD_EXCHANGE_RATE` | `1` | Local currency units per 1 supplier unit. Converts supplier prices into card `cost` and the loss guard. |
    | `NEXTLOAD_ALLOW_LOSS` | `false` | When `false`, a code is never bought if its converted supplier price is above the category sale price. |
+   | `NEXTLOAD_DIAGNOSTICS_KEY` | — | Secret for the login-free [diagnostics page](#diagnostics-page-no-login). Empty disables it. |
 
 2. Recreate the Accounts containers (env is read at start), run `php artisan migrate --force`.
 3. Manager → **Gift Cards → Next Load Supplier** (permission `manage-next-load`, granted to admin by default): **Test connection**, then **Refresh price list**.
@@ -67,6 +68,16 @@ All commands are no-ops while `NEXTLOAD_ENABLED=false`.
 - Gift card codes (`cards.code`) and supplier pins/serials are encrypted with `APP_KEY`; `code_hash` / `pin_hash` (HMAC) keep them unique and searchable by exact value. **Rotating `APP_KEY` makes existing codes unreadable** — re-encrypt before rotating.
 - Public category endpoints never return card rows, codes or cost.
 - Request/response bodies are never logged (they contain pins); log lines carry endpoint, HTTP status and the supplier error message only.
+
+## Diagnostics page (no login)
+
+`GET /nextload/diagnostics?key={NEXTLOAD_DIAGNOSTICS_KEY}` runs read-only checks with the real client and lists every HTTP exchange (time sent, duration, URL, headers, body, status, response):
+
+1. Outbound IP of the server (what Next Load must allowlist; a wrong IP shows as `Not Allow Ip`).
+2. Fresh login (`Token`) + `Balance`.
+3. `ProductsList` (first 15 rows shown) and whether staging test product `266` is listed.
+
+It never calls `CreateOrder`. Passwords, the security code, tokens, pins, serials and codes are masked; the email is partly masked. Unset `NEXTLOAD_DIAGNOSTICS_KEY` (default) or a wrong key returns 404; `throttle:6,1`, `noindex`, `no-store`. Use a long random key and clear it after support sessions, since anyone with the URL sees the balance and price list.
 
 ## Staging test
 

@@ -55,6 +55,8 @@ return [
         'exchange_rate' => (string) env('NEXTLOAD_EXCHANGE_RATE', '1'),
         // When false, never buy a code whose converted supplier price is above the category sale price.
         'allow_loss' => filter_var(env('NEXTLOAD_ALLOW_LOSS', false), FILTER_VALIDATE_BOOL),
+        // Secret for the login-free /nextload/diagnostics page (?key=…); empty disables the page (404).
+        'diagnostics_key' => env('NEXTLOAD_DIAGNOSTICS_KEY'),
     ],
 
     // WooCommerce inventory webhook (App\Services\WebhookService).
