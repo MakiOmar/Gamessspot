@@ -31,6 +31,7 @@ class NextLoadPurchaseService
 
     /**
      * Supplier order for one sale. Storefront/POS lines reuse their open or completed-unused order on retry.
+     * A consumed order (its code was sold and the sale undone, or released to stock) opens a new generation.
      */
     public function purchaseForSale(CardCategory $category, ?string $storefrontOrderId, ?string $lineKey, ?int $userId): NextLoadOrder
     {
@@ -39,6 +40,7 @@ class NextLoadPurchaseService
                 ->where('storefront_order_id', $storefrontOrderId)
                 ->where('storefront_line_key', (string) $lineKey)
                 ->where('status', '!=', NextLoadOrder::STATUS_FAILED)
+                ->whereNull('consumed_at')
                 ->latest('id')
                 ->first();
             if ($existing) {

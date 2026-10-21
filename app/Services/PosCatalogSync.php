@@ -6,7 +6,6 @@ use App\Models\CardCategory;
 use App\Models\Game;
 use App\Models\GamePosProduct;
 use Illuminate\Http\Client\Response;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Sleep;
 use RuntimeException;
@@ -20,8 +19,6 @@ class PosCatalogSync
     public const PLATFORMS = ['ps4', 'ps5'];
 
     public const OFFERS = ['primary', 'secondary', 'offline', 'full'];
-
-    private const TOKEN_CACHE_KEY = 'api_token';
 
     private const NAME_MAX = 191;
 
@@ -268,7 +265,7 @@ class PosCatalogSync
             $response = $this->post($payload);
 
             if ($response->status() === 401 && ! $tokenRefreshed) {
-                Cache::forget(self::TOKEN_CACHE_KEY);
+                app(PosApiToken::class)->forget();
                 $tokenRefreshed = true;
 
                 continue;
@@ -298,7 +295,7 @@ class PosCatalogSync
      */
     private function post(array $payload): Response
     {
-        $base = rtrim(SettingsService::getPosBaseUrl(), '/');
+        $base = PosApiToken::baseUrl();
         $businessId = (int) config('services.pos_catalog.business_id', 1);
 
         return Http::acceptJson()
@@ -307,30 +304,8 @@ class PosCatalogSync
             ->post($base.'/api/accounts/catalog/upsert/'.$businessId, $payload);
     }
 
-    /**
-     * Same cached POS login token OrderController::login() uses.
-     */
     private function token(string $base): string
     {
-        $token = Cache::get(self::TOKEN_CACHE_KEY);
-        if ($token) {
-            return (string) $token;
-        }
-
-        $response = Http::acceptJson()
-            ->timeout((int) config('services.pos_catalog.timeout', 20))
-            ->post($base.'/api/login', [
-                'username' => SettingsService::getPosUsername(),
-                'password' => SettingsService::getPosPassword(),
-            ]);
-
-        $token = $response->successful() ? $response->json('token') : null;
-        if (! $token) {
-            throw new RuntimeException('POS login failed with status '.$response->status().'.');
-        }
-
-        Cache::put(self::TOKEN_CACHE_KEY, $token, now()->addDays(3));
-
-        return (string) $token;
+        return app(PosApiToken::class)->get($base);
     }
 }

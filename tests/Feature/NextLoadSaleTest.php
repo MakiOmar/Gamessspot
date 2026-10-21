@@ -5,6 +5,8 @@ namespace Tests\Feature;
 use App\Models\Card;
 use App\Models\CardCategory;
 use App\Models\NextLoadOrder;
+use App\Models\Order;
+use App\Models\Role;
 use App\Models\StoresProfile;
 use App\Models\User;
 use App\Services\NextLoad\NextLoadCatalog;
@@ -154,6 +156,27 @@ class NextLoadSaleTest extends TestCase
         $references = NextLoadOrder::where('storefront_order_id', $payload['storefront_order_id'])->orderBy('id')->pluck('reference');
         $this->assertCount(2, $references);
         $this->assertStringEndsWith('-1', $references[0]);
+        $this->assertStringEndsWith('-2', $references[1]);
+    }
+
+    public function test_refetch_after_undo_buys_a_new_code_with_a_new_reference(): void
+    {
+        $payload = $this->storefrontPayload();
+        $this->createResponses[] = $this->complete('PIN-UND-1');
+        $this->createResponses[] = $this->complete('PIN-UND-2');
+
+        $this->sell($payload)->assertCreated()->assertJsonPath('code', 'PIN-UND-1');
+        $order = Order::where('storefront_order_id', $payload['storefront_order_id'])->firstOrFail();
+        $manager = User::factory()->create(['is_active' => true]);
+        $manager->roles()->attach(Role::firstOrCreate(['name' => 'admin'])->id);
+        $this->actingAs($manager, 'admin')
+            ->postJson(route('manager.orders.undo'), ['order_id' => $order->id, 'sold_item' => $order->sold_item])
+            ->assertOk()->assertJsonPath('success', true);
+
+        $this->sell($payload)->assertCreated()->assertJsonPath('code', 'PIN-UND-2');
+
+        $references = NextLoadOrder::where('storefront_order_id', $payload['storefront_order_id'])->orderBy('id')->pluck('reference');
+        $this->assertCount(2, $references);
         $this->assertStringEndsWith('-2', $references[1]);
     }
 

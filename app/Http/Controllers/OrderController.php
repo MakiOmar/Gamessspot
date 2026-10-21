@@ -22,6 +22,7 @@ use App\Services\SettingsService;
 use App\Services\PosSaleProductResolver;
 use Rawilk\Settings\Facades\Settings;
 use App\Jobs\SendInventoryWebhookJob;
+use App\Jobs\NotifyPosOrderUndoneJob;
 use App\Services\CacheManager;
 use App\Services\CardSourcingService;
 use App\Services\NextLoad\NextLoadCatalog;
@@ -537,7 +538,11 @@ class OrderController extends Controller
                     $this->updateReportStatus($request->report_id);
                 }
 
+                $posNotice = NotifyPosOrderUndoneJob::forOrder($order);
                 $this->deleteOrderAndReports($order);
+                if ($posNotice) {
+                    dispatch($posNotice);
+                }
 
                 DB::commit();
 
