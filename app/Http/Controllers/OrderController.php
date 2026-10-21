@@ -5,8 +5,6 @@ namespace App\Http\Controllers;
 use App\Models\Order;
 use App\Models\Account;
 use Illuminate\Http\Request;
-use App\Exports\OrdersExport;
-use App\Http\Requests\ExportOrdersRequest;
 use App\Exports\CustomersExport;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Models\User;
@@ -459,16 +457,6 @@ class OrderController extends Controller
         return view('manager.orders-quick', compact('orders', 'buyer', 'historyUserIds', 'searchedUser'))->render();
     }
 
-
-    /**
-     * Export the list of orders as an Excel file.
-     *
-     * @return \Symfony\Component\HttpFoundation\BinaryFileResponse
-     */
-    public function export(ExportOrdersRequest $request)
-    {
-        return Excel::download(new OrdersExport($request->filters()), 'orders.xlsx');
-    }
 
     /**
      * Export the list of customers as an Excel file.

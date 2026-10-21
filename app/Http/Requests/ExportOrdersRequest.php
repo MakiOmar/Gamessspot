@@ -20,7 +20,7 @@ class ExportOrdersRequest extends FormRequest
     {
         return array(
             'searchOrder' => array('nullable', 'string', 'max:255'),
-            'status'      => array('nullable', 'string', 'in:' . implode(',', self::REPORT_STATUSES)),
+            'status'      => array('nullable', 'string', 'in:all,' . implode(',', self::REPORT_STATUSES)),
             'start_date'  => array('nullable', 'date_format:Y-m-d'),
             'end_date'    => array('nullable', 'date_format:Y-m-d', 'after_or_equal:start_date'),
             'id'          => array('nullable', 'integer', 'min:1'),
@@ -38,7 +38,7 @@ class ExportOrdersRequest extends FormRequest
 
         return array_filter(array(
             'search'           => isset($data['searchOrder']) ? trim($data['searchOrder']) : null,
-            'status'           => $data['status'] ?? null,
+            'status'           => ($data['status'] ?? 'all') === 'all' ? null : $data['status'],
             'start_date'       => $data['start_date'] ?? null,
             'end_date'         => $data['end_date'] ?? null,
             'store_profile_id' => isset($data['id']) ? (int) $data['id'] : null,

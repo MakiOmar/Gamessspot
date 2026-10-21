@@ -52,7 +52,8 @@
         </div>
         @endif
         <div class="container-fluid">
-            <form @unless($isCallCenter) action="{{ route('manager.orders.export') }}" @endunless method="GET">
+            <form id="ordersFilterForm" @unless($isCallCenter) action="{{ route('manager.orders.export') }}" @endunless method="POST">
+                @csrf
                 <div class="row g-2">
                     <!-- Search Input -->
                     <div class="col-12 col-md-4">
@@ -101,7 +102,11 @@
                         @if(!empty($_GET['id']))
                             <input type="hidden" name="id" value="{{ $_GET['id'] }}">
                         @endif
-                        <button type="submit" class="btn p-0 border-0 bg-transparent">
+                        <!-- Queues a background export; the file downloads when the job finishes -->
+                        <span id="ordersExportStatus" class="text-muted small align-self-center me-2 d-none">
+                            <span class="spinner-border spinner-border-sm me-1" role="status"></span>Preparing export…
+                        </span>
+                        <button type="submit" id="ordersExportBtn" class="btn p-0 border-0 bg-transparent" title="Export to Excel">
                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="36px" height="36px">
                                 <path fill="#4CAF50" d="M41,10H25v28h16c0.553,0,1-0.447,1-1V11C42,10.447,41.553,10,41,10z" />
                                 <path fill="#FFF"
@@ -803,4 +808,7 @@
             updateUnsendForm();
         });
     </script>
+    @if($canManageSellLog && ! $isCallCenter)
+        @include('manager.partials.orders_export_js')
+    @endif
 @endpush

@@ -8,6 +8,7 @@ use App\Http\Controllers\PurchaseOrderController;
 use App\Http\Controllers\TraderController;
 use App\Http\Controllers\TraderPaymentController;
 use App\Http\Controllers\OrderController;
+use App\Http\Controllers\OrderExportController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\UserHistoryController;
 use App\Http\Controllers\StoreProfileController;
@@ -712,7 +713,11 @@ Route::prefix('manager')->group(function () {
                     ->name('manager.orders.qsearch');
 
                 Route::middleware('can:manage-sell-log')->group(function () {
-                    Route::get('/export', [OrderController::class, 'export'])->name('manager.orders.export');
+                    Route::post('/export', [OrderExportController::class, 'store'])
+                        ->middleware('throttle:10,1')
+                        ->name('manager.orders.export');
+                    Route::get('/exports/{dataExport}', [OrderExportController::class, 'show'])->name('manager.orders.exports.show');
+                    Route::get('/exports/{dataExport}/download', [OrderExportController::class, 'download'])->name('manager.orders.exports.download');
                     Route::post('/store', [OrderController::class, 'store'])
                         ->middleware('throttle:5,1')
                         ->name('orders.store');

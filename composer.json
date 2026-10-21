@@ -13,6 +13,7 @@
         "laravel/tinker": "^2.9",
         "laravel/ui": "^4.6",
         "maatwebsite/excel": "^3.1",
+        "openspout/openspout": "^4.28",
         "predis/predis": "^3.2",
         "rawilk/laravel-settings": "^3.4",
         "spatie/laravel-backup": "^9.3",

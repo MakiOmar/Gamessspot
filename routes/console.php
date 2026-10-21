@@ -32,6 +32,8 @@ if (config('queue.worker_via_scheduler')) {
     Schedule::command('queue:work database --stop-when-empty')->everyMinute()->withoutOverlapping();
 }
 Schedule::command('accounts:sync-secondary-stock')->hourly();
+// Background sell log exports hold account passwords; keep them for a day only.
+Schedule::command('exports:prune')->hourly()->withoutOverlapping();
 // System Ops automatic DB backup (interval enforced inside the command)
 Schedule::command('system-ops:run-scheduled-backup')->hourly();
 // Next Load supplier (no-ops while NEXTLOAD_ENABLED=false)

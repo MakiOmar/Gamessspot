@@ -5,11 +5,11 @@ namespace App\Exports;
 use App\Models\Order;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
-use Maatwebsite\Excel\Concerns\FromQuery;
-use Maatwebsite\Excel\Concerns\WithHeadings;
-use Maatwebsite\Excel\Concerns\WithMapping;
 
-class OrdersExport implements FromQuery, WithHeadings, WithMapping
+/**
+ * Sell log export definition (query, headings, row mapping); written to XLSX by {@see \App\Services\Exports\XlsxExportWriter}.
+ */
+class OrdersExport
 {
     /**
      * @param array{search?: string, status?: string, start_date?: string, end_date?: string, store_profile_id?: int} $filters
@@ -55,6 +55,7 @@ class OrdersExport implements FromQuery, WithHeadings, WithMapping
 
     /**
      * @param Order $order
+     * @return array<int, string|int|float|null>
      */
     public function map($order): array
     {
@@ -64,16 +65,19 @@ class OrdersExport implements FromQuery, WithHeadings, WithMapping
             $order->account_mail,
             $order->account_password,
             $order->game_name ?? $order->card_category_name,
-            // Leading space keeps Excel from turning phone numbers into numbers.
-            $order->buyer_phone !== null ? ' ' . $order->buyer_phone : null,
+            // Kept as a string so the XLSX cell is text and leading zeros survive.
+            $order->buyer_phone !== null ? (string) $order->buyer_phone : null,
             $order->buyer_name,
-            $order->price,
+            $order->price !== null ? (float) $order->price : null,
             $order->sold_item,
             $order->notes,
             optional($order->created_at)->format('Y-m-d H:i:s'),
         );
     }
 
+    /**
+     * @return array<int, string>
+     */
     public function headings(): array
     {
         return array(

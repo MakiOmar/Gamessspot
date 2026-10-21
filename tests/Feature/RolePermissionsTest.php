@@ -92,7 +92,7 @@ class RolePermissionsTest extends TestCase
         $user = $this->createUserWithRole('call center');
 
         $this->actingAs($user, 'admin')
-            ->get(route('manager.orders.export'))
+            ->postJson(route('manager.orders.export'))
             ->assertStatus(403);
     }
 
