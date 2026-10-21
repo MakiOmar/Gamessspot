@@ -17,6 +17,15 @@ The Excel button on **Sell Log** and the report pages (Needs Return, Reported Is
 | `searchOrder` | Seller name, account email, buyer phone or name (contains) |
 | `id` | Store profile |
 
+## Columns
+
+ID, Seller Name, Account Mail, Password, Game Name, Buyer Phone, Buyer Name, Price, Sold Item, then:
+
+- **Sell Log:** Notes (the order's notes).
+- **Report pages** (`status` is a report status): Sell Log Notes, Report Note, Reported By, Last Action. These match the table on those pages.
+
+The file ends with Created At.
+
 ## Operations
 
 - **A queue worker is required.** On the VPS this is the `accounts-queue` container. On cron-only hosts, `QUEUE_WORKER_VIA_SCHEDULER=true` drains the queue every minute. With `QUEUE_CONNECTION=sync` the export runs inside the request (fine locally, slow for large ranges).

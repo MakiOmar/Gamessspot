@@ -3,6 +3,7 @@
 namespace App\Exports;
 
 use App\Models\Order;
+use App\Models\Report;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 
@@ -45,6 +46,7 @@ class OrdersExport
                 'orders.notes',
                 'orders.created_at',
             ))
+            ->when($this->isReportExport(), fn (Builder $query) => $query->with(array('reports.seller:id,name', 'reports.latestAction.user:id,name')))
             ->when(! empty($filters['store_profile_id']), fn (Builder $query) => $query->where('orders.store_profile_id', $filters['store_profile_id']))
             ->when(! empty($filters['status']), fn (Builder $query) => $query->whereHas('reports', fn (Builder $reports) => $reports->where('status', $filters['status'])))
             ->when(! empty($filters['search']), fn (Builder $query) => $this->applySearch($query, $filters['search']))
@@ -59,19 +61,21 @@ class OrdersExport
      */
     public function map($order): array
     {
-        return array(
-            $order->id,
-            $order->seller_name,
-            $order->account_mail,
-            $order->account_password,
-            $order->game_name ?? $order->card_category_name,
-            // Kept as a string so the XLSX cell is text and leading zeros survive.
-            $order->buyer_phone !== null ? (string) $order->buyer_phone : null,
-            $order->buyer_name,
-            $order->price !== null ? (float) $order->price : null,
-            $order->sold_item,
-            $order->notes,
-            optional($order->created_at)->format('Y-m-d H:i:s'),
+        return array_merge(
+            array(
+                $order->id,
+                $order->seller_name,
+                $order->account_mail,
+                $order->account_password,
+                $order->game_name ?? $order->card_category_name,
+                // Kept as a string so the XLSX cell is text and leading zeros survive.
+                $order->buyer_phone !== null ? (string) $order->buyer_phone : null,
+                $order->buyer_name,
+                $order->price !== null ? (float) $order->price : null,
+                $order->sold_item,
+            ),
+            $this->isReportExport() ? $this->reportCells($order) : array($order->notes),
+            array(optional($order->created_at)->format('Y-m-d H:i:s')),
         );
     }
 
@@ -80,18 +84,46 @@ class OrdersExport
      */
     public function headings(): array
     {
+        return array_merge(
+            array(
+                'ID',
+                'Seller Name',
+                'Account Mail',
+                'Password',
+                'Game Name',
+                'Buyer Phone',
+                'Buyer Name',
+                'Price',
+                'Sold Item',
+            ),
+            // Report pages (has problem, needs return, solved, archived) show these columns instead of "Notes".
+            $this->isReportExport()
+                ? array('Sell Log Notes', 'Report Note', 'Reported By', 'Last Action')
+                : array('Notes'),
+            array('Created At'),
+        );
+    }
+
+    private function isReportExport(): bool
+    {
+        return Report::isReportStatus($this->filters['status'] ?? null);
+    }
+
+    /**
+     * @return array<int, string|null>
+     */
+    private function reportCells(Order $order): array
+    {
+        $report = $order->reports;
+        $lastAction = $report?->latestAction;
+
         return array(
-            'ID',
-            'Seller Name',
-            'Account Mail',
-            'Password',
-            'Game Name',
-            'Buyer Phone',
-            'Buyer Name',
-            'Price',
-            'Sold Item',
-            'Notes',
-            'Created At',
+            $order->notes,
+            $report?->note,
+            $report?->seller?->name,
+            $lastAction
+                ? $lastAction->label() . ' by ' . ($lastAction->user?->name ?? 'deleted user') . ', ' . $lastAction->created_at?->format('Y-m-d H:i')
+                : null,
         );
     }
 

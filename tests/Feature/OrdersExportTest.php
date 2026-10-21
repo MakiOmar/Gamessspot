@@ -169,6 +169,32 @@ class OrdersExportTest extends TestCase
         $this->assertSame('2026-10-01 12:00:00', $mapped[10]);
     }
 
+    public function test_report_export_includes_sell_log_and_report_notes_like_the_page(): void
+    {
+        $order = $this->makeAccountOrder('2026-10-15 09:00:00', 'archived');
+        $order->update(['notes' => 'Sell log note']);
+        $report = $order->reports()->firstOrFail();
+        $report->update(['note' => 'Customer could not log in']);
+        $report->recordAction('archived', 'has_problem', 'archived', $this->admin->id);
+
+        $export = new OrdersExport(['status' => 'archived', 'store_profile_id' => $this->store->id]);
+        $headings = $export->headings();
+        $row = $export->query()->where('orders.id', $order->id)->get()->map(fn ($o) => $export->map($o))->first();
+        $cells = array_combine($headings, $row);
+
+        $this->assertSame('Sell log note', $cells['Sell Log Notes']);
+        $this->assertSame('Customer could not log in', $cells['Report Note']);
+        $this->assertSame($this->admin->name, $cells['Reported By']);
+        $this->assertStringStartsWith('Archived by ' . $this->admin->name, $cells['Last Action']);
+        $this->assertSame('2026-10-15 09:00:00', $cells['Created At']);
+        $this->assertNotContains('Notes', $headings);
+
+        $plain = new OrdersExport(['store_profile_id' => $this->store->id]);
+        $plainCells = array_combine($plain->headings(), $plain->map($plain->query()->where('orders.id', $order->id)->firstOrFail()));
+        $this->assertSame('Sell log note', $plainCells['Notes']);
+        $this->assertArrayNotHasKey('Report Note', $plainCells);
+    }
+
     public function test_failure_marks_export_failed_but_redelivery_of_a_running_export_does_not(): void
     {
         $running = DataExport::create(['user_id' => $this->admin->id, 'type' => DataExport::TYPE_ORDERS, 'status' => DataExport::STATUS_PROCESSING]);
