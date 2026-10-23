@@ -36,6 +36,9 @@
                             <div class="card-category-img">
                                 @if($category->poster_image)
                                     <img style="max-width:100%" src="{{ asset($category->poster_image) }}" alt="{{ $category->name }}">
+                                @elseif ($category->card_art)
+                                    {{-- No poster: generated artwork from the product name --}}
+                                    <x-card-art :art="$category->card_art" />
                                 @else
                                     <div class="card-category-img" style="width:100%;height:250px;background-color:burlywood"></div>
                                 @endif

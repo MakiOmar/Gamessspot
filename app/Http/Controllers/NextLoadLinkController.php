@@ -2,16 +2,20 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\CardArtPreviewRequest;
 use App\Http\Requests\NextLoadLinkRequest;
 use App\Http\Requests\NextLoadRestockRequest;
 use App\Models\CardCategory;
 use App\Models\NextLoadOrder;
+use App\Services\CardArt\CardArtCatalog;
+use App\Services\CardArt\CardArtPresenter;
 use App\Services\NextLoad\NextLoadClient;
 use App\Services\NextLoad\NextLoadException;
 use App\Services\NextLoad\NextLoadPurchaseService;
 use App\Services\SystemActivityLogger;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
@@ -37,7 +41,7 @@ class NextLoadLinkController extends Controller
             'products' => $this->safeProducts(),
             'categories' => CardCategory::whereNull('next_load_product_id')->orderBy('name')->get(array('id', 'name', 'price')),
             'modes' => CardCategory::SUPPLIER_MODES,
-        ));
+        ) + $this->artOptions());
     }
 
     public function store(NextLoadLinkRequest $request): JsonResponse
@@ -53,12 +57,7 @@ class NextLoadLinkController extends Controller
                 ? CardCategory::lockForUpdate()->findOrFail($data['card_category_id'])
                 : CardCategory::create(array('name' => $data['name'], 'price' => $data['price']));
 
-            $category->forceFill(array(
-                'next_load_product_id' => $product['product_id'],
-                'supplier_mode' => $data['supplier_mode'],
-                'supplier_cost' => $product['price'],
-                'supplier_synced_at' => now(),
-            ))->save();
+            $category->forceFill($this->linkAttributes($product, $data))->save();
 
             return $category;
         });
@@ -84,7 +83,7 @@ class NextLoadLinkController extends Controller
             'modes' => CardCategory::SUPPLIER_MODES,
             'recentOrders' => $cardCategory->nextLoadOrders()->latest('id')->limit(10)->get(),
             'maxRestock' => NextLoadRestockRequest::MAX_QUANTITY,
-        ));
+        ) + $this->artOptions());
     }
 
     public function update(NextLoadLinkRequest $request, CardCategory $cardCategory): JsonResponse
@@ -95,12 +94,7 @@ class NextLoadLinkController extends Controller
             return response()->json(array('success' => false, 'message' => 'That product is not in the Next Load price list.'), 422);
         }
 
-        $cardCategory->forceFill(array(
-            'next_load_product_id' => $product['product_id'],
-            'supplier_mode' => $data['supplier_mode'],
-            'supplier_cost' => $product['price'],
-            'supplier_synced_at' => now(),
-        ))->save();
+        $cardCategory->forceFill($this->linkAttributes($product, $data))->save();
         $this->audit('next_load.link_saved', $cardCategory, array('product_id' => $product['product_id'], 'mode' => $data['supplier_mode']));
 
         return response()->json(array('success' => true, 'message' => 'Supplier settings saved.'));
@@ -113,6 +107,7 @@ class NextLoadLinkController extends Controller
             'supplier_mode' => CardCategory::MODE_LOCAL_ONLY,
             'supplier_cost' => null,
             'supplier_synced_at' => null,
+            'supplier_product_name' => null,
         ))->save();
         $this->audit('next_load.link_removed', $cardCategory);
 
@@ -120,6 +115,18 @@ class NextLoadLinkController extends Controller
             'success' => true,
             'message' => '"'.$cardCategory->name.'" now sells local codes only.',
             'redirect' => route('manager.next-load.products'),
+        ));
+    }
+
+    public function artPreview(CardArtPreviewRequest $request, CardArtPresenter $presenter): JsonResponse
+    {
+        $data = $request->validated();
+        $art = $presenter->build($data['name'], $data['art_brand'] ?? null, $data['art_country'] ?? null, $data['art_value'] ?? null);
+
+        return response()->json(array(
+            'success' => true,
+            'card_art' => $art,
+            'html' => $art ? Blade::render('<x-card-art :art="$art" />', array('art' => $art)) : null,
         ));
     }
 
@@ -142,6 +149,34 @@ class NextLoadLinkController extends Controller
             'message' => $message,
             'redirect' => route('manager.next-load.orders.show', $order),
         ), $order->isFailed() ? 422 : 200);
+    }
+
+    /**
+     * Brand and country choices for the artwork override selects.
+     */
+    private function artOptions(): array
+    {
+        return array(
+            'artBrands' => array_map(fn (array $brand) => $brand['label'], CardArtCatalog::BRANDS),
+            'artCountries' => CardArtCatalog::COUNTRIES,
+        );
+    }
+
+    /**
+     * @param  array{product_id:int,product:string,price:string}  $product
+     */
+    private function linkAttributes(array $product, array $data): array
+    {
+        return array(
+            'next_load_product_id' => $product['product_id'],
+            'supplier_mode' => $data['supplier_mode'],
+            'supplier_cost' => $product['price'],
+            'supplier_synced_at' => now(),
+            'supplier_product_name' => $product['product'],
+            'art_brand' => $data['art_brand'] ?? null,
+            'art_country' => $data['art_country'] ?? null,
+            'art_value' => filled($data['art_value'] ?? null) ? trim($data['art_value']) : null,
+        );
     }
 
     /**

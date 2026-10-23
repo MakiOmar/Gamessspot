@@ -63,6 +63,16 @@ All commands are no-ops while `NEXTLOAD_ENABLED=false`.
 - **Products & links** — supplier price list with local cost; `links/new` and `links/{category}` pages for linking, sourcing mode, **Restock** (buy N codes into stock, max 50 per click) and **Unlink**.
 - **Supplier orders** — filters, details, **Refresh status**, **Release to stock** (unused codes of a completed order), **Reveal code** (recorded in the activity log as `next_load.pin_revealed`; refused if the audit write fails).
 
+## Card artwork
+
+Next Load products have no images. Categories **without a poster** get generated HTML artwork (white "GIFT CARD" band with face value and flag, brand-coloured area with logo):
+
+- **Source text:** `card_categories.supplier_product_name` (the Next Load name, saved when linking and refreshed by `nextload:sync-products`), else the category name — so local categories named like "PSN US 10$" get artwork too.
+- **Parsing** (`App\Services\CardArt\CardArtParser`): brand keywords (PlayStation/PSN, Xbox, Amazon, iTunes/Apple, Google Play, Steam, Nintendo; anything else is `generic` with its name as label), country tokens (`US`, `UK`, `KSA`, `UAE`, …; upper-case 2-letter codes only), and a value next to a currency symbol or code (`$10`, `10$`, `10 £`, `100 SAR`). No country token → country from currency; "Global" → globe icon. No value → no artwork.
+- **Overrides:** the link form (`links/{category}`) has a **Card artwork** section (brand, country flag, face value) with a live preview (`GET /manager/next-load/links/art-preview`). Leave on *Automatic* unless the preview is wrong.
+- **Output:** `card_art` on the public category APIs ([README_API.md](../README_API.md)), the `<x-card-art>` Blade component (sell screen, categories list) and the storefront `GiftCardArt` component.
+- **Assets:** `public/images/card-art/flags` (flag-icons, MIT) and `brands` (Simple Icons, CC0) — see `public/images/card-art/LICENSES.md`. Add a country/brand by dropping the SVG and adding it to `App\Services\CardArt\CardArtCatalog`.
+
 ## Security
 
 - Gift card codes (`cards.code`) and supplier pins/serials are encrypted with `APP_KEY`; `code_hash` / `pin_hash` (HMAC) keep them unique and searchable by exact value. **Rotating `APP_KEY` makes existing codes unreadable** — re-encrypt before rotating.

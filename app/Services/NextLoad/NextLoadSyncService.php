@@ -145,7 +145,7 @@ class NextLoadSyncService
     }
 
     /**
-     * Refresh supplier_cost on linked categories from the live price list.
+     * Refresh supplier_cost and product name on linked categories from the live price list.
      *
      * @return array{updated:int, missing:list<int>}
      */
@@ -162,7 +162,11 @@ class NextLoadSyncService
 
                 return;
             }
-            $category->forceFill(['supplier_cost' => $product['price'], 'supplier_synced_at' => now()])->saveQuietly();
+            $category->forceFill([
+                'supplier_cost' => $product['price'],
+                'supplier_product_name' => $product['product'],
+                'supplier_synced_at' => now(),
+            ])->saveQuietly();
             $updated++;
         });
 

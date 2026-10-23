@@ -825,6 +825,7 @@ Route::prefix('manager')->group(function () {
             Route::get('/products', [NextLoadController::class, 'products'])->name('products');
 
             Route::get('/links/new', [NextLoadLinkController::class, 'create'])->name('links.create');
+            Route::get('/links/art-preview', [NextLoadLinkController::class, 'artPreview'])->name('links.art-preview');
             Route::post('/links', [NextLoadLinkController::class, 'store'])->name('links.store');
             Route::get('/links/{cardCategory}', [NextLoadLinkController::class, 'edit'])->whereNumber('cardCategory')->name('links.edit');
             Route::put('/links/{cardCategory}', [NextLoadLinkController::class, 'update'])->whereNumber('cardCategory')->name('links.update');

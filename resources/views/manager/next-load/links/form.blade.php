@@ -30,7 +30,7 @@
                         <select id="nlProduct" name="next_load_product_id" class="form-control" required>
                             <option value="">Select a product…</option>
                             @foreach ($products as $row)
-                                <option value="{{ $row['product_id'] }}" @selected((int) $productId === $row['product_id'])>
+                                <option value="{{ $row['product_id'] }}" data-name="{{ $row['product'] }}" @selected((int) $productId === $row['product_id'])>
                                     #{{ $row['product_id'] }} — {{ $row['product'] }} ({{ $row['price'] }})
                                 </option>
                             @endforeach
@@ -78,6 +78,46 @@
                             @endforeach
                         </select>
                     </div>
+
+                    {{-- Generated artwork, shown on the sell screen and storefront when there is no poster --}}
+                    <fieldset class="border rounded p-3 mb-3">
+                        <legend class="w-auto px-2 h6 mb-0">Card artwork</legend>
+                        @if ($category?->poster_image)
+                            <p class="small text-muted">This category has a poster image, which is shown instead of the artwork.</p>
+                        @endif
+                        <div class="row">
+                            <div class="col-sm-7">
+                                <p class="small text-muted">Brand, value and flag are read from the product name. Override them only if the preview is wrong.</p>
+                                <div class="form-group">
+                                    <label for="nlArtBrand">Brand</label>
+                                    <select id="nlArtBrand" name="art_brand" class="form-control nl-art-input">
+                                        <option value="">Automatic</option>
+                                        @foreach ($artBrands as $key => $label)
+                                            <option value="{{ $key }}" @selected(($category->art_brand ?? null) === $key)>{{ $label }}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="nlArtCountry">Country flag</label>
+                                    <select id="nlArtCountry" name="art_country" class="form-control nl-art-input">
+                                        <option value="">Automatic</option>
+                                        @foreach ($artCountries as $code => $label)
+                                            <option value="{{ $code }}" @selected(($category->art_country ?? null) === $code)>{{ $label }} ({{ strtoupper($code) }})</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                                <div class="form-group mb-0">
+                                    <label for="nlArtValue">Face value</label>
+                                    <input type="text" id="nlArtValue" name="art_value" class="form-control nl-art-input" maxlength="20" placeholder="Automatic, e.g. $10 or 100 SAR" value="{{ $category->art_value ?? '' }}">
+                                </div>
+                            </div>
+                            <div class="col-sm-5">
+                                <label class="d-block">Preview</label>
+                                <div id="nlArtPreview" style="max-width:200px"></div>
+                                <small id="nlArtEmpty" class="text-muted d-none">No face value found in the name. Enter one to show artwork.</small>
+                            </div>
+                        </div>
+                    </fieldset>
 
                     <button type="submit" class="btn btn-primary" id="nlSaveBtn" @disabled($products === array())>Save</button>
                     <a href="{{ route('manager.next-load.products') }}" class="btn btn-secondary">Back</a>
@@ -145,11 +185,45 @@ jQuery(function ($) {
         $('#nlExistingFields').toggleClass('d-none', isNew);
     });
 
+    // Artwork preview from the selected product name and overrides (debounced)
+    var artTimer = null;
+    var artRequest = null;
+    function refreshArt() {
+        var name = $('#nlProduct option:selected').data('name') || '';
+        if (!name) {
+            $('#nlArtPreview').empty();
+            $('#nlArtEmpty').addClass('d-none');
+            return;
+        }
+        if (artRequest) artRequest.abort();
+        artRequest = $.get(@json(route('manager.next-load.links.art-preview')), {
+            name: name,
+            art_brand: $('#nlArtBrand').val(),
+            art_country: $('#nlArtCountry').val(),
+            art_value: $('#nlArtValue').val()
+        }).done(function (res) {
+            $('#nlArtPreview').html(res.html || '');
+            $('#nlArtEmpty').toggleClass('d-none', !!res.html);
+        }).fail(function (xhr) {
+            if (xhr.statusText !== 'abort') NextLoadUi.ajaxError(xhr, 'Could not load the artwork preview.');
+        });
+    }
+    function scheduleArt() {
+        clearTimeout(artTimer);
+        artTimer = setTimeout(refreshArt, 300);
+    }
+    $('#nlProduct, .nl-art-input').on('change', scheduleArt);
+    $('#nlArtValue').on('input', scheduleArt);
+    refreshArt();
+
     $('#nlLinkForm').on('submit', function (e) {
         e.preventDefault();
         var data = {
             next_load_product_id: $('#nlProduct').val(),
-            supplier_mode: $('#nlMode').val()
+            supplier_mode: $('#nlMode').val(),
+            art_brand: $('#nlArtBrand').val(),
+            art_country: $('#nlArtCountry').val(),
+            art_value: $('#nlArtValue').val()
         };
         if (isEdit) {
             data._method = 'PUT';

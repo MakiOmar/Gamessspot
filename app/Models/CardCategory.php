@@ -28,9 +28,13 @@ class CardCategory extends Model
     protected $fillable = [
         'name', 'price', 'poster_image', 'description',
         'supplier_mode', 'next_load_product_id', 'supplier_cost', 'supplier_synced_at',
+        'supplier_product_name', 'art_brand', 'art_country', 'art_value',
     ];
 
-    protected $hidden = ['pos_product_id', 'pos_active', 'supplier_mode', 'next_load_product_id', 'supplier_cost', 'supplier_synced_at'];
+    protected $hidden = [
+        'pos_product_id', 'pos_active', 'supplier_mode', 'next_load_product_id', 'supplier_cost', 'supplier_synced_at',
+        'supplier_product_name', 'art_brand', 'art_country', 'art_value',
+    ];
 
     protected $casts = [
         'pos_product_id' => 'integer',

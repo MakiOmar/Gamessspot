@@ -355,6 +355,7 @@ Legacy path spelling (`ctegories`). Categories that can be sold now: at least on
       "price": 50,
       "description": "<p>...</p>",
       "poster_image": "assets/...",
+      "card_art": null,
       "gallery": [],
       "reviews": { "average": 0, "count": 0, "items": [] },
       "available_count": 12
@@ -362,6 +363,22 @@ Legacy path spelling (`ctegories`). Categories that can be sold now: at least on
   ]
 }
 ```
+
+`card_art` (list and single category) is generated artwork data, returned **only when the category has no `poster_image`** and a face value can be read from the Next Load product name / category name or the admin overrides ([docs/NEXTLOAD.md](docs/NEXTLOAD.md#card-artwork)); otherwise `null`:
+
+```json
+"card_art": {
+  "brand": "playstation",
+  "brand_label": "PlayStation Store",
+  "value": "$10",
+  "country_code": "us",
+  "flag_url": "https://accounts.../images/card-art/flags/us.svg",
+  "logo_url": "https://accounts.../images/card-art/brands/playstation.svg",
+  "color": "#0070d1"
+}
+```
+
+`country_code` is `null` for global cards (`flag_url` then points to a globe icon) or when no country is known; `logo_url` is `null` for brands without a bundled logo (`brand` = `generic`).
 
 ### `GET /api/card-categories/{id}`
 
@@ -376,6 +393,7 @@ Legacy path spelling (`ctegories`). Categories that can be sold now: at least on
     "price": 50,
     "description": "<p>...</p>",
     "poster_image": "https://.../poster.webp",
+    "card_art": null,
     "gallery": [
       { "id": 2, "url": "https://...", "path": "...", "sort_order": 0 }
     ],

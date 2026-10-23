@@ -24,7 +24,7 @@ class NextLoadLinkRequest extends FormRequest
         $rules = array(
             'next_load_product_id' => array('required', 'integer', 'min:1'),
             'supplier_mode' => array('required', Rule::in(CardCategory::SUPPLIER_MODES)),
-        );
+        ) + CardArtPreviewRequest::artRules();
 
         if ($this->isMethod('post')) {
             $rules['card_category_id'] = array('nullable', 'integer', 'exists:card_categories,id', 'required_without:name');
@@ -40,6 +40,6 @@ class NextLoadLinkRequest extends FormRequest
         $this->merge(array(
             'name' => is_string($this->name) && trim($this->name) !== '' ? strip_tags(trim($this->name)) : null,
             'card_category_id' => $this->card_category_id ?: null,
-        ));
+        ) + CardArtPreviewRequest::normalizedArt($this));
     }
 }

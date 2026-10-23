@@ -9,6 +9,7 @@ use Illuminate\Http\Request;
 use App\Services\ImageUploadService;
 use App\Models\StoresProfile;
 use App\Services\NextLoad\NextLoadCatalog;
+use App\Services\CardArt\CardArtPresenter;
 
 class CardCategoryController extends Controller
 {
@@ -24,7 +25,9 @@ class CardCategoryController extends Controller
      */
     public function index()
     {
-        $categories = CardCategory::with('galleryImages')->get();
+        $cardArt = app(CardArtPresenter::class);
+        $categories = CardCategory::with('galleryImages')->get()
+            ->each(fn (CardCategory $category) => $category->setAttribute('card_art', $cardArt->forCategory($category)));
         return view('manager.card-categories', compact('categories'));
     }
 
@@ -34,6 +37,7 @@ class CardCategoryController extends Controller
     public function getCategories(?string $search = null)
     {
         $catalog = app(NextLoadCatalog::class);
+        $cardArt = app(CardArtPresenter::class);
 
         return CardCategory::query()
         ->when($search !== null && $search !== '', fn ($query) => $query->where('name', 'like', '%'.$search.'%'))
@@ -56,7 +60,8 @@ class CardCategoryController extends Controller
         })
         ->filter(fn (CardCategory $category) => $category->available_count > 0)
         ->values()
-        ->map(function (CardCategory $category) {
+        ->map(function (CardCategory $category) use ($cardArt) {
+            $category->setAttribute('card_art', $cardArt->forCategory($category));
             $category->setAttribute('gallery', $category->galleryApiPayload());
             $category->setAttribute('reviews', $category->reviewsApiPayload());
             // Ensure description is present on list payloads
@@ -104,6 +109,7 @@ class CardCategoryController extends Controller
                 'poster_image' => $cardCategory->poster_image
                     ? asset($cardCategory->poster_image)
                     : null,
+                'card_art' => app(CardArtPresenter::class)->forCategory($cardCategory),
                 'gallery' => $cardCategory->galleryApiPayload(),
                 'reviews' => $cardCategory->reviewsApiPayload(),
                 'cards_count' => $available,

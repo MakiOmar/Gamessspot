@@ -43,6 +43,9 @@
                 <td>
                     @if($category->poster_image)
                     <img src="{{ asset($category->poster_image) }}" alt="Poster" width="50" height="50">
+                    @elseif ($category->card_art)
+                    {{-- Generated artwork thumbnail --}}
+                    <div style="width:50px"><x-card-art :art="$category->card_art" /></div>
                     @else
                     N/A
                     @endif
