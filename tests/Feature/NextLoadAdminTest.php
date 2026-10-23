@@ -75,7 +75,7 @@ class NextLoadAdminTest extends TestCase
 
         $this->get(route('manager.next-load.index'))->assertOk()->assertSee('250.000');
         $this->get(route('manager.next-load.products'))->assertOk()->assertSee('amazon KSA 50 SAR');
-        $this->get(route('manager.next-load.links.create', ['product_id' => 352]))->assertOk();
+        $this->get(route('manager.next-load.links.create', ['product_id' => 352]))->assertOk()->assertSee('Linking buys nothing by itself.');
         $this->get(route('manager.next-load.links.edit', $category))->assertOk()->assertSee($category->name);
         $this->get(route('manager.next-load.orders.index'))->assertOk()->assertSee($order->reference);
         $this->get(route('manager.next-load.orders.show', $order))->assertOk()->assertDontSee('PIN-ADMIN');

@@ -33,6 +33,34 @@ Gift cards only. Subscriptions (PS Plus, etc.) stay shared game accounts.
 
 Listings (`GET /api/card-ctegories/list`) and `POST /api/orders/check_card_stock` include supplier-backed categories while the cached balance covers the product price. See [README_API.md](../README_API.md).
 
+### What linking does
+
+Linking a category (**Products & links → link**) stores the Next Load `product_id`, the mode, the supplier price (`supplier_cost`) and the product name. The hourly `nextload:sync-products` keeps price and name current. Linking alone buys nothing; codes are bought only when a sale (or **Restock**) needs one. **Unlink** sets the mode back to `local_only` and keeps existing codes and supplier orders.
+
+### Sale flow (`CardSourcingService`)
+
+Every sale (POS, storefront, manager sell screen) calls `POST /api/orders/receive`; the category mode decides where the code comes from:
+
+1. **Local code** (`local_only`, `local_first`) — the oldest active code in the category is locked, marked sold and returned. Nothing is sent to Next Load.
+2. **No local code left** — `local_only` stops with *"No active code found"*. `local_first` and `supplier_only` continue to Next Load (only if `NEXTLOAD_ENABLED=true` and credentials are set; otherwise the same error).
+3. **Checks before buying** — the linked product must still be in the price list, and its price converted with `NEXTLOAD_EXCHANGE_RATE` must not exceed the category sale price (unless `NEXTLOAD_ALLOW_LOSS=true`). Failing either returns 422 and nothing is charged.
+4. **Buy one code** — a `next_load_orders` row is saved, then `CreateOrder` is sent (see [Purchase flow](#purchase-flow-and-guarantees)):
+   - `Complete` → the pin becomes an encrypted `cards` row (`source = next_load`, `cost` = converted supplier price), the order is created and the code is returned like a local one.
+   - `InProgress` → 202 `pending`. Shop/POS: the retry for the same line returns the code. Manager sale: the code is added to stock when delivered.
+   - `Failed` → 422, not charged; a later retry uses a new reference.
+
+### Availability shown to sellers and the shop
+
+`available_count` (listings) and the stock check use local active codes first. When there are none (or the mode is `supplier_only`), the count is how many codes the cached balance can buy at the current supplier price, capped at 99. It is `0` — and the category is hidden from listings — when Next Load is disabled, the product left the price list, the balance is too low, or the loss guard blocks the price.
+
+### Choosing a mode
+
+- **`local_first`** — recommended for most cards: bulk-bought codes sell first, Next Load covers stock-outs.
+- **`supplier_only`** — no stock to manage; every sale costs the live supplier price and depends on Next Load being reachable.
+- **`local_only`** — pauses supplier buying (e.g. price problem or supplier outage) while keeping the link and price sync. **Restock** is disabled in this mode.
+
+To pre-buy stock, use **Restock** in `local_first` (codes go to local stock and sell before any new supplier purchase).
+
 ## Purchase flow and guarantees
 
 1. A `next_load_orders` row with a unique `reference` is saved **before** `CreateOrder` is sent.

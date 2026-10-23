@@ -6,6 +6,23 @@
     'local_first' => 'Local first — sell a local code, buy from Next Load when none is left',
     'supplier_only' => 'Next Load only — always buy the code at sale time',
 ))
+@php($modeHelp = array(
+    'local_only' => array(
+        'Every sale uses a code staff added to this category.',
+        'When none is left the sale fails with "No active code found". Next Load is never charged.',
+        'The link and hourly price sync are kept, so you can switch back at any time. Restock is disabled.',
+    ),
+    'local_first' => array(
+        'A sale uses a local code first (staff-added or restocked).',
+        'When none is left, one code is bought from Next Load during the sale and returned like a local code (cost = supplier price × exchange rate).',
+        'Shop and POS show local stock, then how many codes the Next Load balance can buy (max 99).',
+    ),
+    'supplier_only' => array(
+        'Every sale buys one code from Next Load; local codes in this category are not sold.',
+        'If Next Load is processing, POS/shop retry automatically and a manager sale gets the code added to stock when it arrives.',
+        'The category is hidden from sale when the balance is too low or Next Load is unreachable.',
+    ),
+))
 
 @section('title', $isEdit ? 'Supplier link: '.$category->name : 'New supplier link')
 
@@ -77,6 +94,18 @@
                                 <option value="{{ $mode }}" @selected(($category->supplier_mode ?? 'local_first') === $mode)>{{ $modeLabels[$mode] ?? $mode }}</option>
                             @endforeach
                         </select>
+                        {{-- How a sale is sourced in the selected mode (toggled by JS) --}}
+                        @foreach ($modeHelp as $mode => $lines)
+                            <ul class="small text-muted mt-2 mb-0 pl-3 nl-mode-help @if (($category->supplier_mode ?? 'local_first') !== $mode) d-none @endif" data-mode="{{ $mode }}">
+                                @foreach ($lines as $line)
+                                    <li>{{ $line }}</li>
+                                @endforeach
+                            </ul>
+                        @endforeach
+                        <small class="d-block text-muted mt-1">
+                            Supplier purchases need Next Load enabled, the product still in the price list, and a supplier price (× exchange rate) not above the sale price.
+                            Linking buys nothing by itself.
+                        </small>
                     </div>
 
                     {{-- Generated artwork, shown on the sell screen and storefront when there is no poster --}}
@@ -183,6 +212,14 @@ jQuery(function ($) {
         var isNew = $(this).val() === 'new';
         $('#nlNewFields').toggleClass('d-none', !isNew);
         $('#nlExistingFields').toggleClass('d-none', isNew);
+    });
+
+    // Show the explanation for the selected sourcing mode
+    $('#nlMode').on('change', function () {
+        var mode = $(this).val();
+        $('.nl-mode-help').each(function () {
+            $(this).toggleClass('d-none', $(this).data('mode') !== mode);
+        });
     });
 
     // Artwork preview from the selected product name and overrides (debounced)
