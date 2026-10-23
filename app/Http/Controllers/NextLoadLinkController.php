@@ -9,6 +9,7 @@ use App\Models\CardCategory;
 use App\Models\NextLoadOrder;
 use App\Services\CardArt\CardArtCatalog;
 use App\Services\CardArt\CardArtPresenter;
+use App\Services\NextLoad\NextLoadCatalog;
 use App\Services\NextLoad\NextLoadClient;
 use App\Services\NextLoad\NextLoadException;
 use App\Services\NextLoad\NextLoadPurchaseService;
@@ -70,12 +71,14 @@ class NextLoadLinkController extends Controller
         ));
     }
 
-    public function edit(CardCategory $cardCategory): View
+    public function edit(CardCategory $cardCategory, NextLoadCatalog $catalog): View
     {
         $cardCategory->loadCount(array('cards as available_count' => fn ($q) => $q->where('status', true)));
 
         return view('manager.next-load.links.form', array(
             'category' => $cardCategory,
+            'purchasedToday' => $catalog->purchasedToday($cardCategory),
+            'supplierStock' => $catalog->supplierStock($cardCategory),
             'productId' => $cardCategory->next_load_product_id,
             'product' => $cardCategory->next_load_product_id ? $this->findProduct((int) $cardCategory->next_load_product_id) : null,
             'products' => $this->safeProducts(),
@@ -173,6 +176,7 @@ class NextLoadLinkController extends Controller
             'supplier_cost' => $product['price'],
             'supplier_synced_at' => now(),
             'supplier_product_name' => $product['product'],
+            'supplier_daily_limit' => isset($data['supplier_daily_limit']) ? (int) $data['supplier_daily_limit'] : null,
             'art_brand' => $data['art_brand'] ?? null,
             'art_country' => $data['art_country'] ?? null,
             'art_value' => filled($data['art_value'] ?? null) ? trim($data['art_value']) : null,

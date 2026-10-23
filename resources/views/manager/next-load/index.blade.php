@@ -34,7 +34,7 @@
                     @elseif ($isLow)
                         Below the low-balance threshold ({{ $lowBalance }}).
                     @else
-                        Cached up to 15 minutes.
+                        Shared by all linked products. Lowered after each purchase; re-read from Next Load every 15 minutes.
                     @endif
                 </div>
             </div>
@@ -78,6 +78,50 @@
     </button>
     <span class="small text-muted ml-2">API: {{ $baseUrl }}</span>
 </div>
+
+{{-- Linked categories: local stock vs what the shared balance can buy --}}
+@if ($linked->isNotEmpty())
+    <div class="card">
+        <div class="card-header">
+            <strong>Linked categories</strong>
+            <div class="small text-muted">
+                "Can buy now" is calculated per product from the <strong>same shared balance</strong>: buying one product lowers the others.
+                Numbers are not added together. Use a daily limit or Restock to set money aside for a product.
+            </div>
+        </div>
+        <div class="card-body p-0 table-responsive">
+            <table class="table table-sm table-striped mb-0">
+                <thead>
+                    <tr>
+                        <th>Category</th>
+                        <th>Mode</th>
+                        <th class="text-right">Supplier price</th>
+                        <th class="text-right">Local codes</th>
+                        <th class="text-right">Bought today</th>
+                        <th class="text-right">Can buy now</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach ($linked as $row)
+                        @php($category = $row['category'])
+                        <tr>
+                            <td><a href="{{ route('manager.next-load.links.edit', $category) }}">{{ $category->name }}</a></td>
+                            <td>{{ str_replace('_', ' ', $category->supplier_mode) }}</td>
+                            <td class="text-right">{{ $category->supplier_cost ?? '—' }}</td>
+                            <td class="text-right">{{ $category->available_count }}</td>
+                            <td class="text-right">
+                                {{ $row['purchased_today'] }}{{ $category->supplier_daily_limit ? ' / '.$category->supplier_daily_limit : '' }}
+                            </td>
+                            <td class="text-right {{ $category->usesSupplier() && $row['can_buy'] === 0 ? 'text-danger' : '' }}">
+                                {{ $category->usesSupplier() ? $row['can_buy'] : '—' }}
+                            </td>
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        </div>
+    </div>
+@endif
 
 {{-- Recent supplier orders --}}
 <div class="card">

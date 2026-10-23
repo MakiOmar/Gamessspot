@@ -73,7 +73,7 @@ class NextLoadAdminTest extends TestCase
         $order = $this->completeOrder($category);
         $this->actingAs($this->admin, 'admin');
 
-        $this->get(route('manager.next-load.index'))->assertOk()->assertSee('250.000');
+        $this->get(route('manager.next-load.index'))->assertOk()->assertSee('250.000')->assertSee('Linked categories')->assertSee($category->name);
         $this->get(route('manager.next-load.products'))->assertOk()->assertSee('amazon KSA 50 SAR');
         $this->get(route('manager.next-load.links.create', ['product_id' => 352]))->assertOk()->assertSee('Linking buys nothing by itself.');
         $this->get(route('manager.next-load.links.edit', $category))->assertOk()->assertSee($category->name);
@@ -116,9 +116,18 @@ class NextLoadAdminTest extends TestCase
         $category = $this->linkedCategory();
         $this->actingAs($this->admin, 'admin');
 
-        $this->putJson(route('manager.next-load.links.update', $category), ['next_load_product_id' => 352, 'supplier_mode' => 'local_first'])
+        $this->putJson(route('manager.next-load.links.update', $category), ['next_load_product_id' => 352, 'supplier_mode' => 'local_first', 'supplier_daily_limit' => '20'])
             ->assertOk();
-        $this->assertSame('local_first', $category->refresh()->supplier_mode);
+        $category->refresh();
+        $this->assertSame('local_first', $category->supplier_mode);
+        $this->assertSame(20, $category->supplier_daily_limit);
+
+        $this->putJson(route('manager.next-load.links.update', $category), ['next_load_product_id' => 352, 'supplier_mode' => 'local_first', 'supplier_daily_limit' => ''])
+            ->assertOk();
+        $this->assertNull($category->refresh()->supplier_daily_limit);
+        $this->putJson(route('manager.next-load.links.update', $category), ['next_load_product_id' => 352, 'supplier_mode' => 'local_first', 'supplier_daily_limit' => 0])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('supplier_daily_limit');
 
         $this->deleteJson(route('manager.next-load.links.destroy', $category))->assertOk();
         $category->refresh();

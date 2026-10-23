@@ -217,6 +217,49 @@ class NextLoadSaleTest extends TestCase
             ->assertJsonPath('supplier_available', true);
     }
 
+    public function test_purchase_lowers_the_cached_balance_and_listing_count(): void
+    {
+        $this->productPrice = '10.000';
+        Cache::put(NextLoadCatalog::BALANCE_CACHE_KEY, '35.000', 60);
+        $this->createResponses[] = $this->complete('PIN-BAL-1', '10.000');
+
+        $this->sell($this->storefrontPayload())->assertCreated();
+
+        $this->assertSame('25.000', Cache::get(NextLoadCatalog::BALANCE_CACHE_KEY));
+        $row = collect($this->getJson('/api/card-ctegories/list')->json('data'))->firstWhere('id', $this->category->id);
+        $this->assertSame(2, $row['available_count']);
+    }
+
+    public function test_rejected_order_drops_the_cached_balance(): void
+    {
+        $this->productPrice = '10.000';
+        Cache::put(NextLoadCatalog::BALANCE_CACHE_KEY, '35.000', 60);
+        $this->createResponses[] = ['status' => 200, 'body' => ['status' => 'Success', 'data' => [
+            'order_id' => 4321, 'status' => 'Failed', 'quantity' => 1, 'card_price' => '10.000', 'order_amount' => '10.000', 'items' => [],
+        ]]];
+
+        $this->sell($this->storefrontPayload())->assertStatus(422);
+
+        $this->assertFalse(Cache::has(NextLoadCatalog::BALANCE_CACHE_KEY));
+    }
+
+    public function test_daily_limit_caps_supplier_purchases_and_stock(): void
+    {
+        $this->productPrice = '10.000';
+        Cache::put(NextLoadCatalog::BALANCE_CACHE_KEY, '500.000', 60);
+        $this->category->forceFill(['supplier_daily_limit' => 1])->save();
+        $this->createResponses[] = $this->complete('PIN-LIM-1', '10.000');
+
+        $this->postJson('/api/orders/check_card_stock', ['category_id' => $this->category->id])->assertJsonPath('stock', 1);
+        $this->sell($this->storefrontPayload('1'))->assertCreated();
+
+        $this->sell($this->storefrontPayload('2'))
+            ->assertStatus(422)
+            ->assertJsonPath('message', 'The daily Next Load limit for this category has been reached.');
+        $this->assertSame(1, NextLoadOrder::where('card_category_id', $this->category->id)->count());
+        $this->assertNull(collect($this->getJson('/api/card-ctegories/list')->json('data'))->firstWhere('id', $this->category->id));
+    }
+
     private function sell(array $payload)
     {
         return $this->postJson('/api/orders/receive', $payload);
@@ -240,11 +283,11 @@ class NextLoadSaleTest extends TestCase
 
     private ?string $storefrontOrderId = null;
 
-    private function complete(string $pin): array
+    private function complete(string $pin, string $price = '0.000'): array
     {
         return ['status' => 200, 'body' => ['status' => 'Success', 'data' => [
-            'order_id' => random_int(1000, 9999), 'status' => 'Complete', 'quantity' => 1, 'card_price' => '0.000', 'order_amount' => '0.000',
-            'product' => 'Test', 'items' => [['product_sn' => 'SN-'.$pin, 'product_pin' => $pin, 'price' => '0.000', 'product' => 'Test']],
+            'order_id' => random_int(1000, 9999), 'status' => 'Complete', 'quantity' => 1, 'card_price' => $price, 'order_amount' => $price,
+            'product' => 'Test', 'items' => [['product_sn' => 'SN-'.$pin, 'product_pin' => $pin, 'price' => $price, 'product' => 'Test']],
         ]]];
     }
 

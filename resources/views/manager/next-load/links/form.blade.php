@@ -108,6 +108,17 @@
                         </small>
                     </div>
 
+                    {{-- Caps automatic purchases so one product cannot use up the shared balance --}}
+                    <div class="form-group">
+                        <label for="nlDailyLimit">Daily Next Load limit <span class="text-muted font-weight-normal">(optional)</span></label>
+                        <input type="number" id="nlDailyLimit" name="supplier_daily_limit" class="form-control" min="1" max="1000" step="1"
+                               placeholder="No limit" value="{{ $category->supplier_daily_limit ?? '' }}">
+                        <small class="text-muted">
+                            Max codes bought from Next Load per day for sales of this category. The balance is shared by every linked product,
+                            so a limit keeps one product from using it all. Local codes and Restock are not counted.
+                        </small>
+                    </div>
+
                     {{-- Generated artwork, shown on the sell screen and storefront when there is no poster --}}
                     <fieldset class="border rounded p-3 mb-3">
                         <legend class="w-auto px-2 h6 mb-0">Card artwork</legend>
@@ -167,6 +178,14 @@
                         @if ($category->supplier_cost !== null)
                             (local {{ \App\Services\NextLoad\Money::toLocal($category->supplier_cost, config('services.nextload.exchange_rate', '1')) }})
                         @endif
+                    </p>
+                    <p class="mb-1">Bought from Next Load today: <strong>{{ $purchasedToday }}</strong>
+                        @if ($category->supplier_daily_limit)
+                            / {{ $category->supplier_daily_limit }} limit
+                        @endif
+                    </p>
+                    <p class="mb-1" title="From the shared balance; other linked products spend the same money">
+                        Can buy now: <strong>{{ $supplierStock }}</strong>
                     </p>
                     <p class="small text-muted">Synced {{ $category->supplier_synced_at?->diffForHumans() ?? 'never' }}</p>
 
@@ -258,6 +277,7 @@ jQuery(function ($) {
         var data = {
             next_load_product_id: $('#nlProduct').val(),
             supplier_mode: $('#nlMode').val(),
+            supplier_daily_limit: $('#nlDailyLimit').val(),
             art_brand: $('#nlArtBrand').val(),
             art_country: $('#nlArtCountry').val(),
             art_value: $('#nlArtValue').val()

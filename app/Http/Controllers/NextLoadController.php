@@ -34,9 +34,26 @@ class NextLoadController extends Controller
             'exchangeRate' => (string) config('services.nextload.exchange_rate', '1'),
             'lastProductSync' => Cache::get(NextLoadSyncService::LAST_PRODUCT_SYNC_KEY),
             'linkedCount' => CardCategory::whereNotNull('next_load_product_id')->count(),
+            'linked' => $configured ? $this->linkedRows($catalog) : collect(),
             'statusCounts' => NextLoadOrder::query()->selectRaw('status, COUNT(*) as total')->groupBy('status')->pluck('total', 'status'),
             'recentOrders' => NextLoadOrder::with('category:id,name')->latest('id')->limit(10)->get(),
         ));
+    }
+
+    /**
+     * Linked categories with local stock, today's supplier purchases and what the shared balance can still buy.
+     */
+    private function linkedRows(NextLoadCatalog $catalog)
+    {
+        return CardCategory::whereNotNull('next_load_product_id')
+            ->withAvailableCount()
+            ->orderBy('name')
+            ->get()
+            ->map(fn (CardCategory $category) => array(
+                'category' => $category,
+                'purchased_today' => $catalog->purchasedToday($category),
+                'can_buy' => $catalog->supplierStock($category),
+            ));
     }
 
     public function test(NextLoadCatalog $catalog): JsonResponse

@@ -54,6 +54,10 @@
                                 <p class="card-text">
                                     ${{ number_format($category->price, 2) }} ({{ $category->available_count }} available)
                                 </p>
+                                {{-- Supplier counts all draw on one Next Load balance --}}
+                                @if ($category->usesSupplier())
+                                    <p class="small text-muted mb-2">When local codes run out, the count is what the shared Next Load balance can buy (shared with other supplier cards).</p>
+                                @endif
                                 <button type="button" class="btn btn-primary" onclick="openOrderForm({{ $category->id }}, '{{ $category->name }}')">
                                     Order Code
                                 </button>

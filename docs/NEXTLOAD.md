@@ -35,7 +35,7 @@ Listings (`GET /api/card-ctegories/list`) and `POST /api/orders/check_card_stock
 
 ### What linking does
 
-Linking a category (**Products & links → link**) stores the Next Load `product_id`, the mode, the supplier price (`supplier_cost`) and the product name. The hourly `nextload:sync-products` keeps price and name current. Linking alone buys nothing; codes are bought only when a sale (or **Restock**) needs one. **Unlink** sets the mode back to `local_only` and keeps existing codes and supplier orders.
+Linking a category (**Products & links → link**) stores the Next Load `product_id`, the mode, the optional daily limit, the supplier price (`supplier_cost`) and the product name. The hourly `nextload:sync-products` keeps price and name current. Linking alone buys nothing; codes are bought only when a sale (or **Restock**) needs one. **Unlink** sets the mode back to `local_only` and keeps existing codes and supplier orders.
 
 ### Sale flow (`CardSourcingService`)
 
@@ -51,7 +51,17 @@ Every sale (POS, storefront, manager sell screen) calls `POST /api/orders/receiv
 
 ### Availability shown to sellers and the shop
 
-`available_count` (listings) and the stock check use local active codes first. When there are none (or the mode is `supplier_only`), the count is how many codes the cached balance can buy at the current supplier price, capped at 99. It is `0` — and the category is hidden from listings — when Next Load is disabled, the product left the price list, the balance is too low, or the loss guard blocks the price.
+`available_count` (listings) and the stock check use local active codes first. When there are none (or the mode is `supplier_only`), the count is how many codes the cached balance can buy at the current supplier price, capped at 99 and at what is left of the category's daily limit. It is `0` — and the category is hidden from listings — when Next Load is disabled, the product left the price list, the balance is too low, the daily limit is used up, or the loss guard blocks the price.
+
+### Managing the shared balance
+
+Next Load sells against **one money balance**, not per-product stock. Each category's count is calculated from that same balance, so the counts are **not** additive: with a balance that buys 100 Amazon *or* 150 PlayStation codes, both may show 99, and selling 50 Amazon codes leaves room for about 75 PlayStation codes.
+
+- **Balance cache:** read from Next Load every 15 minutes (`nextload:balance`), **lowered immediately** after each charged order, and dropped after a rejected order so the next check asks Next Load. Concurrent sales may make the cached value drift slightly until the next refresh.
+- **Daily limit** (link page, optional): max codes Next Load may buy per day for **sales** of that category (failed orders, local codes and Restock are not counted). When it is reached, supplier sales of that category return 422 and the category's supplier count is 0 until midnight (app timezone). Use it so one popular product cannot use the whole balance.
+- **Reserving stock:** **Restock** in `local_first` turns balance into real codes for that category now; they sell first and are unaffected by the balance or a supplier outage.
+- **Low balance:** set `NEXTLOAD_LOW_BALANCE` to about one busy day of supplier purchases (e.g. 20 × the most expensive linked product) and top up when the warning appears. Running dry makes shop orders that were already paid fail allocation (retried, then manual).
+- **Overview page:** the **Linked categories** table shows per product the local codes, purchases today (vs. limit) and what the shared balance can buy now. **Test connection** re-reads the balance after a top-up.
 
 ### Choosing a mode
 
@@ -79,7 +89,7 @@ Amounts are 3-decimal strings compared as integer thousandths (`App\Services\Nex
 | Command | Schedule | Purpose |
 |---------|----------|---------|
 | `nextload:poll` | every minute | Resend timed-out orders, poll `InProgress`, move orphaned manager / restock codes to stock. Gives up after 60 attempts (order flagged for manual review). |
-| `nextload:balance` | every 15 min | Cache the balance; low-balance warning. |
+| `nextload:balance` | every 15 min | Re-read and cache the real balance (corrects the per-purchase deductions); low-balance warning. |
 | `nextload:sync-products` | hourly | Refresh `supplier_cost` on linked categories; warn when a linked product disappears. |
 | `nextload:reconcile` | daily 03:30 | Compare supplier orders (last 2 days) with local rows; log unknown references and status mismatches. |
 
@@ -87,8 +97,8 @@ All commands are no-ops while `NEXTLOAD_ENABLED=false`.
 
 ## Admin pages (`/manager/next-load`)
 
-- **Overview** — balance, linked categories, order counts, connection test, price list refresh.
-- **Products & links** — supplier price list with local cost; `links/new` and `links/{category}` pages for linking, sourcing mode, **Restock** (buy N codes into stock, max 50 per click) and **Unlink**.
+- **Overview** — shared balance, linked categories table (local codes, bought today / limit, can buy now), order counts, connection test, price list refresh.
+- **Products & links** — supplier price list with local cost; `links/new` and `links/{category}` pages for linking, sourcing mode, daily limit, card artwork, **Restock** (buy N codes into stock, max 50 per click) and **Unlink**.
 - **Supplier orders** — filters, details, **Refresh status**, **Release to stock** (unused codes of a completed order), **Reveal code** (recorded in the activity log as `next_load.pin_revealed`; refused if the audit write fails).
 
 ## Card artwork

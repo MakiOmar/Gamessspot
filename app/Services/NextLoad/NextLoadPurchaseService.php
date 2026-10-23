@@ -83,11 +83,30 @@ class NextLoadPurchaseService
         try {
             $data = $this->client->createOrder($order->reference, $order->product_id, $order->quantity);
             $this->apply($order, $data);
+            $this->trackBalance($order);
         } catch (NextLoadException $e) {
             $this->handleSendError($order, $e);
         }
 
         return $order->refresh();
+    }
+
+    /**
+     * Keep the cached balance in step with what CreateOrder just charged (or re-read it after a rejection,
+     * which is often an empty balance).
+     */
+    private function trackBalance(NextLoadOrder $order): void
+    {
+        if ($order->isFailed()) {
+            $this->catalog->forgetBalance();
+
+            return;
+        }
+
+        $amount = Money::toMillis($order->order_amount) > 0
+            ? (string) $order->order_amount
+            : Money::fromMillis(Money::toMillis($order->card_price) * (int) $order->quantity);
+        $this->catalog->deductBalance($amount);
     }
 
     /**
@@ -171,6 +190,10 @@ class NextLoadPurchaseService
         }
         if (! $this->catalog->withinLossGuard($category, $product['price'])) {
             throw new NextLoadException(NextLoadException::FAILED, 'The Next Load price is above the sale price.');
+        }
+        $limitLeft = $purpose === NextLoadOrder::PURPOSE_SALE ? $this->catalog->dailyLimitLeft($category) : null;
+        if ($limitLeft !== null && $limitLeft < $quantity) {
+            throw new NextLoadException(NextLoadException::FAILED, 'The daily Next Load limit for this category has been reached.');
         }
 
         $attributes = [
@@ -290,6 +313,7 @@ class NextLoadPurchaseService
             'last_error' => mb_substr($e->getMessage(), 0, 500),
             'next_poll_at' => null,
         ]);
+        $this->catalog->forgetBalance();
         $this->logEvent('next_load.order_rejected', $order, ['reason' => $e->reason]);
     }
 

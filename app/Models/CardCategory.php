@@ -28,12 +28,12 @@ class CardCategory extends Model
     protected $fillable = [
         'name', 'price', 'poster_image', 'description',
         'supplier_mode', 'next_load_product_id', 'supplier_cost', 'supplier_synced_at',
-        'supplier_product_name', 'art_brand', 'art_country', 'art_value',
+        'supplier_product_name', 'art_brand', 'art_country', 'art_value', 'supplier_daily_limit',
     ];
 
     protected $hidden = [
         'pos_product_id', 'pos_active', 'supplier_mode', 'next_load_product_id', 'supplier_cost', 'supplier_synced_at',
-        'supplier_product_name', 'art_brand', 'art_country', 'art_value',
+        'supplier_product_name', 'art_brand', 'art_country', 'art_value', 'supplier_daily_limit',
     ];
 
     protected $casts = [
@@ -42,6 +42,7 @@ class CardCategory extends Model
         'pos_active' => 'boolean',
         'next_load_product_id' => 'integer',
         'supplier_synced_at' => 'datetime',
+        'supplier_daily_limit' => 'integer',
     ];
 
     /** Sales may buy from Next Load (mode allows it and a product is linked). */

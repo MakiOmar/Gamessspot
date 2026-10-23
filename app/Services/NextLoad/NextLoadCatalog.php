@@ -3,6 +3,7 @@
 namespace App\Services\NextLoad;
 
 use App\Models\CardCategory;
+use App\Models\NextLoadOrder;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 
@@ -88,11 +89,54 @@ class NextLoadCatalog
         }
 
         $price = Money::toMillis($product['price']);
-        if ($price <= 0) {
-            return self::SUPPLIER_STOCK_CAP;
+        $affordable = $price <= 0 ? self::SUPPLIER_STOCK_CAP : intdiv(max(0, Money::toMillis($balance)), $price);
+        $limitLeft = $this->dailyLimitLeft($category);
+
+        return (int) min(self::SUPPLIER_STOCK_CAP, $affordable, $limitLeft ?? PHP_INT_MAX);
+    }
+
+    /**
+     * Codes bought from Next Load today for sales of this category (restocks excluded; failed orders were not charged).
+     */
+    public function purchasedToday(CardCategory $category): int
+    {
+        return (int) NextLoadOrder::query()
+            ->where('card_category_id', $category->id)
+            ->where('purpose', NextLoadOrder::PURPOSE_SALE)
+            ->where('created_at', '>=', today())
+            ->where('status', '!=', NextLoadOrder::STATUS_FAILED)
+            ->sum('quantity');
+    }
+
+    /** Remaining sale purchases allowed today, or null when the category has no daily limit. */
+    public function dailyLimitLeft(CardCategory $category): ?int
+    {
+        if (! $category->supplier_daily_limit) {
+            return null;
         }
 
-        return (int) min(self::SUPPLIER_STOCK_CAP, intdiv(max(0, Money::toMillis($balance)), $price));
+        return max(0, (int) $category->supplier_daily_limit - $this->purchasedToday($category));
+    }
+
+    /**
+     * Lower the cached balance right after a purchase, so listings stop offering codes the balance
+     * no longer covers. Best effort: the scheduled nextload:balance replaces it with the real value.
+     */
+    public function deductBalance(string $amount): void
+    {
+        $cached = Cache::get(self::BALANCE_CACHE_KEY);
+        if (! is_string($cached) || Money::toMillis($amount) <= 0) {
+            return;
+        }
+
+        $left = max(0, Money::toMillis($cached) - Money::toMillis($amount));
+        Cache::put(self::BALANCE_CACHE_KEY, Money::fromMillis($left), self::BALANCE_TTL_SECONDS);
+    }
+
+    /** Drop the cached balance (e.g. after a rejected order) so the next check asks Next Load. */
+    public function forgetBalance(): void
+    {
+        Cache::forget(self::BALANCE_CACHE_KEY);
     }
 
     /** Supplier price converted to local currency (card cost). */
