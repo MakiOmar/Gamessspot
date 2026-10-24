@@ -4,6 +4,118 @@ Accounts can buy gift card codes from the [Next Load](https://stg.next-load.com)
 
 Gift cards only. Subscriptions (PS Plus, etc.) stay shared game accounts.
 
+The **staff guide** below needs no technical knowledge. Technical details start at [Setup](#setup).
+
+## Staff guide (plain language)
+
+### The two places a code can come from
+
+Think of it like a shop:
+
+- **Your drawer** = codes your team already has in the system (added by hand, or bought earlier with **Restock**). We call these *local codes*.
+- **Next Load** = a wholesaler. You put money in your Next Load account (your **balance**). When the system buys a code from them, the price is taken from that balance and the code arrives in seconds.
+
+Each gift card category (for example *"Amazon KSA 100 SAR"*) has a **mode** that decides: drawer, wholesaler, or both.
+
+Where to find everything: **Manager → Gift Cards → Next Load Supplier**.
+
+### What "linking" a category means
+
+Linking tells the system: *"This card of ours is the same as that product at Next Load."*
+
+How to link:
+
+1. Open **Products & links**, find the product (e.g. *amazon KSA 100 SAR*) and click **Link / create category**.
+2. Choose an **existing category** of yours, or **create a new one** (type a name and the price you sell it for).
+3. Choose a **mode** (explained below). If unsure, pick **Local first**.
+4. Optional: a **daily limit** and the **card artwork**.
+5. Click **Save**.
+
+What linking does **not** do:
+
+- It does **not** buy anything and does **not** spend money. Money is only spent when a customer actually buys a card (or when you press **Restock**).
+- It does **not** change the price you sell at. You still decide your sale price.
+
+What happens after linking:
+
+- Every hour the system checks Next Load's price for that product.
+- If Next Load's price becomes **higher than your sale price**, the system **will not buy** (so you never sell at a loss). Raise your sale price to start selling again.
+- **Unlink** turns the category back to *Local only*. Codes already in your drawer stay there.
+
+### The three modes — with an example
+
+Example for all three: you sell **Amazon KSA 100 SAR** cards. Your drawer has **5 codes**. A customer buys one card.
+
+#### 1. Local only — "only sell what's in my drawer"
+
+| Situation | What happens |
+|-----------|--------------|
+| Drawer has 5 codes | The customer gets a code from the drawer. Drawer now has 4. Next Load is never used. |
+| Drawer is empty | The card **disappears from the shop** and the sell screen says *"No active code found"*. Nothing is bought. |
+
+Use it when: you only want to sell codes you already bought, or you want to **pause** buying from Next Load (for example, the price went up).
+
+#### 2. Local first — "sell from my drawer, then from Next Load" (recommended)
+
+| Situation | What happens |
+|-----------|--------------|
+| Drawer has 5 codes | Sales 1 to 5 use the drawer. No money is spent at Next Load. |
+| Sale number 6 (drawer empty) | The system **automatically buys 1 code** from Next Load and gives it to the customer. The price is taken from your balance. |
+| Drawer empty **and** balance too low | The card disappears from the shop until you top up. |
+
+Use it when: you want to sell cheap bulk codes first and **never run out**. Best choice for most cards.
+
+#### 3. Next Load only — "always buy a fresh code from Next Load"
+
+| Situation | What happens |
+|-----------|--------------|
+| Any sale | The system buys **1 code from Next Load** for that customer, every time. |
+| Your drawer | Is **ignored**. The 5 codes stay there unsold (switch to *Local first* to sell them). |
+| Balance too low | The card disappears from the shop until you top up. |
+
+Use it when: you don't want to manage any stock at all.
+
+### What the customer sees
+
+- **Normal case:** the customer gets the code straight away, whether it came from the drawer or from Next Load. They can't tell the difference.
+- **Next Load is slow ("still processing"):**
+  - *Online shop / POS:* the system keeps trying by itself. The customer gets the code once it arrives (by email for online orders).
+  - *Manager sell screen:* you see *"Next Load is still processing"*. The code is put **in your drawer** when it arrives. Sell it again from the drawer.
+- **Next Load refuses the order:** **no money is taken**. Try again, or check the balance.
+
+### The balance is shared — read this
+
+Your Next Load balance is **one wallet for all cards**.
+
+Example: your balance can buy **100 Amazon cards** *or* **150 PlayStation cards**.
+
+- The shop may show **99 available** for Amazon **and** 99 for PlayStation. That does **not** mean you have 198 cards. Both numbers come from the same money.
+- If you sell 50 Amazon cards, half the money is gone. PlayStation can now only buy about 75.
+
+To control it:
+
+- **Daily limit** (on the link page): for example *"Amazon: max 30 per day"*. After 30, Amazon stops buying from Next Load until tomorrow, so money is left for other cards. Empty = no limit.
+- **Restock** (on the link page, mode *Local first*): buy codes **now** into your drawer, e.g. 20 PlayStation codes. That money is "reserved" for PlayStation: those codes are yours and sell first. Up to 50 per click.
+  - Do **not** restock in *Next Load only* mode: that mode ignores the drawer, so restocked codes would not sell.
+- **Top up** before the money runs out. The admin can set a low-balance warning. After topping up, press **Test connection** on the overview page so the shop updates right away.
+
+### Daily checklist
+
+1. Open **Next Load Supplier → Overview**.
+2. Check the **Balance**. If it is red (low), top up at Next Load.
+3. In **Linked categories**, check **Can buy now**. A red **0** means that card can't be bought from Next Load right now. The reason is low balance, the daily limit being used up, or Next Load's price being above your sale price.
+4. Check **Supplier orders**. Orders marked **failed** cost nothing. Orders that are stuck **in progress** for a long time should be reported to the admin.
+
+### Quick answers
+
+| Question | Answer |
+|----------|--------|
+| I linked a card but nothing was bought. Is that broken? | No. Codes are only bought when someone buys the card (or you press Restock). |
+| A card disappeared from the shop. | Drawer is empty and Next Load can't buy: balance is low, daily limit reached, mode is *Local only*, or Next Load's price is above your sale price. |
+| Which mode should I use? | **Local first**, unless you have a reason not to. |
+| I want to stop buying from Next Load for one card. | Switch that card to **Local only**. It still sells what's in the drawer. |
+| A customer was charged but got no code. | Tell the admin with the order number. The system retries by itself first; the admin can finish it manually. |
+
 ## Setup
 
 1. Add the credentials to `.env` (server-side only; never in POS, the storefront or the mobile app):
