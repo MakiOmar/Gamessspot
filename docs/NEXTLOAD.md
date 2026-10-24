@@ -12,12 +12,24 @@ The **staff guide** below needs no technical knowledge. Technical details start 
 
 Think of it like a shop:
 
-- **Your drawer** = codes your team already has in the system (added by hand, or bought earlier with **Restock**). We call these *local codes*.
+- **Your drawer** = codes already saved in the system for that card. We call these *local codes*. They get there in two ways only:
+  - **By hand:** **Gift Cards → Gift Cards List/Add** (same as before Next Load existed).
+  - **With Restock:** you press a button and choose how many codes to buy from Next Load now (see [Restock](#restock--buying-codes-in-advance)).
 - **Next Load** = a wholesaler. You put money in your Next Load account (your **balance**). When the system buys a code from them, the price is taken from that balance and the code arrives in seconds.
 
 Each gift card category (for example *"Amazon KSA 100 SAR"*) has a **mode** that decides: drawer, wholesaler, or both.
 
 Where to find everything: **Manager → Gift Cards → Next Load Supplier**.
+
+### The three modes at a glance
+
+| | Local only | Local first (recommended) | Next Load only |
+|---|---|---|---|
+| Where a sale's code comes from | Drawer only | Drawer first, then Next Load | Next Load only |
+| Do I have to add codes? | **Yes**, by hand | **No** (optional) | **No** |
+| Buys from Next Load by itself? | Never | Only when the drawer is empty, **1 code per sale** | Every sale, **1 code per sale** |
+| Restock button | Off | On | On (but don't use it — see below) |
+| Codes in the drawer | Sold | Sold first | **Ignored** (not sold) |
 
 ### What "linking" a category means
 
@@ -34,6 +46,7 @@ How to link:
 What linking does **not** do:
 
 - It does **not** buy anything and does **not** spend money. Money is only spent when a customer actually buys a card (or when you press **Restock**).
+- It does **not** add codes. An existing category keeps the codes it already had; a newly created category starts **empty**.
 - It does **not** change the price you sell at. You still decide your sale price.
 
 What happens after linking:
@@ -53,7 +66,8 @@ Example for all three: you sell **Amazon KSA 100 SAR** cards. Your drawer has **
 | Drawer has 5 codes | The customer gets a code from the drawer. Drawer now has 4. Next Load is never used. |
 | Drawer is empty | The card **disappears from the shop** and the sell screen says *"No active code found"*. Nothing is bought. |
 
-Use it when: you only want to sell codes you already bought, or you want to **pause** buying from Next Load (for example, the price went up).
+- **Codes:** you must add them **by hand**. The Restock button is off in this mode.
+- **Use it when:** you only want to sell codes you already have, or you want to **pause** buying from Next Load (for example, the price went up).
 
 #### 2. Local first — "sell from my drawer, then from Next Load" (recommended)
 
@@ -63,7 +77,8 @@ Use it when: you only want to sell codes you already bought, or you want to **pa
 | Sale number 6 (drawer empty) | The system **automatically buys 1 code** from Next Load and gives it to the customer. The price is taken from your balance. |
 | Drawer empty **and** balance too low | The card disappears from the shop until you top up. |
 
-Use it when: you want to sell cheap bulk codes first and **never run out**. Best choice for most cards.
+- **Codes:** adding codes is **optional**. If the drawer is empty from day one, **every** sale buys from Next Load (just like *Next Load only*) until you add some. Fill the drawer by hand, or with **Restock**.
+- **Use it when:** you want to sell codes you already have first and **never run out**. Best choice for most cards.
 
 #### 3. Next Load only — "always buy a fresh code from Next Load"
 
@@ -73,7 +88,32 @@ Use it when: you want to sell cheap bulk codes first and **never run out**. Best
 | Your drawer | Is **ignored**. The 5 codes stay there unsold (switch to *Local first* to sell them). |
 | Balance too low | The card disappears from the shop until you top up. |
 
-Use it when: you don't want to manage any stock at all.
+- **Codes:** you don't add any. Don't use **Restock** here either: restocked codes go to the drawer, and this mode never sells from the drawer.
+- **Use it when:** you don't want to manage any stock at all.
+
+### Restock — buying codes in advance
+
+Restock is a button on the card's link page (**Next Load Supplier → Products & links → open the linked card**). It buys codes **now** and puts them in your drawer, ready to sell.
+
+**It never runs by itself.** Nothing refills your stock automatically. You decide when and how many.
+
+Step by step:
+
+1. Click **Restock from Next Load**.
+2. A box asks **how many codes** to buy. It starts at **1**; you can enter **1 to 50**.
+3. Click **Buy codes** (or **Cancel** — nothing is spent).
+4. Your balance goes down by *number of codes × Next Load price*. Example: 10 codes × 26.5 = **265** taken from the balance.
+5. You will see one of these:
+   - *"10 code(s) added to stock"* — done, the codes are in the drawer.
+   - *"Next Load is processing the order"* — the codes are added to the drawer by themselves when they arrive. No need to click again.
+   - *"Next Load could not fulfil the order (not charged)"* — nothing was taken. Check the balance and try again.
+
+Good to know:
+
+- Only works in **Local first** or **Next Load only** (and is only useful in **Local first**).
+- It won't buy if Next Load's price is **above your sale price**.
+- The **daily limit does not apply** to Restock: you chose the amount yourself.
+- Need more than 50? Click Restock again.
 
 ### What the customer sees
 
@@ -95,8 +135,7 @@ Example: your balance can buy **100 Amazon cards** *or* **150 PlayStation cards*
 To control it:
 
 - **Daily limit** (on the link page): for example *"Amazon: max 30 per day"*. After 30, Amazon stops buying from Next Load until tomorrow, so money is left for other cards. Empty = no limit.
-- **Restock** (on the link page, mode *Local first*): buy codes **now** into your drawer, e.g. 20 PlayStation codes. That money is "reserved" for PlayStation: those codes are yours and sell first. Up to 50 per click.
-  - Do **not** restock in *Next Load only* mode: that mode ignores the drawer, so restocked codes would not sell.
+- **Restock** (mode *Local first*): buy, for example, 20 PlayStation codes **now**. That money is now "reserved" for PlayStation: the codes are in your drawer and sell first. See [Restock](#restock--buying-codes-in-advance).
 - **Top up** before the money runs out. The admin can set a low-balance warning. After topping up, press **Test connection** on the overview page so the shop updates right away.
 
 ### Daily checklist
@@ -111,6 +150,9 @@ To control it:
 | Question | Answer |
 |----------|--------|
 | I linked a card but nothing was bought. Is that broken? | No. Codes are only bought when someone buys the card (or you press Restock). |
+| In *Local first*, do I have to add codes myself? | No. With an empty drawer, each sale buys one code from Next Load. Add codes (by hand or Restock) only if you want to sell from stock first. |
+| Does Restock keep my stock full automatically? | No. It buys only when you click it, and only the number you type (1–50). |
+| How do I add codes by hand? | **Gift Cards → Gift Cards List/Add**, same as before. |
 | A card disappeared from the shop. | Drawer is empty and Next Load can't buy: balance is low, daily limit reached, mode is *Local only*, or Next Load's price is above your sale price. |
 | Which mode should I use? | **Local first**, unless you have a reason not to. |
 | I want to stop buying from Next Load for one card. | Switch that card to **Local only**. It still sells what's in the drawer. |
