@@ -8,6 +8,92 @@
     div.iti{
         width: 100%
     }
+    /* Brand tiles (mobile-first: 2 columns, wider screens fit more) */
+    .sell-brands{
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+    }
+    @media (min-width: 768px){
+        .sell-brands{ grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); }
+    }
+    .sell-brand{
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: .35rem;
+        padding: .75rem;
+        border: 1px solid #dee2e6;
+        border-radius: .75rem;
+        background: #fff;
+        color: inherit;
+        text-align: center;
+        cursor: pointer;
+        transition: box-shadow .15s, transform .15s;
+    }
+    .sell-brand:hover, .sell-brand:focus{
+        color: inherit;
+        text-decoration: none;
+        box-shadow: 0 .25rem .75rem rgba(0,0,0,.12);
+        transform: translateY(-2px);
+    }
+    .sell-brand__logo{
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        aspect-ratio: 16 / 9;
+        border-radius: .5rem;
+    }
+    .sell-brand__logo img{
+        max-width: 55%;
+        max-height: 60%;
+        object-fit: contain;
+    }
+    .sell-brand__initial{
+        color: #fff;
+        font-size: 2rem;
+        font-weight: 700;
+    }
+    .sell-brand__label{ font-weight: 600; }
+    .sell-brand__count{ font-size: .85rem; color: #6c757d; }
+    .sell-crumbs{
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: .4rem;
+    }
+    .sell-crumbs__sep{ color: #6c757d; }
+    /* Country picker inside the brand modal */
+    .sell-countries{
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: .5rem;
+    }
+    .sell-country{
+        display: flex;
+        align-items: center;
+        gap: .5rem;
+        padding: .5rem .65rem;
+        border: 1px solid #dee2e6;
+        border-radius: .5rem;
+        color: inherit;
+    }
+    .sell-country:hover, .sell-country:focus{
+        color: inherit;
+        text-decoration: none;
+        background: #f8f9fa;
+    }
+    .sell-country__flag{
+        width: 28px;
+        height: 20px;
+        object-fit: cover;
+        border-radius: 3px;
+        flex-shrink: 0;
+    }
+    .sell-country__flag--blank{ background: #e9ecef; }
+    .sell-country__label{ flex: 1; min-width: 0; }
 </style>
 @endpush
 @section('content')
@@ -24,11 +110,63 @@
             </form>
         </div>
 
-        @if($categories->isEmpty())
+        @php($sellUrl = route('manager.sell-cards'))
+        @if($categories->isEmpty() && empty($groups))
             <div class="alert alert-warning" role="alert">
                 No card categories with available codes (local or from Next Load) are currently found.
             </div>
+        @elseif($browsing)
+            {{-- Step 1: pick a brand; brands with several countries open a country modal --}}
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h2 class="h5 mb-0">Choose a brand</h2>
+                <a href="{{ $sellUrl }}?all=1" class="btn btn-outline-secondary btn-sm">All cards</a>
+            </div>
+            <div class="sell-brands">
+                @foreach($groups as $group)
+                    @php($single = count($group['countries']) === 1)
+                    @if($single)
+                        <a class="sell-brand" href="{{ $sellUrl }}?{{ http_build_query(['brand' => $group['brand'], 'country' => $group['countries'][0]['key']]) }}">
+                    @else
+                        <button type="button" class="sell-brand" data-toggle="modal" data-target="#brandModal-{{ $group['brand'] }}">
+                    @endif
+                        {{-- Logo on the brand colour, or the label when no logo file exists --}}
+                        <span class="sell-brand__logo" style="background-color: {{ $group['color'] }}">
+                            @if($group['logo_url'])
+                                <img src="{{ $group['logo_url'] }}" alt="" loading="lazy">
+                            @else
+                                <span class="sell-brand__initial">{{ mb_substr($group['label'], 0, 1) }}</span>
+                            @endif
+                        </span>
+                        <span class="sell-brand__label">{{ $group['label'] }}</span>
+                        <span class="sell-brand__count">{{ $group['count'] }} {{ \Illuminate\Support\Str::plural('card', $group['count']) }}</span>
+                    @if($single)
+                        </a>
+                    @else
+                        </button>
+                    @endif
+                @endforeach
+            </div>
         @else
+            {{-- Brand/country breadcrumb above a filtered grid --}}
+            @if($brandGroup)
+                <nav aria-label="Gift card filter" class="sell-crumbs mb-3">
+                    <a href="{{ $sellUrl }}">All brands</a>
+                    <span class="sell-crumbs__sep">&rsaquo;</span>
+                    <strong>{{ $brandGroup['label'] }}</strong>
+                    <span class="sell-crumbs__sep">&rsaquo;</span>
+                    <strong>{{ $country ? \App\Services\CardArt\CardArtCatalog::countryLabel($country) : 'All countries' }}</strong>
+                    @if(count($brandGroup['countries']) > 1)
+                        <button type="button" class="btn btn-link btn-sm" data-toggle="modal" data-target="#brandModal-{{ $brandGroup['brand'] }}">Change country</button>
+                    @endif
+                </nav>
+            @elseif(blank($query))
+                <div class="mb-3"><a href="{{ $sellUrl }}">&lsaquo; All brands</a></div>
+            @endif
+        @endif
+
+        @if($categories->isEmpty() && ! $browsing && ! empty($groups))
+            <div class="alert alert-info" role="alert">No cards match this selection.</div>
+        @elseif(! $browsing && $categories->isNotEmpty())
             <div class="row">
                 @foreach($categories as $category)
                     <div class="col-12 col-md-4 mb-4">
@@ -68,6 +206,39 @@
             </div>
         @endif
     </div>
+
+    {{-- Country pickers: one per brand that is sold in several countries --}}
+    @foreach($groups as $group)
+        @continue(count($group['countries']) < 2)
+        <div class="modal fade" id="brandModal-{{ $group['brand'] }}" tabindex="-1" aria-labelledby="brandModalLabel-{{ $group['brand'] }}" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="brandModalLabel-{{ $group['brand'] }}">{{ $group['label'] }}: choose country</h5>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="sell-countries">
+                            @foreach($group['countries'] as $option)
+                                <a class="sell-country" href="{{ $sellUrl }}?{{ http_build_query(['brand' => $group['brand'], 'country' => $option['key']]) }}">
+                                    @if($option['flag_url'])
+                                        <img class="sell-country__flag" src="{{ $option['flag_url'] }}" alt="" loading="lazy">
+                                    @else
+                                        <span class="sell-country__flag sell-country__flag--blank" aria-hidden="true"></span>
+                                    @endif
+                                    <span class="sell-country__label">{{ $option['label'] }}</span>
+                                    <span class="badge badge-light">{{ $option['count'] }}</span>
+                                </a>
+                            @endforeach
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <a href="{{ $sellUrl }}?{{ http_build_query(['brand' => $group['brand']]) }}" class="btn btn-outline-secondary btn-sm">All {{ $group['label'] }} cards</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    @endforeach
 
 
     <!-- Order Form Modal -->

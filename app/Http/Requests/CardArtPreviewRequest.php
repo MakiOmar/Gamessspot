@@ -4,6 +4,7 @@ namespace App\Http\Requests;
 
 use App\Services\CardArt\CardArtCatalog;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
 /**
@@ -46,7 +47,7 @@ class CardArtPreviewRequest extends FormRequest
     /**
      * @return array{art_brand: ?string, art_country: ?string, art_value: ?string}
      */
-    public static function normalizedArt(FormRequest $request): array
+    public static function normalizedArt(Request $request): array
     {
         $value = $request->input('art_value');
 

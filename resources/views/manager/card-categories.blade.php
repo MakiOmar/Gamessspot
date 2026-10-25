@@ -101,6 +101,35 @@
                         <small class="text-muted">Up to 8 images.</small>
                         <div id="existingCategoryGallery" class="d-flex flex-wrap gap-2 mt-2"></div>
                     </div>
+                    {{-- Overrides for the brand/country grouping on Sell Gift Cards and the shop, and the generated artwork --}}
+                    <fieldset class="border rounded p-3 mb-3">
+                        <legend class="w-auto px-2 h6 mb-0">Brand and country</legend>
+                        <p class="small text-muted">Read from the category name (or the Next Load product name). Change them only if the card is grouped under the wrong brand or country.</p>
+                        <div class="row">
+                            <div class="col-md-4 mb-3 mb-md-0">
+                                <label for="art_brand" class="form-label">Brand</label>
+                                <select class="form-control" id="art_brand" name="art_brand">
+                                    <option value="">Automatic</option>
+                                    @foreach ($artBrands as $key => $label)
+                                        <option value="{{ $key }}">{{ $label }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="col-md-4 mb-3 mb-md-0">
+                                <label for="art_country" class="form-label">Country</label>
+                                <select class="form-control" id="art_country" name="art_country">
+                                    <option value="">Automatic</option>
+                                    @foreach ($artCountries as $code => $label)
+                                        <option value="{{ $code }}">{{ $label }} ({{ strtoupper($code) }})</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label for="art_value" class="form-label">Face value</label>
+                                <input type="text" class="form-control" id="art_value" name="art_value" maxlength="20" placeholder="Automatic, e.g. $10 or 100 SAR">
+                            </div>
+                        </div>
+                    </fieldset>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
@@ -193,6 +222,9 @@
                 document.getElementById('categoryId').value = data.id;
                 document.getElementById('name').value = data.name;
                 document.getElementById('price').value = data.price;
+                document.getElementById('art_brand').value = data.art_brand || '';
+                document.getElementById('art_country').value = data.art_country || '';
+                document.getElementById('art_value').value = data.art_value || '';
                 document.getElementById('categoryModalLabel').innerText = 'Edit Category';
                 if (window.setCategoryDescription) {
                     window.setCategoryDescription(data.description || '');
@@ -225,6 +257,7 @@
             method: 'POST',
             headers: {
                 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                'Accept': 'application/json',
             },
             body: formData
         }).then(response => response.json()).then(data => {
@@ -241,7 +274,8 @@
                 Swal.fire({
                     icon: 'error',
                     title: 'Error!',
-                    text: 'Failed to save category'
+                    // 422 responses carry the first validation message
+                    text: data.message || 'Failed to save category'
                 });
             }
         }).catch(error => {

@@ -380,6 +380,22 @@ Legacy path spelling (`ctegories`). Categories that can be sold now: at least on
 
 `country_code` is `null` for global cards (`flag_url` then points to a globe icon) or when no country is known; `logo_url` is `null` for brands without a bundled logo (`brand` = `generic`).
 
+`classification` (list and single category) is **always present**, poster or not, and drives the brand → country browsing on Sell Gift Cards and the shop:
+
+```json
+"classification": {
+  "brand": "amazon",
+  "brand_label": "Amazon",
+  "logo_url": "https://accounts.../images/card-art/brands/amazon.svg",
+  "color": "#ff9900",
+  "country": "sa",
+  "country_label": "Saudi Arabia",
+  "flag_url": "https://accounts.../images/card-art/flags/sa.svg"
+}
+```
+
+`brand` is a known brand key or `other` (label "Other", no logo). `country` is an ISO-2 code, `global` (name contains "Global"; globe flag) or `other` (no country found; no flag). Same parsing and admin overrides as `card_art`.
+
 ### `GET /api/card-categories/{id}`
 
 **Success `200`**

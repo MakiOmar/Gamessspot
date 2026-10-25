@@ -6,7 +6,8 @@ use App\Models\CardCategory;
 
 /**
  * Builds the "card_art" payload used to render HTML artwork for categories
- * without a poster image (typically Next Load products).
+ * without a poster image (typically Next Load products), and the brand/country
+ * "classification" used to browse gift cards.
  */
 final class CardArtPresenter
 {
@@ -56,6 +57,43 @@ final class CardArtPresenter
             'flag_url' => $flag ? $this->assetIfExists(CardArtCatalog::flagPath($flag)) : null,
             'logo_url' => $known ? $this->assetIfExists(CardArtCatalog::logoPath($brand)) : null,
             'color' => $known['color'] ?? CardArtCatalog::GENERIC_COLOR,
+        ];
+    }
+
+    /**
+     * Brand and country used to browse cards (always returned, poster or not).
+     * `country` is an ISO-2 code, "global" or "other".
+     *
+     * @return array{brand: string, brand_label: string, logo_url: ?string, color: string, country: string, country_label: string, flag_url: ?string}
+     */
+    public function classify(CardCategory $category): array
+    {
+        $parsed = $this->parser->parse((string) ($category->supplier_product_name ?: $category->name));
+
+        $brand = isset(CardArtCatalog::BRANDS[$category->art_brand ?? '']) ? $category->art_brand : $parsed['brand'];
+        $brand = isset(CardArtCatalog::BRANDS[$brand]) ? $brand : CardArtCatalog::OTHER_BRAND;
+
+        $country = match (true) {
+            isset(CardArtCatalog::COUNTRIES[$category->art_country ?? '']) => $category->art_country,
+            $parsed['global'] => CardArtCatalog::GLOBAL_COUNTRY,
+            $parsed['country'] !== null => $parsed['country'],
+            default => CardArtCatalog::OTHER_COUNTRY,
+        };
+        $flag = match ($country) {
+            CardArtCatalog::GLOBAL_COUNTRY => CardArtCatalog::GLOBAL_FLAG,
+            CardArtCatalog::OTHER_COUNTRY => null,
+            default => $country,
+        };
+        $known = CardArtCatalog::BRANDS[$brand] ?? null;
+
+        return [
+            'brand' => $brand,
+            'brand_label' => CardArtCatalog::brandLabel($brand),
+            'logo_url' => $known ? $this->assetIfExists(CardArtCatalog::logoPath($brand)) : null,
+            'color' => $known['color'] ?? CardArtCatalog::GENERIC_COLOR,
+            'country' => $country,
+            'country_label' => CardArtCatalog::countryLabel($country),
+            'flag_url' => $flag ? $this->assetIfExists(CardArtCatalog::flagPath($flag)) : null,
         ];
     }
 

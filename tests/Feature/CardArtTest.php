@@ -150,10 +150,146 @@ class CardArtTest extends TestCase
         $this->categoryWithStock('Steam 20 EUR');
 
         $this->actingAs($this->userWithRole('admin'), 'admin')
-            ->get(route('manager.sell-cards'))
+            ->get(route('manager.sell-cards', ['all' => 1]))
             ->assertOk()
             ->assertSee('gift-card-art__value', false)
             ->assertSee('€20');
+    }
+
+    public function test_api_returns_classification_even_with_a_poster(): void
+    {
+        $poster = $this->categoryWithStock('Amazon KSA 50 SAR', 'images/posters/demo.webp');
+
+        $row = collect($this->getJson('/api/card-ctegories/list')->assertOk()->json('data'))->firstWhere('id', $poster->id);
+        $this->assertSame('amazon', $row['classification']['brand']);
+        $this->assertSame('sa', $row['classification']['country']);
+        $this->assertSame('Saudi Arabia', $row['classification']['country_label']);
+
+        $this->getJson('/api/card-categories/'.$poster->id)
+            ->assertOk()
+            ->assertJsonPath('data.classification.brand', 'amazon')
+            ->assertJsonPath('data.classification.country', 'sa');
+    }
+
+    public function test_sell_screen_shows_brand_tiles_and_country_modal(): void
+    {
+        $this->categoryWithStock('Amazon KSA 100 SAR');
+        $this->categoryWithStock('Amazon UK 10 £');
+        $this->categoryWithStock('Steam 20 EUR');
+
+        $this->actingAs($this->userWithRole('admin'), 'admin')
+            ->get(route('manager.sell-cards'))
+            ->assertOk()
+            ->assertSee('Choose a brand')
+            ->assertSee('data-target="#brandModal-amazon"', false)
+            ->assertSee('id="brandModal-amazon"', false)
+            ->assertSee('brand=amazon&amp;country=sa', false)
+            // Steam is sold in one country: the tile links straight to its cards.
+            ->assertSee('brand=steam&amp;country=eu', false)
+            ->assertDontSee('id="brandModal-steam"', false)
+            ->assertDontSee('Order Code');
+    }
+
+    public function test_sell_screen_filters_by_brand_and_country(): void
+    {
+        $sa = $this->categoryWithStock('Amazon KSA 100 SAR');
+        $uk = $this->categoryWithStock('Amazon UK 10 £');
+        $steam = $this->categoryWithStock('Steam 20 EUR');
+        $admin = $this->userWithRole('admin');
+
+        $this->actingAs($admin, 'admin')
+            ->get(route('manager.sell-cards', ['brand' => 'amazon', 'country' => 'sa']))
+            ->assertOk()
+            ->assertSee($sa->name)
+            ->assertDontSee($uk->name)
+            ->assertDontSee($steam->name)
+            ->assertSee('Saudi Arabia')
+            ->assertSee('Change country');
+
+        // A single-country brand resolves its country; unknown keys fall back to the tiles.
+        $this->actingAs($admin, 'admin')
+            ->get(route('manager.sell-cards', ['brand' => 'steam']))
+            ->assertOk()
+            ->assertSee($steam->name)
+            ->assertDontSee($sa->name)
+            ->assertDontSee('Change country');
+        $this->actingAs($admin, 'admin')
+            ->get(route('manager.sell-cards', ['brand' => 'nokia', 'country' => 'zz']))
+            ->assertOk()
+            ->assertSee('Choose a brand');
+    }
+
+    public function test_sell_search_and_all_cards_show_the_full_grid(): void
+    {
+        $sa = $this->categoryWithStock('Amazon KSA 100 SAR');
+        $steam = $this->categoryWithStock('Steam 20 EUR');
+        $admin = $this->userWithRole('admin');
+
+        $this->actingAs($admin, 'admin')
+            ->get(route('manager.sell-cards.search', ['q' => $steam->name]))
+            ->assertOk()
+            ->assertSee($steam->name)
+            ->assertDontSee($sa->name)
+            ->assertDontSee('Choose a brand');
+
+        $this->actingAs($admin, 'admin')
+            ->get(route('manager.sell-cards', ['all' => 1]))
+            ->assertOk()
+            ->assertSee($sa->name)
+            ->assertSee($steam->name)
+            ->assertDontSee('Choose a brand');
+    }
+
+    public function test_categories_form_saves_and_returns_the_overrides(): void
+    {
+        $admin = $this->userWithRole('admin');
+        $name = 'Art form '.uniqid();
+
+        $this->actingAs($admin, 'admin')
+            ->get(route('card-categories.index'))
+            ->assertOk()
+            ->assertSee('Brand and country')
+            ->assertSee('<option value="sa">Saudi Arabia (SA)</option>', false);
+
+        $this->actingAs($admin, 'admin')->postJson(route('card-categories.store'), [
+            'name' => $name,
+            'price' => 100,
+            'art_brand' => 'amazon',
+            'art_country' => 'sa',
+            'art_value' => ' 100 SAR ',
+        ])->assertOk()->assertJsonPath('success', true);
+        $category = CardCategory::where('name', $name)->firstOrFail();
+        $this->assertSame(['amazon', 'sa', '100 SAR'], [$category->art_brand, $category->art_country, $category->art_value]);
+
+        $this->actingAs($admin, 'admin')->getJson(route('card-categories.edit', $category))
+            ->assertOk()
+            ->assertJsonPath('art_brand', 'amazon')
+            ->assertJsonPath('art_country', 'sa')
+            ->assertJsonPath('art_value', '100 SAR');
+
+        // Back to "Automatic" clears the overrides.
+        $this->actingAs($admin, 'admin')->putJson(route('card-categories.update', $category), [
+            'name' => $name,
+            'price' => 100,
+            'art_brand' => '',
+            'art_country' => '',
+            'art_value' => '',
+        ])->assertOk();
+        $category->refresh();
+        $this->assertNull($category->art_brand);
+        $this->assertNull($category->art_country);
+        $this->assertNull($category->art_value);
+    }
+
+    public function test_categories_form_rejects_unknown_overrides(): void
+    {
+        $this->actingAs($this->userWithRole('admin'), 'admin')->postJson(route('card-categories.store'), [
+            'name' => 'Art bad '.uniqid(),
+            'price' => 100,
+            'art_brand' => 'nokia',
+            'art_country' => 'zz',
+            'art_value' => str_repeat('9', 21),
+        ])->assertStatus(422)->assertJsonValidationErrors(['art_brand', 'art_country', 'art_value']);
     }
 
     private function categoryWithStock(string $name, ?string $poster = null): CardCategory

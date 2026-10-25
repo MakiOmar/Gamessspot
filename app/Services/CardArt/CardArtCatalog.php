@@ -54,6 +54,28 @@ final class CardArtCatalog
 
     public const GLOBAL_FLAG = 'globe';
 
+    /** Browsing group for brands not in BRANDS. */
+    public const OTHER_BRAND = 'other';
+
+    /** Browsing keys for countries: ISO-2 codes, or these two. */
+    public const GLOBAL_COUNTRY = 'global';
+
+    public const OTHER_COUNTRY = 'other';
+
+    public static function countryLabel(string $key): string
+    {
+        return match ($key) {
+            self::GLOBAL_COUNTRY => 'Global',
+            self::OTHER_COUNTRY => 'Other',
+            default => self::COUNTRIES[$key] ?? strtoupper($key),
+        };
+    }
+
+    public static function brandLabel(string $key): string
+    {
+        return self::BRANDS[$key]['label'] ?? 'Other';
+    }
+
     /** Currency code => [symbol shown before the amount or null for "100 SAR", default country]. */
     public const CURRENCIES = [
         'USD' => ['$', 'us'], 'GBP' => ['£', 'gb'], 'EUR' => ['€', 'eu'],

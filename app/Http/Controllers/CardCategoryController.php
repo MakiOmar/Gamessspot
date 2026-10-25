@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\CardArtPreviewRequest;
 use App\Models\CardCategory;
 use App\Models\GalleryImage;
 use App\Support\HtmlSanitizer;
@@ -9,7 +10,9 @@ use Illuminate\Http\Request;
 use App\Services\ImageUploadService;
 use App\Models\StoresProfile;
 use App\Services\NextLoad\NextLoadCatalog;
+use App\Services\CardArt\CardArtCatalog;
 use App\Services\CardArt\CardArtPresenter;
+use App\Services\CardArt\CardCatalogBrowser;
 
 class CardCategoryController extends Controller
 {
@@ -28,7 +31,12 @@ class CardCategoryController extends Controller
         $cardArt = app(CardArtPresenter::class);
         $categories = CardCategory::with('galleryImages')->get()
             ->each(fn (CardCategory $category) => $category->setAttribute('card_art', $cardArt->forCategory($category)));
-        return view('manager.card-categories', compact('categories'));
+
+        return view('manager.card-categories', [
+            'categories' => $categories,
+            'artBrands' => array_map(fn (array $brand) => $brand['label'], CardArtCatalog::BRANDS),
+            'artCountries' => CardArtCatalog::COUNTRIES,
+        ]);
     }
 
     /**
@@ -62,6 +70,7 @@ class CardCategoryController extends Controller
         ->values()
         ->map(function (CardCategory $category) use ($cardArt) {
             $category->setAttribute('card_art', $cardArt->forCategory($category));
+            $category->setAttribute('classification', $cardArt->classify($category));
             $category->setAttribute('gallery', $category->galleryApiPayload());
             $category->setAttribute('reviews', $category->reviewsApiPayload());
             // Ensure description is present on list payloads
@@ -72,12 +81,9 @@ class CardCategoryController extends Controller
         });
     }
 
-    public function sell()
+    public function sell(Request $request, CardCatalogBrowser $browser)
     {
-        $categories = $this->getCategories();
-        $storeProfiles = StoresProfile::all();
-
-        return view('manager.sell-cards', compact('categories', 'storeProfiles'));
+        return $this->sellView($request, $browser, null);
     }
 
     public function sellApi()
@@ -110,6 +116,7 @@ class CardCategoryController extends Controller
                     ? asset($cardCategory->poster_image)
                     : null,
                 'card_art' => app(CardArtPresenter::class)->forCategory($cardCategory),
+                'classification' => app(CardArtPresenter::class)->classify($cardCategory),
                 'gallery' => $cardCategory->galleryApiPayload(),
                 'reviews' => $cardCategory->reviewsApiPayload(),
                 'cards_count' => $available,
@@ -122,17 +129,43 @@ class CardCategoryController extends Controller
         return $this->getCategories((string) $search);
     }
 
-    public function searchSellCategories(Request $request)
+    public function searchSellCategories(Request $request, CardCatalogBrowser $browser)
     {
-        $query = $request->input('q');
-        $categories = $this->searchCategories($query);
-        $storeProfiles = StoresProfile::all();
+        return $this->sellView($request, $browser, (string) $request->input('q', ''));
+    }
+
+    /**
+     * Sell page: brand tiles first; ?brand=&country= narrows the grid; ?q= or ?all=1 shows the full grid.
+     */
+    private function sellView(Request $request, CardCatalogBrowser $browser, ?string $query)
+    {
+        $categories = $this->getCategories($query);
+        $groups = $browser->groups($categories);
+        $brand = $this->browseKey($request->query('brand'), [...CardArtCatalog::brandKeys(), CardArtCatalog::OTHER_BRAND]);
+        $country = $brand ? $this->browseKey($request->query('country'), [
+            ...CardArtCatalog::countryKeys(), CardArtCatalog::GLOBAL_COUNTRY, CardArtCatalog::OTHER_COUNTRY,
+        ]) : null;
+        $brandGroup = collect($groups)->firstWhere('brand', $brand);
+        if ($brandGroup && $country === null && count($brandGroup['countries']) === 1) {
+            $country = $brandGroup['countries'][0]['key'];
+        }
 
         return view('manager.sell-cards', [
-            'categories' => $categories,
-            'storeProfiles' => $storeProfiles,
+            'categories' => $brand ? $browser->filter($categories, $brand, $country) : $categories,
+            'groups' => $groups,
+            'brandGroup' => $brandGroup,
+            'brand' => $brand,
+            'country' => $country,
+            'browsing' => blank($query) && $brand === null && ! $request->boolean('all'),
+            'storeProfiles' => StoresProfile::all(),
             'query' => $query,
         ]);
+    }
+
+    /** @param  list<string>  $allowed */
+    private function browseKey(mixed $value, array $allowed): ?string
+    {
+        return is_string($value) && in_array($value, $allowed, true) ? $value : null;
     }
 
     public function create()
@@ -152,15 +185,26 @@ class CardCategoryController extends Controller
             'gallery_images.*' => 'nullable|image|mimes:webp,jpeg,png,jpg,gif|max:2048',
             'delete_gallery_ids' => 'nullable|array',
             'delete_gallery_ids.*' => 'integer',
-        ]);
+        ] + CardArtPreviewRequest::artRules());
+    }
+
+    /**
+     * Saved category fields shared by store and update (brand/country/face value overrides included).
+     *
+     * @return array<string, mixed>
+     */
+    private function categoryData(Request $request): array
+    {
+        return $request->only('name', 'price')
+            + ['description' => HtmlSanitizer::sanitize($request->input('description'))]
+            + CardArtPreviewRequest::normalizedArt($request);
     }
 
     public function store(Request $request)
     {
         $this->validatation($request);
 
-        $data = $request->only('name', 'price');
-        $data['description'] = HtmlSanitizer::sanitize($request->input('description'));
+        $data = $this->categoryData($request);
 
         if ($request->hasFile('poster_image')) {
             $data['poster_image'] = $this->imageUploadService->upload($request->file('poster_image'), 'posters');
@@ -192,6 +236,9 @@ class CardCategoryController extends Controller
             'description' => $cardCategory->description,
             'poster_image' => $cardCategory->poster_image,
             'gallery' => $cardCategory->galleryApiPayload(),
+            'art_brand' => $cardCategory->art_brand,
+            'art_country' => $cardCategory->art_country,
+            'art_value' => $cardCategory->art_value,
         ]);
     }
 
@@ -199,8 +246,7 @@ class CardCategoryController extends Controller
     {
         $this->validatation($request, $cardCategory->id);
 
-        $data = $request->only('name', 'price');
-        $data['description'] = HtmlSanitizer::sanitize($request->input('description'));
+        $data = $this->categoryData($request);
 
         if ($request->hasFile('poster_image')) {
             if ($cardCategory->poster_image && file_exists(public_path($cardCategory->poster_image))) {
