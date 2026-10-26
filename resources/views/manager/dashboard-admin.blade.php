@@ -63,6 +63,40 @@
             </a>
         </div>
     </div>
+
+    <!-- Box 5: cost of accounts with no order at all -->
+    <div class="col-lg-3 col-6">
+        <div class="small-box text-bg-primary">
+            <div class="inner">
+                <h3 class="stat-value d-none">{{ number_format($neverSoldAccountsCost, 2) }}<sup class="fs-5">EGP</sup></h3>
+                <p>Unsold Mails Assets</p>
+            </div>
+            <svg class="small-box-icon" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path d="M1.5 8.67v8.58a3 3 0 003 3h15a3 3 0 003-3V8.67l-8.928 5.493a3 3 0 01-3.144 0L1.5 8.67z"></path>
+                <path d="M22.5 6.908V6.75a3 3 0 00-3-3h-15a3 3 0 00-3 3v.158l9.714 5.978a1.5 1.5 0 001.572 0L22.5 6.908z"></path>
+            </svg>
+            <a href="#" class="small-box-footer toggle-stats link-light link-underline-opacity-0 link-underline-opacity-50-hover">
+                More info <i class="bi bi-link-45deg"></i>
+            </a>
+        </div>
+    </div>
+
+    <!-- Box 6: full cost of accounts that still have any slot to sell (partially sold included) -->
+    <div class="col-lg-3 col-6">
+        <div class="small-box text-bg-success">
+            <div class="inner">
+                <h3 class="stat-value d-none">{{ number_format($inStockAccountsCost, 2) }}<sup class="fs-5">EGP</sup></h3>
+                <p>In-Stock Mails Assets</p>
+            </div>
+            <svg class="small-box-icon" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path d="M3.375 3C2.339 3 1.5 3.84 1.5 4.875v.75c0 1.036.84 1.875 1.875 1.875h17.25c1.035 0 1.875-.84 1.875-1.875v-.75C22.5 3.839 21.66 3 20.625 3H3.375z"></path>
+                <path fill-rule="evenodd" clip-rule="evenodd" d="M3.087 9l.54 9.176A3 3 0 006.62 21h10.757a3 3 0 002.995-2.824L20.913 9H3.087zm6.163 3.75A.75.75 0 0110 12h4a.75.75 0 010 1.5h-4a.75.75 0 01-.75-.75z"></path>
+            </svg>
+            <a href="#" class="small-box-footer toggle-stats link-light link-underline-opacity-0 link-underline-opacity-50-hover">
+                More info <i class="bi bi-link-45deg"></i>
+            </a>
+        </div>
+    </div>
 </div>
 
 <!-- Device Repair Statistics Row -->

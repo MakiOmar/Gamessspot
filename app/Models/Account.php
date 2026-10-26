@@ -333,6 +333,41 @@ class Account extends Model
         return $query->whereRaw('(' . self::fullSellEligibleSql($table) . ')');
     }
 
+    /** Stock columns of every sellable slot. */
+    public const STOCK_FIELDS = array(
+        'ps4_offline_stock',
+        'ps4_primary_stock',
+        'ps4_secondary_stock',
+        'ps5_offline_stock',
+        'ps5_primary_stock',
+        'ps5_secondary_stock',
+    );
+
+    /**
+     * Scope: accounts no order was ever placed against (undone orders are deleted, so they do not count).
+     */
+    public function scopeNeverSold($query)
+    {
+        return $query->whereDoesntHave('orders');
+    }
+
+    /**
+     * Scope: accounts with at least one slot left to sell, including partially sold ones.
+     */
+    public function scopeWithStockLeft($query)
+    {
+        return $query->where(function ($q) {
+            foreach (self::STOCK_FIELDS as $field) {
+                $q->orWhere($field, '>', 0);
+            }
+        });
+    }
+
+    public function orders()
+    {
+        return $this->hasMany(Order::class, 'account_id');
+    }
+
     /**
      * The games that belong to the account.
      */

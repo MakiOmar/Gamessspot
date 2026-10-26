@@ -24,6 +24,8 @@ class DashboardController extends Controller
         // ✅ Use CacheManager for all cached statistics
         $totalCodeCost = CacheManager::getTotalCodeCost();
         $accountsCost = CacheManager::getTotalAccountCost();
+        $neverSoldAccountsCost = CacheManager::getNeverSoldAccountCost();
+        $inStockAccountsCost = CacheManager::getInStockAccountCost();
         $totalUserCount = CacheManager::getTotalUserCount();
         $totalOrderCount = CacheManager::getTodayOrderCount();
         $uniqueBuyerPhoneCount = CacheManager::getUniqueBuyerCount();
@@ -57,6 +59,8 @@ class DashboardController extends Controller
             'manager.dashboard',
             compact(
                 'accountsCost',
+                'neverSoldAccountsCost',
+                'inStockAccountsCost',
                 'totalCodeCost',
                 'total',
                 'totalUserCount',

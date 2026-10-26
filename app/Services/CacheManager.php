@@ -269,6 +269,8 @@ class CacheManager
         return [
             'total_code_cost' => self::getTotalCodeCost(),
             'total_account_cost' => self::getTotalAccountCost(),
+            'never_sold_account_cost' => self::getNeverSoldAccountCost(),
+            'in_stock_account_cost' => self::getInStockAccountCost(),
             'total_user_count' => self::getTotalUserCount(),
             'today_order_count' => self::getTodayOrderCount(),
             'unique_buyer_count' => self::getUniqueBuyerCount(),
@@ -292,6 +294,26 @@ class CacheManager
             self::PREFIX_ACCOUNTS . 'total_account_cost',
             self::TTL_LONG,
             fn() => \App\Models\Account::sum('cost')
+        );
+    }
+
+    /** Cost of accounts with no order at all. Sales and undos bump the "accounts" group (OrderObserver). */
+    public static function getNeverSoldAccountCost()
+    {
+        return self::remember(
+            self::PREFIX_ACCOUNTS . 'never_sold_account_cost',
+            self::TTL_LONG,
+            fn() => \App\Models\Account::neverSold()->sum('cost')
+        );
+    }
+
+    /** Full cost of accounts that still have any slot to sell (partially sold included). */
+    public static function getInStockAccountCost()
+    {
+        return self::remember(
+            self::PREFIX_ACCOUNTS . 'in_stock_account_cost',
+            self::TTL_LONG,
+            fn() => \App\Models\Account::withStockLeft()->sum('cost')
         );
     }
     
