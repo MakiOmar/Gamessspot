@@ -76,6 +76,7 @@ Example for all three: you sell **Amazon KSA 100 SAR** cards. Your drawer has **
 | Drawer has 5 codes | Sales 1 to 5 use the drawer. No money is spent at Next Load. |
 | Sale number 6 (drawer empty) | The system **automatically buys 1 code** from Next Load and gives it to the customer. The price is taken from your balance. |
 | Drawer empty **and** balance too low | The card disappears from the shop until you top up. |
+| Drawer empty **and** Next Load is out of stock | The card disappears from the shop until Next Load has it again. |
 
 - **Codes:** adding codes is **optional**. If the drawer is empty from day one, **every** sale buys from Next Load (just like *Next Load only*) until you add some. Fill the drawer by hand, or with **Restock**.
 - **Use it when:** you want to sell codes you already have first and **never run out**. Best choice for most cards.
@@ -87,6 +88,7 @@ Example for all three: you sell **Amazon KSA 100 SAR** cards. Your drawer has **
 | Any sale | The system buys **1 code from Next Load** for that customer, every time. |
 | Your drawer | Is **ignored**. The 5 codes stay there unsold (switch to *Local first* to sell them). |
 | Balance too low | The card disappears from the shop until you top up. |
+| Next Load is out of stock | The card disappears from the shop until Next Load has it again. |
 
 - **Codes:** you don't add any. Don't use **Restock** here either: restocked codes go to the drawer, and this mode never sells from the drawer.
 - **Use it when:** you don't want to manage any stock at all.
@@ -142,7 +144,7 @@ To control it:
 
 1. Open **Next Load Supplier → Overview**.
 2. Check the **Balance**. If it is red (low), top up at Next Load.
-3. In **Linked categories**, check **Can buy now**. A red **0** means that card can't be bought from Next Load right now. The reason is low balance, the daily limit being used up, or Next Load's price being above your sale price.
+3. In **Linked categories**, check **Can buy now**. A red **0** means that card can't be bought from Next Load right now. The reason is low balance, the daily limit being used up, Next Load being out of stock (see the **Stock** column on **Products & links**), or Next Load's price being above your sale price.
 4. Check **Supplier orders**. Orders marked **failed** cost nothing. Orders that are stuck **in progress** for a long time should be reported to the admin.
 
 ### Quick answers
@@ -153,7 +155,7 @@ To control it:
 | In *Local first*, do I have to add codes myself? | No. With an empty drawer, each sale buys one code from Next Load. Add codes (by hand or Restock) only if you want to sell from stock first. |
 | Does Restock keep my stock full automatically? | No. It buys only when you click it, and only the number you type (1–50). |
 | How do I add codes by hand? | **Gift Cards → Gift Cards List/Add**, same as before. |
-| A card disappeared from the shop. | Drawer is empty and Next Load can't buy: balance is low, daily limit reached, mode is *Local only*, or Next Load's price is above your sale price. |
+| A card disappeared from the shop. | Drawer is empty and Next Load can't buy: balance is low, daily limit reached, Next Load is out of stock, mode is *Local only*, or Next Load's price is above your sale price. |
 | Which mode should I use? | **Local first**, unless you have a reason not to. |
 | I want to stop buying from Next Load for one card. | Switch that card to **Local only**. It still sells what's in the drawer. |
 | A customer was charged but got no code. | Tell the admin with the order number. The system retries by itself first; the admin can finish it manually. |
@@ -185,7 +187,7 @@ To control it:
 | `local_first` | Sell a local code; buy from Next Load when none is left. |
 | `supplier_only` | Always buy the code from Next Load at sale time (local codes are ignored). |
 
-Listings (`GET /api/card-ctegories/list`) and `POST /api/orders/check_card_stock` include supplier-backed categories while the cached balance covers the product price. See [README_API.md](../README_API.md).
+Listings (`GET /api/card-ctegories/list`) and `POST /api/orders/check_card_stock` include supplier-backed categories while Next Load reports the product `in_stock` and the cached balance covers its price. See [README_API.md](../README_API.md).
 
 ### What linking does
 
@@ -197,7 +199,7 @@ Every sale (POS, storefront, manager sell screen) calls `POST /api/orders/receiv
 
 1. **Local code** (`local_only`, `local_first`) — the oldest active code in the category is locked, marked sold and returned. Nothing is sent to Next Load.
 2. **No local code left** — `local_only` stops with *"No active code found"*. `local_first` and `supplier_only` continue to Next Load (only if `NEXTLOAD_ENABLED=true` and credentials are set; otherwise the same error).
-3. **Checks before buying** — the linked product must still be in the price list, and its price converted with `NEXTLOAD_EXCHANGE_RATE` must not exceed the category sale price (unless `NEXTLOAD_ALLOW_LOSS=true`). Failing either returns 422 and nothing is charged.
+3. **Checks before buying** — the linked product must still be in the price list and marked `in_stock` (a missing flag counts as in stock; the price list is cached for 10 minutes), and its price converted with `NEXTLOAD_EXCHANGE_RATE` must not exceed the category sale price (unless `NEXTLOAD_ALLOW_LOSS=true`). Failing either returns 422 and nothing is charged.
 4. **Buy one code** — a `next_load_orders` row is saved, then `CreateOrder` is sent (see [Purchase flow](#purchase-flow-and-guarantees)):
    - `Complete` → the pin becomes an encrypted `cards` row (`source = next_load`, `cost` = converted supplier price), the order is created and the code is returned like a local one.
    - `InProgress` → 202 `pending`. Shop/POS: the retry for the same line returns the code. Manager sale: the code is added to stock when delivered.
@@ -205,7 +207,7 @@ Every sale (POS, storefront, manager sell screen) calls `POST /api/orders/receiv
 
 ### Availability shown to sellers and the shop
 
-`available_count` (listings) and the stock check use local active codes first. When there are none (or the mode is `supplier_only`), the count is how many codes the cached balance can buy at the current supplier price, capped at 99 and at what is left of the category's daily limit. It is `0` — and the category is hidden from listings — when Next Load is disabled, the product left the price list, the balance is too low, the daily limit is used up, or the loss guard blocks the price.
+`available_count` (listings) and the stock check use local active codes first. When there are none (or the mode is `supplier_only`), the count is how many codes the cached balance can buy at the current supplier price, capped at 99 and at what is left of the category's daily limit. It is `0` — and the category is hidden from listings — when Next Load is disabled, the product left the price list, Next Load reports it `in_stock: false`, the balance is too low, the daily limit is used up, or the loss guard blocks the price.
 
 ### Managing the shared balance
 
@@ -252,7 +254,7 @@ All commands are no-ops while `NEXTLOAD_ENABLED=false`.
 ## Admin pages (`/manager/next-load`)
 
 - **Overview** — shared balance, linked categories table (local codes, bought today / limit, can buy now), order counts, connection test, price list refresh.
-- **Products & links** — supplier price list with local cost; `links/new` and `links/{category}` pages for linking, sourcing mode, daily limit, card artwork, **Restock** (buy N codes into stock, max 50 per click) and **Unlink**.
+- **Products & links** — supplier price list with local cost and Next Load's stock flag; `links/new` and `links/{category}` pages for linking, sourcing mode, daily limit, card artwork, **Restock** (buy N codes into stock, max 50 per click) and **Unlink**.
 - **Supplier orders** — filters, details, **Refresh status**, **Release to stock** (unused codes of a completed order), **Reveal code** (recorded in the activity log as `next_load.pin_revealed`; refused if the audit write fails).
 
 ## Card artwork

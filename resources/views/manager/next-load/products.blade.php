@@ -33,6 +33,7 @@
                     <th>Product</th>
                     <th class="text-right">Supplier price</th>
                     <th class="text-right">Local cost (x{{ $exchangeRate }})</th>
+                    <th>Stock</th>
                     <th>Linked categories</th>
                     <th style="width: 200px;">Actions</th>
                 </tr>
@@ -44,6 +45,14 @@
                         <td>{{ $product['product'] }}</td>
                         <td class="text-right">{{ $product['price'] }}</td>
                         <td class="text-right">{{ \App\Services\NextLoad\Money::toLocal($product['price'], $exchangeRate) }}</td>
+                        {{-- Next Load's own stock flag; out of stock hides linked categories with no local codes --}}
+                        <td>
+                            @if (\App\Services\NextLoad\NextLoadCatalog::inStock($product))
+                                <span class="badge badge-success">In stock</span>
+                            @else
+                                <span class="badge badge-danger">Out of stock</span>
+                            @endif
+                        </td>
                         <td>
                             @foreach ($links->get($product['product_id'], collect()) as $linked)
                                 <a href="{{ route('manager.next-load.links.edit', $linked->id) }}" class="badge badge-primary">
@@ -60,7 +69,7 @@
                 @empty
                     {{-- Empty state --}}
                     <tr>
-                        <td colspan="6" class="text-center text-muted py-4">
+                        <td colspan="7" class="text-center text-muted py-4">
                             <i class="bi bi-box-seam d-block mb-2" style="font-size: 2rem;"></i>
                             {{ $search !== '' ? 'No products match your search.' : 'No products returned by Next Load. Check the connection on the Overview tab.' }}
                         </td>

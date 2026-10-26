@@ -44,7 +44,7 @@ class NextLoadClient
     }
 
     /**
-     * @return list<array{product_id:int,product:string,price:string}>
+     * @return list<array{product_id:int,product:string,price:string,in_stock:bool}>
      */
     public function products(bool $fresh = false): array
     {
@@ -61,13 +61,27 @@ class NextLoadClient
                     'product_id' => (int) $row['product_id'],
                     'product' => (string) ($row['product'] ?? ''),
                     'price' => Money::normalize($row['price'] ?? '0'),
+                    'in_stock' => self::parseInStock($row['in_stock'] ?? null),
                 ])
                 ->values()
                 ->all();
         });
     }
 
-    /** @return array{product_id:int,product:string,price:string}|null */
+    /**
+     * Only an explicit "no" marks a product out of stock: a missing or unreadable flag keeps it sellable,
+     * so a supplier payload change cannot hide every gift card.
+     */
+    public static function parseInStock(mixed $value): bool
+    {
+        if ($value === null || $value === '') {
+            return true;
+        }
+
+        return filter_var($value, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE) ?? true;
+    }
+
+    /** @return array{product_id:int,product:string,price:string,in_stock:bool}|null */
     public function product(int $productId): ?array
     {
         foreach ($this->products() as $product) {

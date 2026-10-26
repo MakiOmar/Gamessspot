@@ -188,6 +188,9 @@ class NextLoadPurchaseService
         if ($product === null) {
             throw new NextLoadException(NextLoadException::FAILED, 'The linked Next Load product is not available.');
         }
+        if (! NextLoadCatalog::inStock($product)) {
+            throw new NextLoadException(NextLoadException::FAILED, 'The linked Next Load product is out of stock at Next Load.');
+        }
         if (! $this->catalog->withinLossGuard($category, $product['price'])) {
             throw new NextLoadException(NextLoadException::FAILED, 'The Next Load price is above the sale price.');
         }

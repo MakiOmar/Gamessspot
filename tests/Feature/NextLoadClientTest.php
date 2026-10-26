@@ -129,6 +129,33 @@ class NextLoadClientTest extends TestCase
         Http::assertSentCount(2);
     }
 
+    public function test_products_keep_the_supplier_in_stock_flag(): void
+    {
+        Http::fake([
+            self::BASE.'Token' => Http::response(['status' => 'Success', 'token' => 't']),
+            self::BASE.'ProductsList' => Http::response(['status' => 'Success', 'data' => [
+                ['product_id' => 513, 'product' => 'Amazon UK 100 £', 'price' => '137.000', 'in_stock' => false],
+                ['product_id' => 514, 'product' => 'Amazon UK 50 £', 'price' => '68.500', 'in_stock' => true],
+                ['product_id' => 515, 'product' => 'No flag', 'price' => '1.000'],
+            ]]),
+        ]);
+        $client = new NextLoadClient();
+
+        $this->assertFalse($client->product(513)['in_stock']);
+        $this->assertTrue($client->product(514)['in_stock']);
+        $this->assertTrue($client->product(515)['in_stock']);
+    }
+
+    public function test_in_stock_flag_parsing_only_treats_explicit_no_as_out_of_stock(): void
+    {
+        foreach ([false, 0, '0', 'false', 'no'] as $value) {
+            $this->assertFalse(NextLoadClient::parseInStock($value), var_export($value, true));
+        }
+        foreach ([true, 1, '1', 'true', null, '', 'unknown'] as $value) {
+            $this->assertTrue(NextLoadClient::parseInStock($value), var_export($value, true));
+        }
+    }
+
     public function test_money_helpers_avoid_floats(): void
     {
         $this->assertSame(0, Money::compare('13.380', '13.38'));

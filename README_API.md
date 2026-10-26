@@ -341,7 +341,7 @@ Notes:
 
 ### `GET /api/card-ctegories/list`
 
-Legacy path spelling (`ctegories`). Categories that can be sold now: at least one active local code, or linked to Next Load with enough supplier balance (see [docs/NEXTLOAD.md](docs/NEXTLOAD.md)). Card rows (codes, cost) are never included; `available_count` is local codes, or the supplier-backed count (capped at 99) when no local code is left.
+Legacy path spelling (`ctegories`). Categories that can be sold now: at least one active local code, or linked to a Next Load product that Next Load reports `in_stock` and the supplier balance covers (see [docs/NEXTLOAD.md](docs/NEXTLOAD.md)). Card rows (codes, cost) are never included; `available_count` is local codes, or the supplier-backed count (capped at 99) when no local code is left.
 
 **Success `200`**
 
@@ -551,7 +551,7 @@ If phone already exists, returns existing customer (`200`). Duplicate email for 
 }
 ```
 
-`stock` is local codes (ignored for `supplier_only` categories) plus what Next Load can deliver with the cached balance (capped at 99). `supplier_available` is `true` when a sale can fall back to Next Load.
+`stock` is local codes (ignored for `supplier_only` categories) plus what Next Load can deliver with the cached balance (capped at 99; `0` when Next Load reports the product out of stock). `supplier_available` is `true` when a sale can fall back to Next Load.
 
 ### `POST /api/orders/receive`
 
@@ -631,7 +631,7 @@ Send `card_category_id` (triggers card flow):
 Categories linked to Next Load may buy the code at sale time ([docs/NEXTLOAD.md](docs/NEXTLOAD.md)):
 
 - **`202`** `{ "success": false, "pending": true, "message": "...", "supplier_reference": "sf-..." }` — the supplier is still processing. Retry later with the **same** `storefront_order_id` + `storefront_line_key`; it reuses the same supplier order and never buys twice. Manager sales (no storefront fields) get the code added to stock once delivered.
-- **`422`** — no local code and the supplier cannot deliver (not linked, product unavailable, price above the sale price, or the supplier order failed; failed supplier orders are not charged).
+- **`422`** — no local code and the supplier cannot deliver (not linked, product unavailable or out of stock at Next Load, price above the sale price, or the supplier order failed; failed supplier orders are not charged).
 
 ### `POST /api/pos/receive-order`
 

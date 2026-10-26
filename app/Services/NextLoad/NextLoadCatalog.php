@@ -56,7 +56,7 @@ class NextLoadCatalog
         return $balance;
     }
 
-    /** @return array{product_id:int,product:string,price:string}|null */
+    /** @return array{product_id:int,product:string,price:string,in_stock:bool}|null */
     public function product(int $productId): ?array
     {
         if (Cache::has(self::OUTAGE_CACHE_KEY) && ! Cache::has(NextLoadClient::PRODUCTS_CACHE_KEY)) {
@@ -84,7 +84,7 @@ class NextLoadCatalog
 
         $product = $this->product((int) $category->next_load_product_id);
         $balance = $this->balance();
-        if ($product === null || $balance === null || ! $this->withinLossGuard($category, $product['price'])) {
+        if ($product === null || ! self::inStock($product) || $balance === null || ! $this->withinLossGuard($category, $product['price'])) {
             return 0;
         }
 
@@ -93,6 +93,16 @@ class NextLoadCatalog
         $limitLeft = $this->dailyLimitLeft($category);
 
         return (int) min(self::SUPPLIER_STOCK_CAP, $affordable, $limitLeft ?? PHP_INT_MAX);
+    }
+
+    /**
+     * Next Load's own stock flag. Price lists cached before the flag was read have no key and count as in stock.
+     *
+     * @param  array<string, mixed>  $product
+     */
+    public static function inStock(array $product): bool
+    {
+        return (bool) ($product['in_stock'] ?? true);
     }
 
     /**

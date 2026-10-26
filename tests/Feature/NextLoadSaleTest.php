@@ -44,6 +44,8 @@ class NextLoadSaleTest extends TestCase
 
     private string $productPrice = '0.000';
 
+    private bool $productInStock = true;
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -201,6 +203,38 @@ class NextLoadSaleTest extends TestCase
         Http::assertNotSent(fn (Request $r) => str_ends_with($r->url(), 'CreateOrder'));
     }
 
+    public function test_out_of_stock_product_is_hidden_and_never_bought(): void
+    {
+        $this->productPrice = '10.000';
+        $this->productInStock = false;
+        Cache::put(NextLoadCatalog::BALANCE_CACHE_KEY, '500.000', 60);
+
+        $this->assertNull(collect($this->getJson('/api/card-ctegories/list')->assertOk()->json('data'))->firstWhere('id', $this->category->id));
+        $this->postJson('/api/orders/check_card_stock', ['category_id' => $this->category->id])
+            ->assertOk()
+            ->assertJsonPath('stock', 0)
+            ->assertJsonPath('supplier_available', false);
+
+        $this->sell($this->storefrontPayload())
+            ->assertStatus(422)
+            ->assertJsonPath('message', 'The linked Next Load product is out of stock at Next Load.');
+        Http::assertNotSent(fn (Request $r) => str_ends_with($r->url(), 'CreateOrder'));
+        $this->assertSame(0, NextLoadOrder::where('card_category_id', $this->category->id)->count());
+    }
+
+    public function test_local_first_keeps_selling_local_codes_when_supplier_is_out_of_stock(): void
+    {
+        $this->productInStock = false;
+        $this->category->update(['supplier_mode' => CardCategory::MODE_LOCAL_FIRST]);
+        Card::create(['code' => 'LOCAL-OOS-'.uniqid(), 'cost' => 50, 'card_category_id' => $this->category->id, 'status' => true]);
+
+        $row = collect($this->getJson('/api/card-ctegories/list')->assertOk()->json('data'))->firstWhere('id', $this->category->id);
+        $this->assertSame(1, $row['available_count'] ?? null);
+
+        $this->sell($this->storefrontPayload())->assertCreated();
+        Http::assertNotSent(fn (Request $r) => str_ends_with($r->url(), 'CreateOrder'));
+    }
+
     public function test_listing_and_stock_check_include_supplier_categories(): void
     {
         $this->productPrice = '10.000';
@@ -299,7 +333,9 @@ class NextLoadSaleTest extends TestCase
             return match ($endpoint) {
                 'Token' => Http::response(['status' => 'Success', 'token' => 'tok']),
                 'Balance' => Http::response(['status' => 'Success', 'data' => [['balance' => '1000.000']]]),
-                'ProductsList' => Http::response(['status' => 'Success', 'data' => [['product_id' => 266, 'product' => 'Test', 'price' => $this->productPrice]]]),
+                'ProductsList' => Http::response(['status' => 'Success', 'data' => [
+                    ['product_id' => 266, 'product' => 'Test', 'price' => $this->productPrice, 'in_stock' => $this->productInStock],
+                ]]),
                 'CreateOrder' => $this->next($this->createResponses),
                 'FetchOrder' => $this->next($this->fetchResponses),
                 'Orders' => Http::response(['status' => 'Success', 'data' => is_callable($this->ordersList) ? ($this->ordersList)() : $this->ordersList]),

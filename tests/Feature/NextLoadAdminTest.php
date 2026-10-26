@@ -52,7 +52,7 @@ class NextLoadAdminTest extends TestCase
                 'Balance' => Http::response(['status' => 'Success', 'data' => [['balance' => '250.000']]]),
                 'ProductsList' => Http::response(['status' => 'Success', 'data' => [
                     ['product_id' => 266, 'product' => 'Test', 'price' => '0.000'],
-                    ['product_id' => 352, 'product' => 'amazon KSA 50 SAR', 'price' => '13.380'],
+                    ['product_id' => 352, 'product' => 'amazon KSA 50 SAR', 'price' => '13.380', 'in_stock' => false],
                 ]]),
                 'CreateOrder' => Http::response(array_shift($this->createResponses) ?? ['status' => 'Error', 'message' => 'none'], 200),
                 default => Http::response(['status' => 'Error', 'message' => 'unknown'], 404),
@@ -74,7 +74,7 @@ class NextLoadAdminTest extends TestCase
         $this->actingAs($this->admin, 'admin');
 
         $this->get(route('manager.next-load.index'))->assertOk()->assertSee('250.000')->assertSee('Linked categories')->assertSee($category->name);
-        $this->get(route('manager.next-load.products'))->assertOk()->assertSee('amazon KSA 50 SAR');
+        $this->get(route('manager.next-load.products'))->assertOk()->assertSee('amazon KSA 50 SAR')->assertSee('Out of stock')->assertSee('In stock');
         $this->get(route('manager.next-load.links.create', ['product_id' => 352]))->assertOk()->assertSee('Linking buys nothing by itself.');
         $this->get(route('manager.next-load.links.edit', $category))->assertOk()->assertSee($category->name);
         $this->get(route('manager.next-load.orders.index'))->assertOk()->assertSee($order->reference);
