@@ -83,12 +83,18 @@ class ImageUploadService
     }
 
     /**
-     * Convert an existing public-relative image to WebP on disk.
+     * Convert an existing public-relative image to WebP on disk, optionally scaling it down.
      *
+     * @param  int|null  $maxWidth  Downscale wider images to this width (aspect ratio kept, never upscaled).
+     * @param  int  $quality  WebP quality 0–100, or WEBP_LOSSLESS.
      * @return string|null New relative path, same path if already WebP, or null if skipped/failed
      */
-    public function convertExistingPublicImage(string $relativePath, bool $deleteOriginal = true): ?string
-    {
+    public function convertExistingPublicImage(
+        string $relativePath,
+        bool $deleteOriginal = true,
+        ?int $maxWidth = null,
+        int $quality = self::WEBP_QUALITY
+    ): ?string {
         $relativePath = ltrim(str_replace('\\', '/', $relativePath), '/');
         if ($relativePath === '') {
             return null;
@@ -106,7 +112,11 @@ class ImageUploadService
         }
 
         if ($ext === 'webp') {
-            return $relativePath;
+            if (!$this->exceedsWidth($absolutePath, $maxWidth)) {
+                return $relativePath;
+            }
+
+            return $this->resizeWebpInPlace($absolutePath, $maxWidth, $quality) ? $relativePath : null;
         }
 
         if (!in_array($ext, self::CONVERTIBLE_EXTENSIONS, true) || !$this->canEncodeWebp()) {
@@ -124,7 +134,7 @@ class ImageUploadService
             $newAbsolute = public_path($newRelative);
         }
 
-        if (!$this->convertFilePathToWebp($absolutePath, $newAbsolute)) {
+        if (!$this->convertFilePathToWebp($absolutePath, $newAbsolute, $maxWidth, $quality)) {
             return null;
         }
 
@@ -161,7 +171,7 @@ class ImageUploadService
         return $name !== '' ? $name : 'image';
     }
 
-    protected function exceedsWidth(string $absolutePath, ?int $maxWidth): bool
+    public function exceedsWidth(string $absolutePath, ?int $maxWidth): bool
     {
         if ($maxWidth === null) {
             return false;
@@ -186,14 +196,43 @@ class ImageUploadService
         return $this->encodeBinaryAsWebp($binary, $destinationAbsolute, $maxWidth, $quality);
     }
 
-    protected function convertFilePathToWebp(string $sourceAbsolute, string $destinationAbsolute): bool
-    {
+    protected function convertFilePathToWebp(
+        string $sourceAbsolute,
+        string $destinationAbsolute,
+        ?int $maxWidth = null,
+        int $quality = self::WEBP_QUALITY
+    ): bool {
         $binary = @file_get_contents($sourceAbsolute);
         if ($binary === false || $binary === '') {
             return false;
         }
 
-        return $this->encodeBinaryAsWebp($binary, $destinationAbsolute);
+        return $this->encodeBinaryAsWebp($binary, $destinationAbsolute, $maxWidth, $quality);
+    }
+
+    /**
+     * Encode to a sibling temp file first so a failed encode never destroys the original.
+     */
+    protected function resizeWebpInPlace(string $absolutePath, int $maxWidth, int $quality): bool
+    {
+        if (!$this->canEncodeWebp()) {
+            return false;
+        }
+
+        $tmpAbsolute = $absolutePath . '.' . uniqid('resize_', false) . '.webp';
+        if (!$this->convertFilePathToWebp($absolutePath, $tmpAbsolute, $maxWidth, $quality)) {
+            @unlink($tmpAbsolute);
+
+            return false;
+        }
+
+        if (!@rename($tmpAbsolute, $absolutePath)) {
+            @unlink($tmpAbsolute);
+
+            return false;
+        }
+
+        return true;
     }
 
     /**
