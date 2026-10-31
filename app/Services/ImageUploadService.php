@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use RuntimeException;
 
@@ -10,6 +11,9 @@ class ImageUploadService
 {
     /** WebP quality (0–100). */
     public const WEBP_QUALITY = 82;
+
+    /** Pixel-exact WebP encoding, for uploads where no extra compression loss is acceptable. */
+    public const WEBP_LOSSLESS = IMG_WEBP_LOSSLESS;
 
     /** Extensions we never convert (vector / unsupported by GD rasterize). */
     private const SKIP_EXTENSIONS = ['svg', 'svgz'];
@@ -22,10 +26,16 @@ class ImageUploadService
      *
      * @param  string  $directory  Short name (`galleries`) → `assets/uploads/galleries`,
      *                             or a public-relative path (`assets/ps4`, `logos`).
+     * @param  int|null  $maxWidth  Downscale wider images to this width (aspect ratio kept, never upscaled).
+     * @param  int  $quality  WebP quality 0–100, or WEBP_LOSSLESS.
      * @return string Relative path from the public root (e.g. assets/ps4/foo.webp)
      */
-    public function upload(UploadedFile $imageFile, string $directory): string
-    {
+    public function upload(
+        UploadedFile $imageFile,
+        string $directory,
+        ?int $maxWidth = null,
+        int $quality = self::WEBP_QUALITY
+    ): string {
         $relativeDir = $this->resolvePublicDirectory($directory);
         $absoluteDir = public_path($relativeDir);
 
@@ -33,27 +43,37 @@ class ImageUploadService
             throw new RuntimeException("Unable to create upload directory: {$relativeDir}");
         }
 
-        $baseName = $this->sanitizeBaseName(
+        $stem = $this->sanitizeBaseName(
             pathinfo($imageFile->getClientOriginalName(), PATHINFO_FILENAME)
-        );
+        ) . '_' . uniqid();
         $sourceExt = strtolower($imageFile->getClientOriginalExtension() ?: $imageFile->extension() ?: '');
 
         // Skip WebP for SVG (and when GD WebP is unavailable)
         if (in_array($sourceExt, self::SKIP_EXTENSIONS, true) || !$this->canEncodeWebp()) {
-            $filename = $baseName . '_' . time() . '.' . ($sourceExt ?: 'bin');
+            $filename = $stem . '.' . ($sourceExt ?: 'bin');
             $imageFile->move($absoluteDir, $filename);
 
             return $relativeDir . '/' . $filename;
         }
 
-        $filename = $baseName . '_' . time() . '.webp';
+        $filename = $stem . '.webp';
         $absolutePath = $absoluteDir . DIRECTORY_SEPARATOR . $filename;
 
-        $converted = $this->convertUploadedFileToWebp($imageFile, $absolutePath);
+        // Re-encoding a WebP that already fits would only add compression loss
+        if ($sourceExt === 'webp' && !$this->exceedsWidth($imageFile->getRealPath(), $maxWidth)) {
+            $imageFile->move($absoluteDir, $filename);
+
+            return $relativeDir . '/' . $filename;
+        }
+
+        $converted = $this->convertUploadedFileToWebp($imageFile, $absolutePath, $maxWidth, $quality);
 
         if (!$converted) {
-            // Fall back to storing the original file
-            $filename = $baseName . '_' . time() . '.' . ($sourceExt ?: 'jpg');
+            Log::warning('Image WebP conversion failed; storing original file', [
+                'file' => $imageFile->getClientOriginalName(),
+                'directory' => $relativeDir,
+            ]);
+            $filename = $stem . '.' . ($sourceExt ?: 'jpg');
             $imageFile->move($absoluteDir, $filename);
 
             return $relativeDir . '/' . $filename;
@@ -141,14 +161,29 @@ class ImageUploadService
         return $name !== '' ? $name : 'image';
     }
 
-    protected function convertUploadedFileToWebp(UploadedFile $file, string $destinationAbsolute): bool
+    protected function exceedsWidth(string $absolutePath, ?int $maxWidth): bool
     {
+        if ($maxWidth === null) {
+            return false;
+        }
+
+        $size = @getimagesize($absolutePath);
+
+        return $size !== false && $size[0] > $maxWidth;
+    }
+
+    protected function convertUploadedFileToWebp(
+        UploadedFile $file,
+        string $destinationAbsolute,
+        ?int $maxWidth,
+        int $quality
+    ): bool {
         $binary = @file_get_contents($file->getRealPath());
         if ($binary === false || $binary === '') {
             return false;
         }
 
-        return $this->encodeBinaryAsWebp($binary, $destinationAbsolute);
+        return $this->encodeBinaryAsWebp($binary, $destinationAbsolute, $maxWidth, $quality);
     }
 
     protected function convertFilePathToWebp(string $sourceAbsolute, string $destinationAbsolute): bool
@@ -165,8 +200,12 @@ class ImageUploadService
      * Encode image binary as WebP. Interlaced PNGs are decoded in a child process
      * with stderr discarded so libpng does not print noisy CLI warnings.
      */
-    protected function encodeBinaryAsWebp(string $binary, string $destinationAbsolute): bool
-    {
+    protected function encodeBinaryAsWebp(
+        string $binary,
+        string $destinationAbsolute,
+        ?int $maxWidth = null,
+        int $quality = self::WEBP_QUALITY
+    ): bool {
         $dir = dirname($destinationAbsolute);
         if (!is_dir($dir) && !mkdir($dir, 0775, true) && !is_dir($dir)) {
             return false;
@@ -174,10 +213,10 @@ class ImageUploadService
 
         // Interlaced PNGs trigger: "libpng warning: Interlace handling should be turned on..."
         if ($this->isInterlacedPng($binary)) {
-            return $this->encodeInterlacedPngAsWebpSilenced($binary, $destinationAbsolute);
+            return $this->encodeInterlacedPngAsWebpSilenced($binary, $destinationAbsolute, $maxWidth, $quality);
         }
 
-        return $this->encodeBinaryAsWebpInProcess($binary, $destinationAbsolute);
+        return $this->encodeBinaryAsWebpInProcess($binary, $destinationAbsolute, $maxWidth, $quality);
     }
 
     /**
@@ -196,20 +235,47 @@ class ImageUploadService
         return ord($binary[28]) === 1;
     }
 
-    protected function encodeBinaryAsWebpInProcess(string $binary, string $destinationAbsolute): bool
-    {
+    protected function encodeBinaryAsWebpInProcess(
+        string $binary,
+        string $destinationAbsolute,
+        ?int $maxWidth = null,
+        int $quality = self::WEBP_QUALITY
+    ): bool {
         $image = @imagecreatefromstring($binary);
         if ($image === false) {
             return false;
         }
 
-        return $this->writeGdImageAsWebp($image, $destinationAbsolute);
+        return $this->writeGdImageAsWebp($this->scaleDownToWidth($image, $maxWidth), $destinationAbsolute, $quality);
+    }
+
+    /**
+     * Resample to $maxWidth keeping aspect ratio and transparency; narrower images are returned untouched.
+     */
+    protected function scaleDownToWidth(\GdImage $image, ?int $maxWidth): \GdImage
+    {
+        $width = imagesx($image);
+        if ($maxWidth === null || $maxWidth < 1 || $width <= $maxWidth) {
+            return $image;
+        }
+
+        $height = imagesy($image);
+        $targetHeight = max(1, (int) round($height * $maxWidth / $width));
+
+        $scaled = imagecreatetruecolor($maxWidth, $targetHeight);
+        imagealphablending($scaled, false);
+        imagesavealpha($scaled, true);
+        imagefill($scaled, 0, 0, imagecolorallocatealpha($scaled, 0, 0, 0, 127));
+        imagecopyresampled($scaled, $image, 0, 0, 0, 0, $maxWidth, $targetHeight, $width, $height);
+        imagedestroy($image);
+
+        return $scaled;
     }
 
     /**
      * @param  \GdImage|resource  $image
      */
-    protected function writeGdImageAsWebp($image, string $destinationAbsolute): bool
+    protected function writeGdImageAsWebp($image, string $destinationAbsolute, int $quality = self::WEBP_QUALITY): bool
     {
         // Ensure non-interlaced raster and keep alpha
         if (function_exists('imageinterlace')) {
@@ -219,7 +285,7 @@ class ImageUploadService
         imagealphablending($image, true);
         imagesavealpha($image, true);
 
-        $ok = imagewebp($image, $destinationAbsolute, self::WEBP_QUALITY);
+        $ok = imagewebp($image, $destinationAbsolute, $quality);
         imagedestroy($image);
 
         return (bool) $ok && is_file($destinationAbsolute);
@@ -228,12 +294,16 @@ class ImageUploadService
     /**
      * Decode interlaced PNG in a PHP child with stderr → NUL/dev/null, then write WebP.
      */
-    protected function encodeInterlacedPngAsWebpSilenced(string $binary, string $destinationAbsolute): bool
-    {
+    protected function encodeInterlacedPngAsWebpSilenced(
+        string $binary,
+        string $destinationAbsolute,
+        ?int $maxWidth = null,
+        int $quality = self::WEBP_QUALITY
+    ): bool {
         $tmpSrc = tempnam(sys_get_temp_dir(), 'png_i_');
         $tmpPhp = tempnam(sys_get_temp_dir(), 'webp_w_');
         if ($tmpSrc === false || $tmpPhp === false) {
-            return $this->encodeBinaryAsWebpInProcess($binary, $destinationAbsolute);
+            return $this->encodeBinaryAsWebpInProcess($binary, $destinationAbsolute, $maxWidth, $quality);
         }
 
         $tmpSrcPng = $tmpSrc . '.png';
@@ -246,12 +316,12 @@ class ImageUploadService
                 return false;
             }
 
-            $quality = (int) self::WEBP_QUALITY;
             $script = <<<'PHP'
 <?php
 $src = $argv[1] ?? '';
 $dest = $argv[2] ?? '';
 $quality = (int) ($argv[3] ?? 82);
+$maxWidth = (int) ($argv[4] ?? 0);
 if ($src === '' || $dest === '' || !is_file($src)) {
     exit(1);
 }
@@ -259,6 +329,18 @@ $binary = file_get_contents($src);
 $image = @imagecreatefromstring($binary);
 if ($image === false) {
     exit(1);
+}
+$width = imagesx($image);
+if ($maxWidth > 0 && $width > $maxWidth) {
+    $height = imagesy($image);
+    $targetHeight = max(1, (int) round($height * $maxWidth / $width));
+    $scaled = imagecreatetruecolor($maxWidth, $targetHeight);
+    imagealphablending($scaled, false);
+    imagesavealpha($scaled, true);
+    imagefill($scaled, 0, 0, imagecolorallocatealpha($scaled, 0, 0, 0, 127));
+    imagecopyresampled($scaled, $image, 0, 0, 0, 0, $maxWidth, $targetHeight, $width, $height);
+    imagedestroy($image);
+    $image = $scaled;
 }
 if (function_exists('imageinterlace')) {
     imageinterlace($image, false);
@@ -272,7 +354,7 @@ exit($ok && is_file($dest) ? 0 : 1);
 PHP;
 
             if (file_put_contents($tmpPhpScript, $script) === false) {
-                return $this->encodeBinaryAsWebpInProcess($binary, $destinationAbsolute);
+                return $this->encodeBinaryAsWebpInProcess($binary, $destinationAbsolute, $maxWidth, $quality);
             }
 
             $nullDevice = PHP_OS_FAMILY === 'Windows' ? 'NUL' : '/dev/null';
@@ -282,6 +364,7 @@ PHP;
                 $tmpSrcPng,
                 $destinationAbsolute,
                 (string) $quality,
+                (string) ($maxWidth ?? 0),
             ];
 
             $descriptors = [
@@ -292,7 +375,7 @@ PHP;
 
             $process = @proc_open($cmd, $descriptors, $pipes, null, null, ['bypass_shell' => true]);
             if (!is_resource($process)) {
-                return $this->encodeBinaryAsWebpInProcess($binary, $destinationAbsolute);
+                return $this->encodeBinaryAsWebpInProcess($binary, $destinationAbsolute, $maxWidth, $quality);
             }
 
             fclose($pipes[0]);

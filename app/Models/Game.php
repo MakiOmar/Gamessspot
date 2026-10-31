@@ -67,6 +67,9 @@ class Game extends Model
         self::TYPE_SUBSCRIPTION,
     ];
 
+    /** Uploaded covers and gallery images are scaled down to this width. */
+    public const IMAGE_MAX_WIDTH = 500;
+
     // Define the fillable fields (excluding _token)
     protected $fillable = array(
         'title',

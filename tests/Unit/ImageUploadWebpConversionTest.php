@@ -86,6 +86,113 @@ class ImageUploadWebpConversionTest extends TestCase
         $this->assertFileDoesNotExist($sourceAbsolute);
     }
 
+    public function test_upload_scales_wide_image_down_to_max_width_keeping_aspect_ratio(): void
+    {
+        $service = new ImageUploadService();
+        $upload = UploadedFile::fake()->image('wide.jpg', 1200, 800);
+
+        $path = $service->upload($upload, 'assets/ps4', 500, ImageUploadService::WEBP_LOSSLESS);
+
+        $this->assertStringEndsWith('.webp', $path);
+        $this->assertSame([500, 333], $this->dimensionsOf($path));
+        $this->assertTrue($this->isLosslessWebp($path));
+    }
+
+    public function test_upload_never_upscales_narrow_image(): void
+    {
+        $service = new ImageUploadService();
+        $upload = UploadedFile::fake()->image('narrow.png', 300, 200);
+
+        $path = $service->upload($upload, 'assets/ps4', 500, ImageUploadService::WEBP_LOSSLESS);
+
+        $this->assertStringEndsWith('.webp', $path);
+        $this->assertSame([300, 200], $this->dimensionsOf($path));
+    }
+
+    public function test_upload_keeps_transparency_when_resizing(): void
+    {
+        $service = new ImageUploadService();
+        $source = $this->tempPublic . '/transparent.png';
+        $img = imagecreatetruecolor(1000, 1000);
+        imagealphablending($img, false);
+        imagesavealpha($img, true);
+        imagefill($img, 0, 0, imagecolorallocatealpha($img, 0, 0, 0, 127));
+        imagepng($img, $source);
+        imagedestroy($img);
+
+        $path = $service->upload(
+            new UploadedFile($source, 'transparent.png', 'image/png', null, true),
+            'assets/ps4',
+            500,
+            ImageUploadService::WEBP_LOSSLESS
+        );
+
+        $result = imagecreatefromwebp($this->absolute($path));
+        $alpha = (imagecolorat($result, 250, 250) >> 24) & 0x7F;
+        $this->assertSame(127, $alpha);
+    }
+
+    public function test_webp_within_max_width_is_stored_without_re_encoding(): void
+    {
+        $service = new ImageUploadService();
+        $source = $this->tempPublic . '/small.webp';
+        imagewebp(imagecreatetruecolor(400, 300), $source, 90);
+        $originalBytes = file_get_contents($source);
+
+        $path = $service->upload(new UploadedFile($source, 'small.webp', 'image/webp', null, true), 'assets/ps4', 500);
+
+        $this->assertSame($originalBytes, file_get_contents($this->absolute($path)));
+    }
+
+    public function test_wide_webp_is_resized(): void
+    {
+        $service = new ImageUploadService();
+        $source = $this->tempPublic . '/wide.webp';
+        imagewebp(imagecreatetruecolor(1000, 400), $source, 90);
+
+        $path = $service->upload(new UploadedFile($source, 'wide.webp', 'image/webp', null, true), 'assets/ps4', 500);
+
+        $this->assertSame([500, 200], $this->dimensionsOf($path));
+    }
+
+    public function test_interlaced_png_upload_is_resized(): void
+    {
+        $service = new ImageUploadService();
+        $source = $this->tempPublic . '/interlaced_wide.png';
+        $img = imagecreatetruecolor(1000, 500);
+        imageinterlace($img, true);
+        imagepng($img, $source);
+        imagedestroy($img);
+
+        $path = $service->upload(
+            new UploadedFile($source, 'interlaced_wide.png', 'image/png', null, true),
+            'assets/ps4',
+            500,
+            ImageUploadService::WEBP_LOSSLESS
+        );
+
+        $this->assertStringEndsWith('.webp', $path);
+        $this->assertSame([500, 250], $this->dimensionsOf($path));
+    }
+
+    private function absolute(string $relativePath): string
+    {
+        return $this->tempPublic . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $relativePath);
+    }
+
+    /** @return array{0: int, 1: int} */
+    private function dimensionsOf(string $relativePath): array
+    {
+        $size = getimagesize($this->absolute($relativePath));
+
+        return [$size[0], $size[1]];
+    }
+
+    private function isLosslessWebp(string $relativePath): bool
+    {
+        return substr(file_get_contents($this->absolute($relativePath)), 12, 4) === 'VP8L';
+    }
+
     private function makePngUploadedFile(): UploadedFile
     {
         $tmp = $this->tempPublic . '/upload_src.png';

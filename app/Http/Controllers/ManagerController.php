@@ -241,56 +241,18 @@ class ManagerController extends Controller
         $data['description'] = Game::sanitizeDescription($request->input('description'));
         $data['is_featured'] = $request->boolean('is_featured');
         $data['display_order'] = $request->filled('display_order') ? (int) $request->input('display_order') : null;
-        // Handle PS4 image update
-        if ($request->hasFile('ps4_image')) {
-            $ps4_image = $request->file('ps4_image');
-            $ps4_filename = $this->sanitizeFilename($ps4_image->getClientOriginalName());
-            $ps4_path = 'assets/ps4/' . $ps4_filename;
 
-            // Ensure the directory exists
-            if (!file_exists(public_path('assets/ps4'))) {
-                mkdir(public_path('assets/ps4'), 0777, true);
+        foreach (['ps4', 'ps5'] as $platform) {
+            $newPath = $this->storePlatformImage($request, $platform, $game->{"{$platform}_image_url"});
+            if ($newPath !== null) {
+                $data["{$platform}_image_url"] = $newPath;
             }
-
-            // Delete the old image if it exists
-            if (!empty($game->ps4_image_url) && file_exists(public_path($game->ps4_image_url))) {
-                unlink(public_path($game->ps4_image_url));
-            }
-
-            // Move the new image
-            $ps4_image->move(public_path('assets/ps4'), $ps4_filename);
-
-            // Store the new image path
-            $data['ps4_image_url'] = $ps4_path;
-        }
-
-        // Handle PS5 image update
-        if ($request->hasFile('ps5_image')) {
-            $ps5_image = $request->file('ps5_image');
-            $ps5_filename = $this->sanitizeFilename($ps5_image->getClientOriginalName());
-            $ps5_path = 'assets/ps5/' . $ps5_filename;
-
-            // Ensure the directory exists
-            if (!file_exists(public_path('assets/ps5'))) {
-                mkdir(public_path('assets/ps5'), 0777, true);
-            }
-
-            // Delete the old image if it exists
-            if (!empty($game->ps5_image_url) && file_exists(public_path($game->ps5_image_url))) {
-                unlink(public_path($game->ps5_image_url));
-            }
-
-            // Move the new image
-            $ps5_image->move(public_path('assets/ps5'), $ps5_filename);
-
-            // Store the new image path
-            $data['ps5_image_url'] = $ps5_path;
         }
 
         // Update the game with new data
         $game->update($data);
         $game->deleteGalleryIds($request->input('delete_gallery_ids', []));
-        $game->syncGalleryFromRequest($request, $this->imageUploadService);
+        $this->syncGameGallery($game, $request);
 
         // Clear the cache after updating the game
         $this->clearPaginatedGameCache();
@@ -344,21 +306,41 @@ class ManagerController extends Controller
             ], 500);
         }
     }
-    // Function to sanitize filenames for URL safety
-    public function sanitizeFilename($filename)
+    /**
+     * Store an uploaded PS4/PS5 cover as WebP scaled down to Game::IMAGE_MAX_WIDTH,
+     * removing the replaced file only after the new one is saved.
+     *
+     * @return string|null New public-relative path, or null when no file was uploaded
+     */
+    private function storePlatformImage(Request $request, string $platform, ?string $previousPath = null): ?string
     {
-        // Get file extension
-        $extension = pathinfo($filename, PATHINFO_EXTENSION);
-        // Remove extension from filename
-        $name = pathinfo($filename, PATHINFO_FILENAME);
-        // Replace spaces with underscores
-        $name = str_replace(' ', '_', $name);
-        // Remove special characters (keep only letters, numbers, - and _)
-        $name = preg_replace('/[^A-Za-z0-9\-_]/', '', $name);
-        // Ensure lowercase
-        $name = strtolower($name);
-        // Append a unique ID to prevent duplication
-        return $name . '_' . uniqid() . '.' . $extension;
+        $field = "{$platform}_image";
+        if (!$request->hasFile($field)) {
+            return null;
+        }
+
+        $newPath = $this->imageUploadService->upload(
+            $request->file($field),
+            "assets/{$platform}",
+            Game::IMAGE_MAX_WIDTH,
+            ImageUploadService::WEBP_LOSSLESS
+        );
+
+        if (!empty($previousPath) && $previousPath !== $newPath && is_file(public_path($previousPath))) {
+            @unlink(public_path($previousPath));
+        }
+
+        return $newPath;
+    }
+
+    private function syncGameGallery(Game $game, Request $request): void
+    {
+        $game->syncGalleryFromRequest(
+            $request,
+            $this->imageUploadService,
+            Game::IMAGE_MAX_WIDTH,
+            ImageUploadService::WEBP_LOSSLESS
+        );
     }
     public function store(Request $request)
     {
@@ -393,45 +375,16 @@ class ManagerController extends Controller
         $validatedData['display_order'] = $request->filled('display_order') ? (int) $request->input('display_order') : null;
         unset($validatedData['gallery_images']);
 
-        // Handle PS4 image upload
-        if ($request->hasFile('ps4_image')) {
-            $ps4_image = $request->file('ps4_image');
-            $ps4_filename = $this->sanitizeFilename($ps4_image->getClientOriginalName());
-            $ps4_path = 'assets/ps4/' . $ps4_filename; // Define path in public/assets/ps4/
-
-            // Ensure the directory exists
-            if (!file_exists(public_path('assets/ps4'))) {
-                mkdir(public_path('assets/ps4'), 0777, true);
+        foreach (['ps4', 'ps5'] as $platform) {
+            $newPath = $this->storePlatformImage($request, $platform);
+            if ($newPath !== null) {
+                $validatedData["{$platform}_image_url"] = $newPath;
             }
-
-            // Move the file to public/assets/ps4/
-            $ps4_image->move(public_path('assets/ps4'), $ps4_filename);
-
-            // Store the publicly accessible URL in the database
-            $validatedData['ps4_image_url'] = $ps4_path;
-        }
-
-        // Handle PS5 image upload
-        if ($request->hasFile('ps5_image')) {
-            $ps5_image = $request->file('ps5_image');
-            $ps5_filename = $this->sanitizeFilename($ps5_image->getClientOriginalName());
-            $ps5_path = 'assets/ps5/' . $ps5_filename; // Define path in public/assets/ps5/
-
-            // Ensure the directory exists
-            if (!file_exists(public_path('assets/ps5'))) {
-                mkdir(public_path('assets/ps5'), 0777, true);
-            }
-
-            // Move the file to public/assets/ps5/
-            $ps5_image->move(public_path('assets/ps5'), $ps5_filename);
-
-            // Store the publicly accessible URL in the database
-            $validatedData['ps5_image_url'] = $ps5_path;
         }
 
         // Create the new game
         $game = Game::create($validatedData);
-        $game->syncGalleryFromRequest($request, $this->imageUploadService);
+        $this->syncGameGallery($game, $request);
 
         // Clear cache
         $this->clearPaginatedGameCache();

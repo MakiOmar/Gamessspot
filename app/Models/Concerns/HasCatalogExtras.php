@@ -28,8 +28,12 @@ trait HasCatalogExtras
     /**
      * Sync gallery uploads from a request (append up to MAX_PER_PRODUCT).
      */
-    public function syncGalleryFromRequest(Request $request, ImageUploadService $uploader): void
-    {
+    public function syncGalleryFromRequest(
+        Request $request,
+        ImageUploadService $uploader,
+        ?int $maxWidth = null,
+        int $quality = ImageUploadService::WEBP_QUALITY
+    ): void {
         $files = $request->file('gallery_images', []);
         if (!is_array($files) || empty($files)) {
             return;
@@ -46,7 +50,7 @@ trait HasCatalogExtras
                 continue;
             }
 
-            $path = $uploader->upload($file, 'galleries');
+            $path = $uploader->upload($file, 'galleries', $maxWidth, $quality);
             $this->galleryImages()->create([
                 'path' => $path,
                 'sort_order' => $nextSort++,
