@@ -7,6 +7,7 @@ use App\Models\Game;
 use App\Models\Role;
 use App\Models\User;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 class ProductTypeListingTest extends TestCase
@@ -105,6 +106,47 @@ class ProductTypeListingTest extends TestCase
         $subsPage->assertSee('Mgr Sub Only BBB');
         $subsPage->assertDontSee('Mgr Game Only AAA');
         $subsPage->assertSee('PS4 Subscriptions');
+    }
+
+    #[DataProvider('managerGamesRouteProvider')]
+    public function test_manager_games_listing_lazy_loads_cover_images(string $routeName, int $platform): void
+    {
+        $user = $this->actingManager();
+
+        $game = Game::factory()->create([
+            'title' => "Lazy Cover PS{$platform} CCC",
+            "ps{$platform}_image_url" => "assets/uploads/lazy-cover-ps{$platform}.webp",
+        ]);
+
+        Account::factory()->create([
+            'game_id' => $game->id,
+            'mail' => "lazy_ps{$platform}_" . uniqid() . '@example.com',
+            "ps{$platform}_primary_stock" => 1,
+            "ps{$platform}_offline_stock" => 1,
+            "ps{$platform}_secondary_stock" => 1,
+            'password' => 'secret',
+            'cost' => 1,
+            'birthdate' => '1990-01-01',
+            'login_code' => '1111',
+        ]);
+
+        $response = $this->actingAs($user, 'admin')->get(route($routeName));
+
+        $response->assertOk();
+        $response->assertSee(
+            '<img src="' . asset("assets/uploads/lazy-cover-ps{$platform}.webp") . '"',
+            false
+        );
+        $response->assertSee('loading="lazy"', false);
+        $response->assertDontSee('background-image: url(', false);
+    }
+
+    public static function managerGamesRouteProvider(): array
+    {
+        return [
+            'ps4 games' => ['manager.games.ps4', 4],
+            'ps5 games' => ['manager.games.ps5', 5],
+        ];
     }
 
     public function test_game_by_id_includes_product_type(): void

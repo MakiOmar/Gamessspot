@@ -27,11 +27,11 @@
     #gamesListings{
         max-width: 1200px;
     }
+    /* Fixed height reserves space before lazy images load, preventing layout shift */
     #gamesListings .card-img-top{
-        height: 250px; 
-        background-size: contain; 
-        background-position: center;
-        background-repeat: no-repeat;
+        height: 250px;
+        object-fit: contain;
+        object-position: center;
     }
 </style>
 @endpush

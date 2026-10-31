@@ -15,7 +15,16 @@
 
 <div class="col-md-4 mb-4 game-card">
     <div class="card">
-        <div class="card-img-top" style="background-image: url('{{ asset($game->$image_url) }}');"></div>
+        {{-- Native lazy loading: off-screen covers are only fetched as the manager scrolls --}}
+        @if ($game->$image_url)
+            <img src="{{ asset($game->$image_url) }}"
+                 class="card-img-top"
+                 alt="{{ $game->title }}"
+                 loading="lazy"
+                 decoding="async">
+        @else
+            <div class="card-img-top"></div>
+        @endif
         <div class="card-body text-center">
             <h5 class="card-title float-none">{{ $game->title }}</h5>
             <br>
