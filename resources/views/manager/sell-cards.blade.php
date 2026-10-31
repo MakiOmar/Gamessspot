@@ -454,7 +454,7 @@
                             showOrderModal(data.code);
                             jQuery('#orderModal').modal('hide');
                         } else if (data.pending) {
-                            // 202: Next Load is still processing; the code goes to stock when delivered.
+                            // 202: Next Load is still processing; the sale is recorded in the Sell Log when the code arrives.
                             jQuery('#orderModal').modal('hide');
                             Swal.fire({
                                 icon: 'info',

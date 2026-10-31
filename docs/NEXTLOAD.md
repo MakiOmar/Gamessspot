@@ -122,7 +122,7 @@ Good to know:
 - **Normal case:** the customer gets the code straight away, whether it came from the drawer or from Next Load. They can't tell the difference.
 - **Next Load is slow ("still processing"):**
   - *Online shop / POS:* the system keeps trying by itself. The customer gets the code once it arrives (by email for online orders).
-  - *Manager sell screen:* you see *"Next Load is still processing"*. The code is put **in your drawer** when it arrives. Sell it again from the drawer.
+  - *Manager sell screen:* you see *"Next Load is still processing"*. When the code arrives (usually within minutes), the sale is **recorded in the Sell Log by itself**, under your name, with the buyer and price you entered. Find the code there (or in **Gift Cards → Gift Cards Sell Log**) and give it to the customer. Don't sell the card again.
 - **Next Load refuses the order:** **no money is taken**. Try again, or check the balance.
 
 ### The balance is shared — read this
@@ -202,7 +202,7 @@ Every sale (POS, storefront, manager sell screen) calls `POST /api/orders/receiv
 3. **Checks before buying** — the linked product must still be in the price list and marked `in_stock` (a missing flag counts as in stock; the price list is cached for 10 minutes), and its price converted with `NEXTLOAD_EXCHANGE_RATE` must not exceed the category sale price (unless `NEXTLOAD_ALLOW_LOSS=true`). Failing either returns 422 and nothing is charged.
 4. **Buy one code** — a `next_load_orders` row is saved, then `CreateOrder` is sent (see [Purchase flow](#purchase-flow-and-guarantees)):
    - `Complete` → the pin becomes an encrypted `cards` row (`source = next_load`, `cost` = converted supplier price), the order is created and the code is returned like a local one.
-   - `InProgress` → 202 `pending`. Shop/POS: the retry for the same line returns the code. Manager sale: the code is added to stock when delivered.
+   - `InProgress` → 202 `pending`. Shop/POS: the retry for the same line returns the code. Manager sale: the buyer, price, store and notes are saved on the supplier order (`sale_context`); when the code is delivered, the sale is recorded in the Sell Log with the requesting user as seller (see [Gift Cards Sell Log](#gift-cards-sell-log)).
    - `Failed` → 422, not charged; a later retry uses a new reference.
 
 ### Availability shown to sellers and the shop
@@ -233,7 +233,7 @@ To pre-buy stock, use **Restock** in `local_first` (codes go to local stock and 
    - Shop / POS lines: `sf-{hash(storefront_order_id|line_key)}-{n}` — retries of the same line reuse the open or completed order.
    - Manager sales: `acc-{ulid}`.
 2. `Complete` → codes are stored in `next_load_order_items` (serial and pin encrypted), the sold code becomes a `cards` row (`source = next_load`, encrypted) and the order is created.
-3. `InProgress` → `/api/orders/receive` answers `202 {pending: true}`. `nextload:poll` follows the order with `FetchOrder`. A shop retry with the same line key then returns the code; a manager sale's code goes to stock.
+3. `InProgress` → `/api/orders/receive` answers `202 {pending: true}`. `nextload:poll` follows the order with `FetchOrder`. A shop retry with the same line key then returns the code; a manager sale is recorded from its `sale_context` (`CardSourcingService::recordPendingSale`, activity log `next_load.pending_sale_recorded`). If the sale cannot be recorded (e.g. the store profile was deleted), or the order predates `sale_context`, the code goes to stock instead.
 4. `Failed` → nothing was charged; the next retry gets a new reference (`-2`, `-3`, …).
 5. Timeout / no envelope → the order stays `pending_send` and is resent with the **same** reference. `reference is existing` is recovered through `Orders` + `FetchOrder`; it is never bought twice.
 6. Token: cached encrypted; `Invalid Login` (HTTP 501) gets a new token and retries once.
@@ -244,7 +244,7 @@ Amounts are 3-decimal strings compared as integer thousandths (`App\Services\Nex
 
 | Command | Schedule | Purpose |
 |---------|----------|---------|
-| `nextload:poll` | every minute | Resend timed-out orders, poll `InProgress`, move orphaned manager / restock codes to stock. Gives up after 60 attempts (order flagged for manual review). |
+| `nextload:poll` | every minute | Resend timed-out orders, poll `InProgress`, record delayed manager sales in the Sell Log, move restock codes (and unrecordable or legacy manager codes) to stock. Gives up after 60 attempts (order flagged for manual review). |
 | `nextload:balance` | every 15 min | Re-read and cache the real balance (corrects the per-purchase deductions); low-balance warning. |
 | `nextload:sync-products` | hourly | Refresh `supplier_cost` on linked categories; warn when a linked product disappears. |
 | `nextload:reconcile` | daily 03:30 | Compare supplier orders (last 2 days) with local rows; log unknown references and status mismatches. |
@@ -255,7 +255,16 @@ All commands are no-ops while `NEXTLOAD_ENABLED=false`.
 
 - **Overview** — shared balance, linked categories table (local codes, bought today / limit, can buy now), order counts, connection test, price list refresh.
 - **Products & links** — supplier price list with local cost and Next Load's stock flag; `links/new` and `links/{category}` pages for linking, sourcing mode, daily limit, card artwork, **Restock** (buy N codes into stock, max 50 per click) and **Unlink**.
-- **Supplier orders** — filters, details, **Refresh status**, **Release to stock** (unused codes of a completed order), **Reveal code** (recorded in the activity log as `next_load.pin_revealed`; refused if the audit write fails).
+- **Supplier orders** — filters, details, **Refresh status** (records a delayed manager sale when the order completes), **Release to stock** (unused codes of a completed order; for a delayed manager sale it records the sale instead and answers 422), **Reveal code** (recorded in the activity log as `next_load.pin_revealed`; refused if the audit write fails).
+
+## Gift Cards Sell Log
+
+**Gift Cards → Gift Cards Sell Log** (`GET /manager/gift-cards/sell-log`, `manager.gift-cards.sell-log`; needs `view-sell-log` and `manage-gift-cards`) lists gift card sales only — local and Next Load codes. The main **Sell Log** keeps listing them too, with a **Next Load** badge on supplier codes and **Website** as seller for shop orders.
+
+- **Filters (GET, bookmarkable):** date range (default today), store, category, source (*Local* / *Next Load*), search by buyer phone or name, or an exact code.
+- **Totals:** cards sold and revenue; cost and profit for admins only.
+- **Who sees what:** admins and users with `search-customer-orders` see every gift card sale, including shop orders (no seller). Others see only their own sales. Codes are hidden from accountants.
+- Code: `GiftCardSellLogController`, `GiftCardSellLogRequest`, `App\Services\GiftCardSellLogService`, `resources/views/manager/gift-cards/sell-log.blade.php`.
 
 ## Card artwork
 
@@ -299,5 +308,6 @@ Staging product `266` ("Test") costs `0.000`:
 | Shop order stuck "awaiting code" | Supplier orders → filter `in_progress` / `pending_send` → **Refresh status**. POS retries `storefront:fulfill-digital` every 5 minutes. |
 | `Stopped polling after N attempts` | Contact Next Load support with the reference and Next Load id; never place a new order for the same line by hand. |
 | Completed shop order marked `unused` | The POS sale was cancelled or never retried. **Release to stock** makes the code sellable. |
+| Manager sold a card, Next Load was "still processing" | Nothing to do: the sale appears in the Sell Log once the code arrives. **Refresh status** on the supplier order speeds it up. |
 | Low balance warnings | Top up with Next Load; supplier-backed categories disappear from listings when the balance does not cover the price. |
 | `Next Load rejected the credentials` | Check the three `NEXTLOAD_*` credentials, recreate the containers. |

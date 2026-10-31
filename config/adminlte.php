@@ -401,6 +401,12 @@ return [
                     'icon' => 'bi bi-circle',
                 ],
                 [
+                    'text' => 'Gift Cards Sell Log',
+                    'route' => 'manager.gift-cards.sell-log',
+                    'icon' => 'bi bi-circle',
+                    'can' => 'view-sell-log',
+                ],
+                [
                     'text' => 'Next Load Supplier',
                     'route' => 'manager.next-load.index',
                     'icon' => 'bi bi-circle',

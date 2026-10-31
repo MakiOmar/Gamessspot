@@ -19,6 +19,7 @@ use App\Http\Controllers\SpecialPriceController;
 use App\Http\Controllers\MasterController;
 use App\Http\Controllers\CardCategoryController;
 use App\Http\Controllers\CardController;
+use App\Http\Controllers\GiftCardSellLogController;
 use App\Http\Controllers\NextLoadController;
 use App\Http\Controllers\NextLoadLinkController;
 use App\Http\Controllers\NextLoadOrderController;
@@ -815,6 +816,10 @@ Route::prefix('manager')->group(function () {
             Route::get('/cards/search', [CardCategoryController::class, 'searchSellCategories'])
             ->name('manager.sell-cards.search');
 
+            // Gift card sales only (local and Next Load codes)
+            Route::get('/gift-cards/sell-log', [GiftCardSellLogController::class, 'index'])
+                ->middleware('can:view-sell-log')
+                ->name('manager.gift-cards.sell-log');
         });
 
         // Next Load gift card supplier (docs/NEXTLOAD.md)

@@ -17,8 +17,8 @@
         </td>
         @endunless
         <td>{{ $order->id }}</td>
-        {{-- Website label only when WooCommerce profile and no seller user; otherwise show seller name --}}
-        @if ( $order->store_profile_id === 17 && is_null($order->seller_id) )
+        {{-- Website label for storefront orders and the WooCommerce profile with no seller user; otherwise show seller name --}}
+        @if ($order->isWebsiteSale())
         <td>Website</td>
         @else
         <td class="{{ $order->seller ? '' : 'text-danger' }}">{{ $order->seller?->name ?? 'Maybe deleted' }}</td>
@@ -30,7 +30,13 @@
             <td>{{ $order->account->password }}</td>
             @endif
         @elseif($order->card)
-            <td>{{ $order->card->category->name }}</td>
+            <td>
+                {{ $order->card->category?->name }}
+                {{-- Code bought from the Next Load supplier at sale time --}}
+                @if ($order->card->isFromNextLoad())
+                    <span class="badge badge-info bg-info ml-1">Next Load</span>
+                @endif
+            </td>
             @if(! Auth::user()->roles->contains('name', 'accountant') )
             <td>{{ $order->card->code }}</td>
             @endif

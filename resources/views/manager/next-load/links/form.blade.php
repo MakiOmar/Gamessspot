@@ -19,7 +19,7 @@
     ),
     'supplier_only' => array(
         'Every sale buys one code from Next Load; local codes in this category are not sold.',
-        'If Next Load is processing, POS/shop retry automatically and a manager sale gets the code added to stock when it arrives.',
+        'If Next Load is processing, POS/shop retry automatically and a manager sale is recorded in the Sell Log when the code arrives.',
         'The category is hidden from sale when the balance is too low or Next Load is unreachable.',
     ),
 ))

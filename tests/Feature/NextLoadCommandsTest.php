@@ -5,6 +5,9 @@ namespace Tests\Feature;
 use App\Models\Card;
 use App\Models\CardCategory;
 use App\Models\NextLoadOrder;
+use App\Models\Order;
+use App\Models\StoresProfile;
+use App\Models\User;
 use App\Services\NextLoad\NextLoadCatalog;
 use App\Services\NextLoad\NextLoadClient;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
@@ -44,19 +47,66 @@ class NextLoadCommandsTest extends TestCase
         ]);
     }
 
-    public function test_poll_completes_manager_order_and_releases_codes_to_stock(): void
+    public function test_poll_records_delayed_manager_sale_in_the_sell_log(): void
     {
-        $order = $this->inProgressOrder(null);
-        $this->fake(['FetchOrder' => ['status' => 'Success', 'data' => [[
-            'status' => 'Complete', 'price' => '0.000', 'totalamount' => '0.000',
-            'items' => [['product_sn' => 'SN', 'product_pin' => 'PIN-POLL-'.uniqid(), 'price' => '0.000']],
-        ]]]]);
+        $seller = User::factory()->create();
+        $store = StoresProfile::factory()->create();
+        $order = $this->inProgressOrder(null, $seller->id, [
+            'card_category_id' => $this->category->id,
+            'store_profile_id' => $store->id,
+            'buyer_phone' => '01012345678',
+            'buyer_name' => 'Delayed Buyer',
+            'price' => 100,
+            'notes' => 'counter sale',
+        ]);
+        $this->fakeComplete('PIN-POLL-'.uniqid());
 
-        $this->artisan('nextload:poll')->assertSuccessful();
+        $this->artisan('nextload:poll')->expectsOutputToContain('recorded 1 delayed sale')->assertSuccessful();
 
         $order->refresh();
         $this->assertSame(NextLoadOrder::STATUS_COMPLETE, $order->status);
         $this->assertNotNull($order->consumed_at);
+        $card = Card::where('card_category_id', $this->category->id)->sole();
+        $this->assertFalse($card->status);
+        $this->assertSame(Card::SOURCE_NEXT_LOAD, $card->source);
+        $this->assertDatabaseHas('orders', [
+            'card_id' => $card->id,
+            'seller_id' => $seller->id,
+            'store_profile_id' => $store->id,
+            'buyer_phone' => '01012345678',
+            'buyer_name' => 'Delayed Buyer',
+            'sold_item' => 'card',
+            'notes' => 'counter sale',
+        ]);
+        $this->assertDatabaseHas('system_activity_logs', ['action' => 'next_load.pending_sale_recorded', 'subject_id' => $order->id]);
+    }
+
+    public function test_poll_releases_manager_order_without_sale_details_to_stock(): void
+    {
+        $order = $this->inProgressOrder(null);
+        $this->fakeComplete('PIN-OLD-'.uniqid());
+
+        $this->artisan('nextload:poll')->assertSuccessful();
+
+        $this->assertNotNull($order->refresh()->consumed_at);
+        $this->assertSame(1, Card::where('card_category_id', $this->category->id)->where('status', true)->count());
+        $this->assertSame(0, Order::whereIn('card_id', Card::where('card_category_id', $this->category->id)->pluck('id'))->count());
+    }
+
+    public function test_poll_releases_to_stock_when_the_delayed_sale_cannot_be_recorded(): void
+    {
+        $order = $this->inProgressOrder(null, null, [
+            'card_category_id' => $this->category->id,
+            'store_profile_id' => 999999999,
+            'buyer_phone' => '01012345678',
+            'buyer_name' => 'Gone Store',
+            'price' => 100,
+        ]);
+        $this->fakeComplete('PIN-FK-'.uniqid());
+
+        $this->artisan('nextload:poll')->assertSuccessful();
+
+        $this->assertNotNull($order->refresh()->consumed_at);
         $this->assertSame(1, Card::where('card_category_id', $this->category->id)->where('status', true)->count());
     }
 
@@ -112,9 +162,19 @@ class NextLoadCommandsTest extends TestCase
         Http::assertNothingSent();
     }
 
-    private function inProgressOrder(?string $storefrontOrderId): NextLoadOrder
+    private function fakeComplete(string $pin): void
+    {
+        $this->fake(['FetchOrder' => ['status' => 'Success', 'data' => [[
+            'status' => 'Complete', 'price' => '0.000', 'totalamount' => '0.000',
+            'items' => [['product_sn' => 'SN', 'product_pin' => $pin, 'price' => '0.000']],
+        ]]]]);
+    }
+
+    private function inProgressOrder(?string $storefrontOrderId, ?int $requestedBy = null, ?array $saleContext = null): NextLoadOrder
     {
         return NextLoadOrder::create([
+            'requested_by' => $requestedBy,
+            'sale_context' => $saleContext,
             'reference' => 'test-'.uniqid(),
             'next_load_order_id' => '42',
             'card_category_id' => $this->category->id,

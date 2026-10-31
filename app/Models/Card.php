@@ -40,6 +40,11 @@ class Card extends Model
         return hash_hmac('sha256', trim($code), (string) config('app.key'));
     }
 
+    public function isFromNextLoad(): bool
+    {
+        return $this->source === self::SOURCE_NEXT_LOAD;
+    }
+
     public static function codeExists(string $code, ?int $ignoreId = null): bool
     {
         return self::query()

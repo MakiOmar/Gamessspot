@@ -4,6 +4,7 @@ namespace App\Services\NextLoad;
 
 use App\Models\CardCategory;
 use App\Models\NextLoadOrder;
+use App\Services\CardSourcingService;
 use App\Services\SystemActivityLogger;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
@@ -23,18 +24,20 @@ class NextLoadSyncService
         private readonly NextLoadClient $client,
         private readonly NextLoadCatalog $catalog,
         private readonly NextLoadPurchaseService $purchases,
+        private readonly CardSourcingService $sales,
         private readonly SystemActivityLogger $activityLogger,
     ) {
     }
 
     /**
-     * Resend timed-out orders and poll InProgress ones; deliver orphaned codes to stock.
+     * Resend timed-out orders and poll InProgress ones; record delayed manager sales and deliver
+     * orphaned codes to stock.
      *
-     * @return array{checked:int, completed:int, failed:int, released:int, stuck:int}
+     * @return array{checked:int, completed:int, failed:int, recorded:int, released:int, stuck:int}
      */
     public function pollDue(int $limit = 50): array
     {
-        $stats = ['checked' => 0, 'completed' => 0, 'failed' => 0, 'released' => 0, 'stuck' => 0];
+        $stats = ['checked' => 0, 'completed' => 0, 'failed' => 0, 'recorded' => 0, 'released' => 0, 'stuck' => 0];
 
         $orders = NextLoadOrder::query()
             ->whereIn('status', [NextLoadOrder::STATUS_PENDING_SEND, NextLoadOrder::STATUS_IN_PROGRESS])
@@ -57,11 +60,11 @@ class NextLoadSyncService
                 $stats['failed']++;
             } elseif ($order->isComplete()) {
                 $stats['completed']++;
-                $stats['released'] += $this->releaseIfOrphaned($order);
+                $this->settleCompleted($order, $stats);
             }
         }
 
-        // Manager sales that completed after the request returned have no one waiting for the code.
+        // Manager orders completed outside the poll (e.g. Refresh status, reconcile) that are still unused.
         NextLoadOrder::query()
             ->where('status', NextLoadOrder::STATUS_COMPLETE)
             ->whereNull('consumed_at')
@@ -70,10 +73,27 @@ class NextLoadSyncService
             ->limit($limit)
             ->get()
             ->each(function (NextLoadOrder $order) use (&$stats) {
-                $stats['released'] += $this->releaseIfOrphaned($order);
+                $this->settleCompleted($order, $stats);
             });
 
         return $stats;
+    }
+
+    /**
+     * A delivered manager sale becomes that sale; restock orders, old rows without sale details and sales that
+     * cannot be recorded go to stock.
+     *
+     * @param  array<string, int>  $stats
+     */
+    public function settleCompleted(NextLoadOrder $order, array &$stats): void
+    {
+        if ($order->awaitsManagerSale() && $this->sales->recordPendingSale($order)) {
+            $stats['recorded']++;
+
+            return;
+        }
+
+        $stats['released'] += $this->releaseIfOrphaned($order->refresh());
     }
 
     /**

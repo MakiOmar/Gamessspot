@@ -6,6 +6,7 @@ use App\Models\Card;
 use App\Models\CardCategory;
 use App\Models\NextLoadOrder;
 use App\Models\Role;
+use App\Models\StoresProfile;
 use App\Models\User;
 use App\Services\NextLoad\NextLoadCatalog;
 use App\Services\NextLoad\NextLoadClient;
@@ -28,6 +29,8 @@ class NextLoadAdminTest extends TestCase
     private User $admin;
 
     private array $createResponses = [];
+
+    private array $fetchResponses = [];
 
     protected function setUp(): void
     {
@@ -55,6 +58,7 @@ class NextLoadAdminTest extends TestCase
                     ['product_id' => 352, 'product' => 'amazon KSA 50 SAR', 'price' => '13.380', 'in_stock' => false],
                 ]]),
                 'CreateOrder' => Http::response(array_shift($this->createResponses) ?? ['status' => 'Error', 'message' => 'none'], 200),
+                'FetchOrder' => Http::response(array_shift($this->fetchResponses) ?? ['status' => 'Error', 'message' => 'none'], 200),
                 default => Http::response(['status' => 'Error', 'message' => 'unknown'], 404),
             };
         });
@@ -175,6 +179,64 @@ class NextLoadAdminTest extends TestCase
         $this->postJson(route('manager.next-load.orders.release', $order))->assertOk();
         $this->assertSame(1, Card::where('next_load_order_item_id', $item->id)->where('status', true)->count());
         $this->postJson(route('manager.next-load.orders.release', $order))->assertStatus(422);
+    }
+
+    public function test_pending_manager_sale_is_recorded_when_refresh_completes_it(): void
+    {
+        $category = $this->linkedCategory();
+        $store = StoresProfile::factory()->create();
+        $this->createResponses[] = ['status' => 'Success', 'data' => [
+            'order_id' => 4242, 'status' => 'InProgress', 'quantity' => 0, 'card_price' => '0.000', 'items' => [],
+        ]];
+        $this->actingAs($this->admin, 'admin');
+
+        $this->postJson(route('manager.orders.sell.card'), [
+            'card_category_id' => $category->id,
+            'store_profile_id' => $store->id,
+            'buyer_phone' => '01099990000',
+            'buyer_name' => 'Counter Buyer',
+            'price' => 100,
+        ])->assertStatus(202)->assertJsonPath('pending', true);
+
+        $supplierOrder = NextLoadOrder::where('card_category_id', $category->id)->sole();
+        $this->assertSame($this->admin->id, $supplierOrder->requested_by);
+        $this->assertSame('Counter Buyer', $supplierOrder->sale_context['buyer_name']);
+        $this->assertSame($store->id, (int) $supplierOrder->sale_context['store_profile_id']);
+
+        $this->fetchResponses[] = ['status' => 'Success', 'data' => [[
+            'status' => 'Complete', 'price' => '0.000', 'totalamount' => '0.000',
+            'items' => [['product_sn' => 'SN', 'product_pin' => 'PIN-REF-'.uniqid(), 'price' => '0.000']],
+        ]]];
+        $this->postJson(route('manager.next-load.orders.refresh', $supplierOrder))
+            ->assertOk()
+            ->assertJsonPath('success', true)
+            ->assertSee('recorded in the Sell Log');
+
+        $card = Card::where('card_category_id', $category->id)->sole();
+        $this->assertFalse($card->status);
+        $this->assertDatabaseHas('orders', ['card_id' => $card->id, 'seller_id' => $this->admin->id, 'buyer_name' => 'Counter Buyer', 'store_profile_id' => $store->id]);
+        $this->assertNotNull($supplierOrder->refresh()->consumed_at);
+    }
+
+    public function test_release_records_a_waiting_manager_sale_instead_of_stocking_it(): void
+    {
+        $category = $this->linkedCategory();
+        $store = StoresProfile::factory()->create();
+        $order = $this->completeOrder($category, 'PIN-WAIT-'.uniqid());
+        $order->update([
+            'storefront_order_id' => null,
+            'storefront_line_key' => null,
+            'requested_by' => $this->admin->id,
+            'sale_context' => ['store_profile_id' => $store->id, 'buyer_phone' => '0101', 'buyer_name' => 'Waiting', 'price' => 100],
+        ]);
+
+        $this->actingAs($this->admin, 'admin')
+            ->postJson(route('manager.next-load.orders.release', $order))
+            ->assertStatus(422)
+            ->assertJsonPath('success', false);
+
+        $this->assertSame(0, Card::where('card_category_id', $category->id)->where('status', true)->count());
+        $this->assertDatabaseHas('orders', ['buyer_name' => 'Waiting', 'seller_id' => $this->admin->id]);
     }
 
     private function linkedCategory(): CardCategory

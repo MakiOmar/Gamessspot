@@ -18,8 +18,13 @@ use Illuminate\Support\Facades\Log;
  */
 class CardSourcingService
 {
-    public function __construct(private readonly NextLoadPurchaseService $purchases)
-    {
+    /** Order fields kept on a manager supplier order so a delayed code can still become the sale. */
+    private const SALE_CONTEXT_KEYS = ['card_category_id', 'store_profile_id', 'buyer_phone', 'buyer_name', 'price', 'notes'];
+
+    public function __construct(
+        private readonly NextLoadPurchaseService $purchases,
+        private readonly SystemActivityLogger $activityLogger,
+    ) {
     }
 
     /**
@@ -77,6 +82,7 @@ class CardSourcingService
                 $isStorefront ? (string) $data['storefront_order_id'] : null,
                 $lineKey,
                 $sellerId,
+                $isStorefront ? null : array_intersect_key($data, array_flip(self::SALE_CONTEXT_KEYS)),
             );
         } catch (NextLoadException $e) {
             Log::warning('Next Load purchase not started', ['category_id' => $category->id, 'reason' => $e->reason]);
@@ -94,7 +100,7 @@ class CardSourcingService
                 'pending' => true,
                 'message' => $isStorefront
                     ? 'The supplier is still processing this code. It will be retried automatically.'
-                    : 'Next Load is still processing this code. It will be added to stock when delivered.',
+                    : 'Next Load is still processing this code. The sale will be recorded in the Sell Log when Next Load delivers the code.',
                 'supplier_reference' => $supplierOrder->reference,
             ]);
         }
@@ -118,19 +124,75 @@ class CardSourcingService
                 return $duplicate;
             }
 
-            $item = $locked->unconvertedItems()->orderBy('id')->first();
-            if (! $item) {
+            $sold = $this->sellLockedItem($locked, $data, $lineKey, $isStorefront, $sellerId);
+            if (! $sold) {
                 return $this->result(422, ['success' => false, 'message' => 'No supplier code is left on this order.']);
             }
 
-            $card = $this->purchases->createCard($locked, $item, false);
-            $order = Order::create($this->orderData($data, $lineKey, $isStorefront, $sellerId, $card->id));
-            if (! $locked->unconvertedItems()->exists()) {
-                $locked->update(['consumed_at' => now()]);
-            }
-
-            return $this->soldResponse($card, $order);
+            return $this->soldResponse($sold['card'], $sold['order']);
         });
+    }
+
+    /**
+     * Turn the delivered code of a manager sale that was still processing into that sale (seller = requester).
+     * Returns null when there is nothing to record or the order cannot be created; the caller may then release
+     * the code to stock instead.
+     */
+    public function recordPendingSale(NextLoadOrder $supplierOrder): ?Order
+    {
+        try {
+            $order = DB::transaction(function () use ($supplierOrder) {
+                $locked = NextLoadOrder::whereKey($supplierOrder->id)->lockForUpdate()->first();
+                if (! $locked || ! $locked->isComplete() || ! $locked->awaitsManagerSale()) {
+                    return null;
+                }
+
+                $sellerId = $locked->requested_by ? (int) $locked->requested_by : null;
+
+                return $this->sellLockedItem($locked, (array) $locked->sale_context, '', false, $sellerId)['order'] ?? null;
+            });
+        } catch (\Throwable $e) {
+            Log::error('Next Load pending sale could not be recorded', ['reference' => $supplierOrder->reference, 'exception' => $e]);
+
+            return null;
+        }
+
+        if ($order) {
+            $this->audit($supplierOrder, $order);
+        }
+
+        return $order;
+    }
+
+    /**
+     * One delivered, unused item becomes a sold card and an order. Runs inside the caller's transaction
+     * with the supplier order row locked.
+     *
+     * @return array{card:Card, order:Order}|null null when every item on the order is already used
+     */
+    private function sellLockedItem(NextLoadOrder $locked, array $data, string $lineKey, bool $isStorefront, ?int $sellerId): ?array
+    {
+        $item = $locked->unconvertedItems()->orderBy('id')->first();
+        if (! $item) {
+            return null;
+        }
+
+        $card = $this->purchases->createCard($locked, $item, false);
+        $order = Order::create($this->orderData($data, $lineKey, $isStorefront, $sellerId, $card->id));
+        if (! $locked->unconvertedItems()->exists()) {
+            $locked->update(['consumed_at' => now()]);
+        }
+
+        return ['card' => $card, 'order' => $order];
+    }
+
+    private function audit(NextLoadOrder $supplierOrder, Order $order): void
+    {
+        try {
+            $this->activityLogger->log('next_load.pending_sale_recorded', 'next_load_order', (int) $supplierOrder->id, $supplierOrder->reference, ['order_id' => $order->id]);
+        } catch (\Throwable) {
+            // Audit logging must never undo a recorded sale.
+        }
     }
 
     /**

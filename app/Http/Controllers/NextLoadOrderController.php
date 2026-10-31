@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\NextLoadOrder;
 use App\Models\NextLoadOrderItem;
+use App\Services\CardSourcingService;
 use App\Services\NextLoad\NextLoadPurchaseService;
 use App\Services\SystemActivityLogger;
 use Illuminate\Http\JsonResponse;
@@ -26,6 +27,7 @@ class NextLoadOrderController extends Controller
 
     public function __construct(
         private readonly NextLoadPurchaseService $purchases,
+        private readonly CardSourcingService $sales,
         private readonly SystemActivityLogger $activityLogger,
     ) {
     }
@@ -70,11 +72,16 @@ class NextLoadOrderController extends Controller
         }
 
         $order = $this->purchases->send($nextLoadOrder);
+        $message = 'Status: '.str_replace('_', ' ', $order->status).($order->last_error ? ' ('.$order->last_error.')' : '');
 
-        return response()->json(array(
-            'success' => true,
-            'message' => 'Status: '.str_replace('_', ' ', $order->status).($order->last_error ? ' ('.$order->last_error.')' : ''),
-        ));
+        if ($order->isComplete() && $order->awaitsManagerSale()) {
+            $sale = $this->sales->recordPendingSale($order);
+            $message .= $sale
+                ? '. Sale #'.$sale->id.' recorded in the Sell Log.'
+                : '. The sale could not be recorded; use Release to stock if the code should be sold again.';
+        }
+
+        return response()->json(array('success' => true, 'message' => $message));
     }
 
     public function release(NextLoadOrder $nextLoadOrder): JsonResponse
@@ -84,6 +91,9 @@ class NextLoadOrderController extends Controller
         }
         if (! $nextLoadOrder->unconvertedItems()->exists()) {
             return response()->json(array('success' => false, 'message' => 'Every code on this order is already in stock or sold.'), 422);
+        }
+        if ($nextLoadOrder->awaitsManagerSale() && $this->sales->recordPendingSale($nextLoadOrder)) {
+            return response()->json(array('success' => false, 'message' => 'This code belonged to a manager sale, so it was recorded in the Sell Log instead of going to stock.'), 422);
         }
 
         $released = $this->purchases->releaseToStock($nextLoadOrder);

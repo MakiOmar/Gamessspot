@@ -30,11 +30,12 @@ class NextLoadOrder extends Model
     protected $fillable = [
         'reference', 'next_load_order_id', 'card_category_id', 'product_id', 'product_name',
         'quantity', 'delivered_quantity', 'status', 'purpose', 'card_price', 'order_amount',
-        'storefront_order_id', 'storefront_line_key', 'requested_by', 'attempts', 'last_error',
+        'storefront_order_id', 'storefront_line_key', 'requested_by', 'sale_context', 'attempts', 'last_error',
         'next_poll_at', 'completed_at', 'consumed_at',
     ];
 
     protected $casts = [
+        'sale_context' => 'array',
         'product_id' => 'integer',
         'quantity' => 'integer',
         'delivered_quantity' => 'integer',
@@ -72,6 +73,18 @@ class NextLoadOrder extends Model
     public function isOpen(): bool
     {
         return in_array($this->status, [self::STATUS_PENDING_SEND, self::STATUS_IN_PROGRESS], true);
+    }
+
+    /**
+     * A manager sale whose code was still processing when the seller asked for it: once delivered,
+     * the code becomes that sale instead of going to stock.
+     */
+    public function awaitsManagerSale(): bool
+    {
+        return $this->purpose === self::PURPOSE_SALE
+            && ! $this->storefront_order_id
+            && ! empty($this->sale_context)
+            && $this->consumed_at === null;
     }
 
     /** Items not yet turned into a Card row. */

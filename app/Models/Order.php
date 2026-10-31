@@ -72,4 +72,13 @@ class Order extends Model
     {
         return $this->belongsTo(Game::class, 'game_id');
     }
+
+    /**
+     * Sold online with no staff seller: storefront orders, or the legacy WooCommerce store profile (17).
+     */
+    public function isWebsiteSale(): bool
+    {
+        return $this->storefront_order_id !== null
+            || ((int) $this->store_profile_id === 17 && $this->seller_id === null);
+    }
 }

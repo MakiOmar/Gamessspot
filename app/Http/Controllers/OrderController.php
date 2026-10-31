@@ -111,7 +111,7 @@ class OrderController extends Controller
         $ordersQuery = Order::with([
             'seller',
             'account.game', // Load game through account
-            'card',
+            'card.category',
             'reports'
         ])->whereDate('created_at', Carbon::today());
 
@@ -263,7 +263,7 @@ class OrderController extends Controller
         }
 
         // Build the query to filter orders
-        $orders = Order::with(array( 'seller', 'account.game' ));
+        $orders = Order::with(array( 'seller', 'account.game', 'card.category' ));
         // Restrict to own sales unless the user can search all customer orders
         if (! $user->can('search-customer-orders')) {
             $orders->where('seller_id', $user->id);
@@ -1223,7 +1223,7 @@ class OrderController extends Controller
     public function ordersWithStatus($status)
     {
         // Retrieve all orders with a related report that has status 'needs_return'
-        $orders = Order::with(array( 'seller', 'account.game', 'reports.seller', 'reports.latestAction.user' ))
+        $orders = Order::with(array( 'seller', 'account.game', 'card.category', 'reports.seller', 'reports.latestAction.user' ))
         ->whereHas(
             'reports',
             function ($query) use ($status) {

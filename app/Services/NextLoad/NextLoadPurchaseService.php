@@ -32,8 +32,10 @@ class NextLoadPurchaseService
     /**
      * Supplier order for one sale. Storefront/POS lines reuse their open or completed-unused order on retry.
      * A consumed order (its code was sold and the sale undone, or released to stock) opens a new generation.
+     *
+     * @param  array<string, mixed>|null  $saleContext  manager sale details, used if the code arrives after the request
      */
-    public function purchaseForSale(CardCategory $category, ?string $storefrontOrderId, ?string $lineKey, ?int $userId): NextLoadOrder
+    public function purchaseForSale(CardCategory $category, ?string $storefrontOrderId, ?string $lineKey, ?int $userId, ?array $saleContext = null): NextLoadOrder
     {
         if ($storefrontOrderId !== null && $storefrontOrderId !== '') {
             $existing = NextLoadOrder::query()
@@ -48,7 +50,7 @@ class NextLoadPurchaseService
             }
         }
 
-        $order = $this->open($category, 1, NextLoadOrder::PURPOSE_SALE, $userId, $storefrontOrderId, $lineKey);
+        $order = $this->open($category, 1, NextLoadOrder::PURPOSE_SALE, $userId, $storefrontOrderId, $lineKey, $saleContext);
 
         return $this->send($order);
     }
@@ -179,6 +181,7 @@ class NextLoadPurchaseService
         ?int $userId,
         ?string $storefrontOrderId = null,
         ?string $lineKey = null,
+        ?array $saleContext = null,
     ): NextLoadOrder {
         if (! NextLoadClient::enabled() || ! $category->usesSupplier()) {
             throw new NextLoadException(NextLoadException::CONFIG, 'This category is not linked to Next Load.');
@@ -210,6 +213,7 @@ class NextLoadPurchaseService
             'storefront_order_id' => $storefrontOrderId ?: null,
             'storefront_line_key' => $storefrontOrderId ? (string) $lineKey : null,
             'requested_by' => $userId,
+            'sale_context' => $storefrontOrderId ? null : $saleContext,
             // Keep the poller away while the creating request is still talking to Next Load.
             'next_poll_at' => now()->addMinutes(2),
         ];

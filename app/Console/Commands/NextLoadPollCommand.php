@@ -10,7 +10,7 @@ class NextLoadPollCommand extends Command
 {
     protected $signature = 'nextload:poll {--limit=50 : Max supplier orders to check per run}';
 
-    protected $description = 'Resend timed-out Next Load orders, poll InProgress ones and move orphaned codes to stock';
+    protected $description = 'Resend timed-out Next Load orders, poll InProgress ones, record delayed manager sales and move orphaned codes to stock';
 
     public function handle(NextLoadSyncService $sync): int
     {
@@ -22,8 +22,8 @@ class NextLoadPollCommand extends Command
 
         $stats = $sync->pollDue(max(1, (int) $this->option('limit')));
         $this->info(sprintf(
-            'Checked %d, completed %d, failed %d, released %d code(s) to stock, stuck %d.',
-            $stats['checked'], $stats['completed'], $stats['failed'], $stats['released'], $stats['stuck']
+            'Checked %d, completed %d, failed %d, recorded %d delayed sale(s), released %d code(s) to stock, stuck %d.',
+            $stats['checked'], $stats['completed'], $stats['failed'], $stats['recorded'], $stats['released'], $stats['stuck']
         ));
 
         return self::SUCCESS;
