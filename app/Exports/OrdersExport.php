@@ -13,7 +13,7 @@ use Illuminate\Database\Eloquent\Builder;
 class OrdersExport
 {
     /**
-     * @param array{search?: string, status?: string, start_date?: string, end_date?: string, store_profile_id?: int} $filters
+     * @param array{search?: string, status?: string, start_date?: string, end_date?: string, store_profile_id?: int, seller_id?: int} $filters
      */
     public function __construct(private array $filters = array())
     {
@@ -48,6 +48,7 @@ class OrdersExport
             ))
             ->when($this->isReportExport(), fn (Builder $query) => $query->with(array('reports.seller:id,name', 'reports.latestAction.user:id,name')))
             ->when(! empty($filters['store_profile_id']), fn (Builder $query) => $query->where('orders.store_profile_id', $filters['store_profile_id']))
+            ->when(! empty($filters['seller_id']), fn (Builder $query) => $query->where('orders.seller_id', $filters['seller_id']))
             ->when(! empty($filters['status']), fn (Builder $query) => $query->whereHas('reports', fn (Builder $reports) => $reports->where('status', $filters['status'])))
             ->when(! empty($filters['search']), fn (Builder $query) => $this->applySearch($query, $filters['search']))
             ->when(! empty($filters['start_date']), fn (Builder $query) => $query->where('orders.created_at', '>=', Carbon::parse($filters['start_date'])->startOfDay()))

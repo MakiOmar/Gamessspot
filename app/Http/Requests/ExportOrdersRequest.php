@@ -24,13 +24,14 @@ class ExportOrdersRequest extends FormRequest
             'start_date'  => array('nullable', 'date_format:Y-m-d'),
             'end_date'    => array('nullable', 'date_format:Y-m-d', 'after_or_equal:start_date'),
             'id'          => array('nullable', 'integer', 'min:1'),
+            'seller_id'   => array('nullable', 'integer', 'min:1'),
         );
     }
 
     /**
      * Filters for {@see \App\Exports\OrdersExport}, with empty values removed.
      *
-     * @return array{search?: string, status?: string, start_date?: string, end_date?: string, store_profile_id?: int}
+     * @return array{search?: string, status?: string, start_date?: string, end_date?: string, store_profile_id?: int, seller_id?: int}
      */
     public function filters(): array
     {
@@ -42,6 +43,7 @@ class ExportOrdersRequest extends FormRequest
             'start_date'       => $data['start_date'] ?? null,
             'end_date'         => $data['end_date'] ?? null,
             'store_profile_id' => isset($data['id']) ? (int) $data['id'] : null,
+            'seller_id'        => isset($data['seller_id']) ? (int) $data['seller_id'] : null,
         ), fn ($value) => $value !== null && $value !== '');
     }
 }

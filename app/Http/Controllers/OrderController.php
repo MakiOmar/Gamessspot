@@ -216,8 +216,25 @@ class OrderController extends Controller
     protected function renderOrders($orders, $user, bool $searchOnly = false)
     {
         $status = request()->input('status', 'all');
+        $storeSellers = $searchOnly ? collect() : $this->storeProfileSellers($user);
 
-        return view('manager.orders', compact('orders', 'user', 'status', 'searchOnly'));
+        return view('manager.orders', compact('orders', 'user', 'status', 'searchOnly', 'storeSellers'));
+    }
+
+    /**
+     * Sellers with at least one order in the store profile opened from Store Profiles (`?id=`).
+     */
+    protected function storeProfileSellers($user)
+    {
+        $storeId = request()->integer('id');
+        if ($storeId < 1 || ! $user->can('search-customer-orders')) {
+            return collect();
+        }
+
+        return User::query()
+            ->whereIn('id', Order::query()->select('seller_id')->where('store_profile_id', $storeId)->whereNotNull('seller_id')->distinct())
+            ->orderBy('name')
+            ->get(array('id', 'name'));
     }
 
     /**
@@ -248,6 +265,7 @@ class OrderController extends Controller
         $startDate      = $request->input('start_date');
         $endDate        = $request->input('end_date');
         $storeProfileId = $request->input('store_profile_id');
+        $sellerId       = $request->integer('seller_id');
         $status         = $request->input('status', 'all'); // Default to 'all' if not provided
         $showAll        = $request->input('show_all', 0); // Check if show all is selected
         Log::info("Search Parameters - Query: $query, Start Date: $startDate, End Date: $endDate, Store Profile ID: $storeProfileId, Status: $status, Show All: $showAll");
@@ -267,6 +285,10 @@ class OrderController extends Controller
         // Restrict to own sales unless the user can search all customer orders
         if (! $user->can('search-customer-orders')) {
             $orders->where('seller_id', $user->id);
+        }
+
+        if ($sellerId > 0) {
+            $orders->where('orders.seller_id', $sellerId);
         }
 
         // Filter by buyer phone if search query exists

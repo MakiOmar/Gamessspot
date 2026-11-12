@@ -18,6 +18,7 @@
     $isCallCenter = Auth::user()->hasRole('call center');
     $searchOnly = $searchOnly ?? false;
     $canManageSellLog = Auth::user()->can('manage-sell-log');
+    $storeSellers = $storeSellers ?? collect();
 @endphp
 
 @section('content')
@@ -63,6 +64,17 @@
                             <input type="hidden" name="status" value="{{ $status }}">
                         @endif
                     </div>
+
+                    @if($storeSellers->isNotEmpty())
+                        <div class="col-12 col-md-4">
+                            <select class="form-control" name="seller_id" id="sellerFilter" data-placeholder="All sellers">
+                                <option value="">All sellers</option>
+                                @foreach($storeSellers as $seller)
+                                    <option value="{{ $seller->id }}">{{ $seller->name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                    @endif
 
                     <!-- Date Range -->
                     @if( ! Auth::user()->roles->contains('name', 'sales') && ! $isCallCenter )
@@ -545,6 +557,7 @@
                 let startDate = $('#startDate').val();
                 let endDate = $('#endDate').val();
                 let storeProfileId = $('#storeId').val();
+                let sellerId = $('#sellerFilter').val() || '';
                 let status = $('#currentReportStatus').length > 0 ? $('#currentReportStatus').val() : 'all';
                 let showAll = $('#showAllCheckbox').is(':checked') ? 1 : 0;
 
@@ -557,10 +570,13 @@
                         end_date: endDate,
                         status: status,
                         store_profile_id: storeProfileId,
+                        seller_id: sellerId,
                         show_all: showAll,
                     },
                     success: function(response) {
                         if (!response.rows || response.rows.trim() === '') {
+                            $('#orderTableBody').empty();
+                            $('#orderPagination').empty();
                             Swal.fire({
                                 title: 'No Results',
                                 text: 'No orders found matching your search criteria.',
@@ -600,6 +616,7 @@
                 queryParams.set('start_date', startDate);
                 queryParams.set('end_date', endDate);
                 queryParams.set('store_profile_id', storeId);
+                queryParams.set('seller_id', $('#sellerFilter').val() || '');
                 queryParams.set('status', status);
                 queryParams.set('show_all', showAll);
 
@@ -616,6 +633,11 @@
                     }
                 });
             });
+
+            $('#sellerFilter').select2({ width: '100%', allowClear: true })
+                .on('change', function() {
+                    $('#customSearchBtn').trigger('click');
+                });
 
             // NOW check for URL parameters and trigger search AFTER the handler is defined
             const urlParams = new URLSearchParams(window.location.search);
