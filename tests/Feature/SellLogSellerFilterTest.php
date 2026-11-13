@@ -92,10 +92,73 @@ class SellLogSellerFilterTest extends TestCase
         $this->assertSame([$aliceOrder->id], (new OrdersExport($filters))->query()->pluck('orders.id')->all());
     }
 
-    private function makeOrder(User $seller, StoresProfile $store): Order
+    public function test_website_option_is_listed_only_for_stores_with_website_sales(): void
     {
-        return Order::create([
-            'seller_id'        => $seller->id,
+        $this->makeOrder($this->admin, $this->store);
+
+        $this->actingAs($this->admin, 'admin')
+            ->get(route('manager.orders', ['id' => $this->store->id]))
+            ->assertOk()
+            ->assertDontSee('value="website"', false);
+
+        $this->makeOrder(null, $this->store, ['storefront_order_id' => 'sf-' . uniqid()]);
+
+        $this->actingAs($this->admin, 'admin')
+            ->get(route('manager.orders', ['id' => $this->store->id]))
+            ->assertOk()
+            ->assertSee('value="website"', false);
+    }
+
+    public function test_website_filter_returns_storefront_and_legacy_website_orders_only(): void
+    {
+        $legacyStore = StoresProfile::find(Order::LEGACY_WEBSITE_STORE_PROFILE_ID)
+            ?? StoresProfile::factory()->create(['id' => Order::LEGACY_WEBSITE_STORE_PROFILE_ID]);
+        $storefront = $this->makeOrder(null, $legacyStore, ['storefront_order_id' => 'sf-' . uniqid()]);
+        $legacy = $this->makeOrder(null, $legacyStore);
+        $staff = $this->makeOrder($this->admin, $legacyStore);
+
+        $rows = $this->actingAs($this->admin, 'admin')
+            ->getJson(route('manager.orders.search', [
+                'store_profile_id' => $legacyStore->id,
+                'seller_id'        => Order::WEBSITE_SELLER,
+                'start_date'       => now()->toDateString(),
+                'end_date'         => now()->toDateString(),
+            ]))
+            ->assertOk()
+            ->json('rows');
+
+        $this->assertStringContainsString('orderRow-' . $storefront->id, $rows);
+        $this->assertStringContainsString('orderRow-' . $legacy->id, $rows);
+        $this->assertStringNotContainsString('orderRow-' . $staff->id, $rows);
+
+        Queue::fake();
+        $exportId = $this->actingAs($this->admin, 'admin')
+            ->postJson(route('manager.orders.export'), ['id' => $legacyStore->id, 'seller_id' => Order::WEBSITE_SELLER])
+            ->assertStatus(202)
+            ->json('id');
+
+        $filters = DataExport::findOrFail($exportId)->filters;
+        $this->assertSame(Order::WEBSITE_SELLER, $filters['seller_id']);
+        $exported = (new OrdersExport($filters))->query()->whereIn('orders.id', [$storefront->id, $legacy->id, $staff->id])->pluck('orders.id')->all();
+        $this->assertEqualsCanonicalizing([$storefront->id, $legacy->id], $exported);
+    }
+
+    public function test_export_rejects_an_unknown_seller_value(): void
+    {
+        Queue::fake();
+
+        $this->actingAs($this->admin, 'admin')
+            ->postJson(route('manager.orders.export'), ['seller_id' => 'robot'])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('seller_id');
+
+        Queue::assertNothingPushed();
+    }
+
+    private function makeOrder(?User $seller, StoresProfile $store, array $attributes = []): Order
+    {
+        return Order::create($attributes + [
+            'seller_id'        => $seller?->id,
             'store_profile_id' => $store->id,
             'buyer_phone'      => '0107' . random_int(1000000, 9999999),
             'buyer_name'       => 'Buyer',

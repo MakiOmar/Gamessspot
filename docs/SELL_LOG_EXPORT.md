@@ -16,7 +16,7 @@ The Excel button on **Sell Log** and the report pages (Needs Return, Reported Is
 | `start_date`, `end_date` | `Y-m-d`, inclusive whole days on `orders.created_at` |
 | `searchOrder` | Seller name, account email, buyer phone or name (contains) |
 | `id` | Store profile |
-| `seller_id` | One seller. Shown as a type-to-search dropdown on a store profile's sell log (`?id=`, opened from **Store Profiles → Sell log**) for users with `search-customer-orders`; it lists sellers with at least one order in that store and also filters the table search |
+| `seller_id` | One seller id, or `website` for website sales (storefront orders, plus store profile 17 orders with no seller — the rows labelled "Website"). Shown as a type-to-search dropdown on a store profile's sell log (`?id=`, opened from **Store Profiles → Sell log**) for users with `search-customer-orders`; it lists "Website" when the store has website sales, then sellers with at least one order in that store, and also filters the table search |
 
 ## Columns
 

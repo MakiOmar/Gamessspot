@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use App\Models\Report;
@@ -10,6 +11,11 @@ use App\Models\StoresProfile;
 class Order extends Model
 {
     use HasFactory;
+
+    /** Seller filter value for {@see isWebsiteSale()} orders. */
+    public const WEBSITE_SELLER = 'website';
+
+    public const LEGACY_WEBSITE_STORE_PROFILE_ID = 17;
 
     // Define which fields are mass-assignable (fillable)
     protected $fillable = array(
@@ -79,6 +85,25 @@ class Order extends Model
     public function isWebsiteSale(): bool
     {
         return $this->storefront_order_id !== null
-            || ((int) $this->store_profile_id === 17 && $this->seller_id === null);
+            || ((int) $this->store_profile_id === self::LEGACY_WEBSITE_STORE_PROFILE_ID && $this->seller_id === null);
+    }
+
+    /**
+     * Same rule as {@see isWebsiteSale()}, as a query.
+     */
+    public function scopeWebsiteSales(Builder $query): Builder
+    {
+        return $query->where(fn (Builder $q) => $q->whereNotNull('orders.storefront_order_id')
+            ->orWhere(fn (Builder $legacy) => $legacy->where('orders.store_profile_id', self::LEGACY_WEBSITE_STORE_PROFILE_ID)->whereNull('orders.seller_id')));
+    }
+
+    /**
+     * @param int|string $seller A seller user id, or {@see WEBSITE_SELLER}
+     */
+    public function scopeSoldBy(Builder $query, int|string $seller): Builder
+    {
+        return $seller === self::WEBSITE_SELLER
+            ? $query->websiteSales()
+            : $query->where('orders.seller_id', (int) $seller);
     }
 }

@@ -222,7 +222,10 @@ class OrderController extends Controller
     }
 
     /**
-     * Sellers with at least one order in the store profile opened from Store Profiles (`?id=`).
+     * Seller filter options (value => label) for the store profile opened from Store Profiles (`?id=`):
+     * "Website" when it has website sales, then sellers with at least one order there.
+     *
+     * @return \Illuminate\Support\Collection<int|string, string>
      */
     protected function storeProfileSellers($user)
     {
@@ -231,10 +234,16 @@ class OrderController extends Controller
             return collect();
         }
 
-        return User::query()
+        $sellers = User::query()
             ->whereIn('id', Order::query()->select('seller_id')->where('store_profile_id', $storeId)->whereNotNull('seller_id')->distinct())
             ->orderBy('name')
-            ->get(array('id', 'name'));
+            ->pluck('name', 'id');
+
+        if (Order::query()->where('store_profile_id', $storeId)->websiteSales()->exists()) {
+            $sellers->prepend('Website', Order::WEBSITE_SELLER);
+        }
+
+        return $sellers;
     }
 
     /**
@@ -265,7 +274,7 @@ class OrderController extends Controller
         $startDate      = $request->input('start_date');
         $endDate        = $request->input('end_date');
         $storeProfileId = $request->input('store_profile_id');
-        $sellerId       = $request->integer('seller_id');
+        $sellerFilter   = $request->input('seller_id') === Order::WEBSITE_SELLER ? Order::WEBSITE_SELLER : $request->integer('seller_id');
         $status         = $request->input('status', 'all'); // Default to 'all' if not provided
         $showAll        = $request->input('show_all', 0); // Check if show all is selected
         Log::info("Search Parameters - Query: $query, Start Date: $startDate, End Date: $endDate, Store Profile ID: $storeProfileId, Status: $status, Show All: $showAll");
@@ -287,8 +296,8 @@ class OrderController extends Controller
             $orders->where('seller_id', $user->id);
         }
 
-        if ($sellerId > 0) {
-            $orders->where('orders.seller_id', $sellerId);
+        if ($sellerFilter === Order::WEBSITE_SELLER || $sellerFilter > 0) {
+            $orders->soldBy($sellerFilter);
         }
 
         // Filter by buyer phone if search query exists

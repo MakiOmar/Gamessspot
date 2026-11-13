@@ -69,8 +69,8 @@
                         <div class="col-12 col-md-4">
                             <select class="form-control" name="seller_id" id="sellerFilter" data-placeholder="All sellers">
                                 <option value="">All sellers</option>
-                                @foreach($storeSellers as $seller)
-                                    <option value="{{ $seller->id }}">{{ $seller->name }}</option>
+                                @foreach($storeSellers as $sellerValue => $sellerName)
+                                    <option value="{{ $sellerValue }}">{{ $sellerName }}</option>
                                 @endforeach
                             </select>
                         </div>
