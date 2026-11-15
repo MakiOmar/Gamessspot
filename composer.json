@@ -17,7 +17,8 @@
         "predis/predis": "^3.2",
         "rawilk/laravel-settings": "^3.4",
         "spatie/laravel-backup": "^9.3",
-        "yaza/laravel-google-drive-storage": "^4.1"
+        "yaza/laravel-google-drive-storage": "^4.1",
+        "zohomail/laravel-zeptomail": "dev-main"
     },
     "require-dev": {
         "barryvdh/laravel-debugbar": "^3.15",
