@@ -70,6 +70,28 @@ class NextLoadController extends Controller
         return response()->json(array('success' => true, 'message' => 'Connected. Balance: '.$balance, 'balance' => $balance));
     }
 
+    /**
+     * Same work as the scheduled nextload:balance job — re-read the live balance now.
+     */
+    public function refreshBalance(NextLoadSyncService $sync): JsonResponse
+    {
+        if (! NextLoadClient::configured()) {
+            return response()->json(array('success' => false, 'message' => 'Next Load credentials are not configured.'), 422);
+        }
+
+        $result = $sync->checkBalance();
+        if ($result['balance'] === null) {
+            return response()->json(array('success' => false, 'message' => 'Could not read the Next Load balance. Check the credentials and the logs.'), 502);
+        }
+
+        $message = 'Balance refreshed: '.$result['balance'];
+        if ($result['low']) {
+            $message .= ' (below the low-balance threshold)';
+        }
+
+        return response()->json(array('success' => true, 'message' => $message, 'balance' => $result['balance'], 'low' => $result['low']));
+    }
+
     public function syncProducts(NextLoadSyncService $sync): JsonResponse
     {
         try {

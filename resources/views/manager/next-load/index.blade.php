@@ -34,7 +34,7 @@
                     @elseif ($isLow)
                         Below the low-balance threshold ({{ $lowBalance }}).
                     @else
-                        Shared by all linked products. Lowered after each purchase; re-read from Next Load every 15 minutes.
+                        Shared by all linked products. Lowered after each purchase; re-read from Next Load every 15 minutes, or use <strong>Refresh balance</strong>.
                     @endif
                 </div>
             </div>
@@ -72,6 +72,9 @@
 <div class="mb-3">
     <button type="button" class="btn btn-sm btn-outline-primary" id="nlTestBtn" @disabled(! $configured)>
         <i class="bi bi-plug"></i> Test connection
+    </button>
+    <button type="button" class="btn btn-sm btn-outline-primary" id="nlBalanceBtn" @disabled(! $configured)>
+        <i class="bi bi-cash-coin"></i> Refresh balance
     </button>
     <button type="button" class="btn btn-sm btn-outline-secondary" id="nlSyncBtn" @disabled(! $configured)>
         <i class="bi bi-arrow-repeat"></i> Refresh price list
@@ -138,6 +141,9 @@
 jQuery(function ($) {
     $('#nlTestBtn').on('click', function () {
         NextLoadUi.post($(this), @json(route('manager.next-load.test')), {}, null, false);
+    });
+    $('#nlBalanceBtn').on('click', function () {
+        NextLoadUi.post($(this), @json(route('manager.next-load.refresh-balance')), {}, null, true);
     });
     $('#nlSyncBtn').on('click', function () {
         NextLoadUi.post($(this), @json(route('manager.next-load.sync-products')), {}, null, true);

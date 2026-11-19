@@ -826,6 +826,7 @@ Route::prefix('manager')->group(function () {
         Route::middleware('can:manage-next-load')->prefix('next-load')->name('manager.next-load.')->group(function () {
             Route::get('/', [NextLoadController::class, 'index'])->name('index');
             Route::post('/test', [NextLoadController::class, 'test'])->name('test');
+            Route::post('/refresh-balance', [NextLoadController::class, 'refreshBalance'])->name('refresh-balance');
             Route::post('/sync-products', [NextLoadController::class, 'syncProducts'])->name('sync-products');
             Route::get('/products', [NextLoadController::class, 'products'])->name('products');
 

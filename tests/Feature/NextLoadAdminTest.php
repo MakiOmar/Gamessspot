@@ -77,12 +77,32 @@ class NextLoadAdminTest extends TestCase
         $order = $this->completeOrder($category);
         $this->actingAs($this->admin, 'admin');
 
-        $this->get(route('manager.next-load.index'))->assertOk()->assertSee('250.000')->assertSee('Linked categories')->assertSee($category->name);
+        $this->get(route('manager.next-load.index'))
+            ->assertOk()
+            ->assertSee('250.000')
+            ->assertSee('Linked categories')
+            ->assertSee('Refresh balance')
+            ->assertSee($category->name);
         $this->get(route('manager.next-load.products'))->assertOk()->assertSee('amazon KSA 50 SAR')->assertSee('Out of stock')->assertSee('In stock');
         $this->get(route('manager.next-load.links.create', ['product_id' => 352]))->assertOk()->assertSee('Linking buys nothing by itself.');
         $this->get(route('manager.next-load.links.edit', $category))->assertOk()->assertSee($category->name);
         $this->get(route('manager.next-load.orders.index'))->assertOk()->assertSee($order->reference);
         $this->get(route('manager.next-load.orders.show', $order))->assertOk()->assertDontSee('PIN-ADMIN');
+    }
+
+    public function test_refresh_balance_re_reads_live_balance(): void
+    {
+        Cache::put(NextLoadCatalog::BALANCE_CACHE_KEY, '1.000', 900);
+        config(['services.nextload.low_balance' => '300']);
+
+        $this->actingAs($this->admin, 'admin')
+            ->postJson(route('manager.next-load.refresh-balance'))
+            ->assertOk()
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('balance', '250.000')
+            ->assertJsonPath('low', true);
+
+        $this->assertSame('250.000', Cache::get(NextLoadCatalog::BALANCE_CACHE_KEY));
     }
 
     public function test_link_existing_and_new_category(): void

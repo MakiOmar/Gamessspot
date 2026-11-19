@@ -138,7 +138,7 @@ To control it:
 
 - **Daily limit** (on the link page): for example *"Amazon: max 30 per day"*. After 30, Amazon stops buying from Next Load until tomorrow, so money is left for other cards. Empty = no limit.
 - **Restock** (mode *Local first*): buy, for example, 20 PlayStation codes **now**. That money is now "reserved" for PlayStation: the codes are in your drawer and sell first. See [Restock](#restock--buying-codes-in-advance).
-- **Top up** before the money runs out. The admin can set a low-balance warning. After topping up, press **Test connection** on the overview page so the shop updates right away.
+- **Top up** before the money runs out. The admin can set a low-balance warning. After topping up, press **Refresh balance** on the overview page so the shop updates right away (or wait for the automatic 15-minute check).
 
 ### Daily checklist
 
@@ -176,7 +176,7 @@ To control it:
    | `NEXTLOAD_DIAGNOSTICS_KEY` | — | Secret for the login-free [diagnostics page](#diagnostics-page-no-login). Empty disables it. |
 
 2. Recreate the Accounts containers (env is read at start), run `php artisan migrate --force`.
-3. Manager → **Gift Cards → Next Load Supplier** (permission `manage-next-load`, granted to admin by default): **Test connection**, then **Refresh price list**.
+3. Manager → **Gift Cards → Next Load Supplier** (permission `manage-next-load`, granted to admin by default): **Test connection**, **Refresh balance**, then **Refresh price list**.
 4. **Products & links** → pick a product → link it to an existing category or create one, and choose the sourcing mode.
 
 ## Sourcing modes (per category)
@@ -213,11 +213,11 @@ Every sale (POS, storefront, manager sell screen) calls `POST /api/orders/receiv
 
 Next Load sells against **one money balance**, not per-product stock. Each category's count is calculated from that same balance, so the counts are **not** additive: with a balance that buys 100 Amazon *or* 150 PlayStation codes, both may show 99, and selling 50 Amazon codes leaves room for about 75 PlayStation codes.
 
-- **Balance cache:** read from Next Load every 15 minutes (`nextload:balance`), **lowered immediately** after each charged order, and dropped after a rejected order so the next check asks Next Load. Concurrent sales may make the cached value drift slightly until the next refresh.
+- **Balance cache:** read from Next Load every 15 minutes (`nextload:balance`), **lowered immediately** after each charged order, and dropped after a rejected order so the next check asks Next Load. Concurrent sales may make the cached value drift slightly until the next refresh. Use **Refresh balance** on the overview to run the same check immediately (e.g. after a top-up).
 - **Daily limit** (link page, optional): max codes Next Load may buy per day for **sales** of that category (failed orders, local codes and Restock are not counted). When it is reached, supplier sales of that category return 422 and the category's supplier count is 0 until midnight (app timezone). Use it so one popular product cannot use the whole balance.
 - **Reserving stock:** **Restock** in `local_first` turns balance into real codes for that category now; they sell first and are unaffected by the balance or a supplier outage.
 - **Low balance:** set `NEXTLOAD_LOW_BALANCE` to about one busy day of supplier purchases (e.g. 20 × the most expensive linked product) and top up when the warning appears. Running dry makes shop orders that were already paid fail allocation (retried, then manual).
-- **Overview page:** the **Linked categories** table shows per product the local codes, purchases today (vs. limit) and what the shared balance can buy now. **Test connection** re-reads the balance after a top-up.
+- **Overview page:** the **Linked categories** table shows per product the local codes, purchases today (vs. limit) and what the shared balance can buy now. **Refresh balance** re-reads the live balance (same as `nextload:balance`). **Test connection** only checks that credentials work.
 
 ### Choosing a mode
 
@@ -253,7 +253,7 @@ All commands are no-ops while `NEXTLOAD_ENABLED=false`.
 
 ## Admin pages (`/manager/next-load`)
 
-- **Overview** — shared balance, linked categories table (local codes, bought today / limit, can buy now), order counts, connection test, price list refresh.
+- **Overview** — shared balance, linked categories table (local codes, bought today / limit, can buy now), order counts, connection test, **Refresh balance**, price list refresh.
 - **Products & links** — supplier price list with local cost and Next Load's stock flag; `links/new` and `links/{category}` pages for linking, sourcing mode, daily limit, card artwork, **Restock** (buy N codes into stock, max 50 per click) and **Unlink**.
 - **Supplier orders** — filters, details, **Refresh status** (records a delayed manager sale when the order completes), **Release to stock** (unused codes of a completed order; for a delayed manager sale it records the sale instead and answers 422), **Reveal code** (recorded in the activity log as `next_load.pin_revealed`; refused if the audit write fails).
 
