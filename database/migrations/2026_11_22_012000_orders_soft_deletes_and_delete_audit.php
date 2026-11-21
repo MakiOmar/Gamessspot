@@ -41,8 +41,11 @@ return new class extends Migration
         });
 
         // Hard DELETE only (raw SQL / forceDelete). Soft deletes are UPDATEs.
-        DB::unprepared('DROP TRIGGER IF EXISTS orders_before_delete_audit');
-        DB::unprepared(<<<'SQL'
+        // On managed MySQL without SUPER, set log_bin_trust_function_creators=1
+        // (or create the trigger as root) — see deploy notes.
+        try {
+            DB::unprepared('DROP TRIGGER IF EXISTS orders_before_delete_audit');
+            DB::unprepared(<<<'SQL'
 CREATE TRIGGER orders_before_delete_audit
 BEFORE DELETE ON orders
 FOR EACH ROW
@@ -58,11 +61,19 @@ BEGIN
   );
 END
 SQL);
+        } catch (\Throwable $e) {
+            // Soft-delete + audit table still land; trigger may need root install.
+            logger()->warning('orders_before_delete_audit trigger not installed: '.$e->getMessage());
+        }
     }
 
     public function down(): void
     {
-        DB::unprepared('DROP TRIGGER IF EXISTS orders_before_delete_audit');
+        try {
+            DB::unprepared('DROP TRIGGER IF EXISTS orders_before_delete_audit');
+        } catch (\Throwable $e) {
+            // ignore
+        }
         Schema::dropIfExists('order_delete_audit');
         Schema::table('orders', function (Blueprint $table) {
             if (Schema::hasColumn('orders', 'deleted_at')) {
