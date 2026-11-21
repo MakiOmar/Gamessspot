@@ -22,7 +22,7 @@
                 No results found.
             </div>
             <!-- Search Box -->
-            <input type="text" class="form-control" id="searchUser" placeholder="Search users by name or store profile">
+            <input type="text" class="form-control" id="searchUser" placeholder="Search users by name, email, phone, or store profile">
         </div>
     </div>
 
@@ -185,11 +185,12 @@
         });
         // Handle search and pagination clicks
         function loadUsers(query = '', role = null, page = 1) {
+            const encoded = encodeURIComponent(query);
             let searchUrl;
             if (role !== null) {
-                searchUrl = `/manager/users/search/${role}?search=${query}&page=${page}`;
+                searchUrl = `/manager/users/search/${role}?search=${encoded}&page=${page}`;
             } else {
-                searchUrl = `/manager/users/search?search=${query}&page=${page}`;
+                searchUrl = `/manager/users/search?search=${encoded}&page=${page}`;
             }
             
             $.ajax({

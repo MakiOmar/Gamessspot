@@ -120,6 +120,7 @@ class UserController extends Controller
 
         $users->where(function ($q) use ($query) {
             $q->where('users.name', 'like', "%{$query}%")
+                ->orWhere('users.email', 'like', "%{$query}%")
                 ->orWhere('users.phone', 'like', "%{$query}%")
                 ->orWhereHas('storeProfile', function ($q) use ($query) {
                     $q->where('stores_profile.name', 'like', "%{$query}%");
