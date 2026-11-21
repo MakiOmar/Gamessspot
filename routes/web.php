@@ -606,8 +606,8 @@ Route::prefix('manager')->group(function () {
         ->name('manager.login.otp.verify');
     Route::post('/logout', [AdminLoginController::class, 'logout'])->name('manager.logout');
 
-    // Group routes that require 'auth:admin' middleware
-    Route::middleware('auth:admin')->group(function () {
+    // Group routes that require a staff session on the admin guard.
+    Route::middleware(['auth:admin', 'manager.staff'])->group(function () {
         // Dashboard route
         Route::get('/', [DashboardController::class, 'dashboard'])->middleware('can:access-dashboard')->name('manager.dashboard');
 

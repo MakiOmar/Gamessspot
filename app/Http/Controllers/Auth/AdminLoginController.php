@@ -3,9 +3,9 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
-use App\Models\Role;
 use App\Models\User;
 use App\Services\AdminLoginOtpService;
+use App\Services\RolePermissionService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
@@ -13,8 +13,10 @@ use Illuminate\Validation\ValidationException;
 
 class AdminLoginController extends Controller
 {
-    public function __construct(private AdminLoginOtpService $otpService)
-    {
+    public function __construct(
+        private AdminLoginOtpService $otpService,
+        private RolePermissionService $roles,
+    ) {
         $this->middleware('guest:admin')->except('logout');
     }
 
@@ -127,19 +129,13 @@ class AdminLoginController extends Controller
             ]);
         }
 
-        $allowedRoles = Role::getAllRoleNames();
-        $hasValidRole = $user->roles->contains(function ($role) use ($allowedRoles) {
-            return in_array($role->name, $allowedRoles);
-        });
-
-        if ($hasValidRole) {
+        if ($this->roles->userCanAccessManager($user)) {
             return redirect()->intended(route('manager.dashboard'));
         }
 
-        Log::warning('User logged in but lacks required roles', [
+        Log::warning('User logged in but lacks a staff role', [
             'user_id' => $user->id,
             'user_roles' => $userRoles,
-            'allowed_roles' => $allowedRoles,
         ]);
         Auth::guard('admin')->logout();
 

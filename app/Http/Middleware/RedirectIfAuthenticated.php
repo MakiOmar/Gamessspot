@@ -2,8 +2,8 @@
 
 namespace App\Http\Middleware;
 
-use App\Models\Role;
 use App\Providers\RouteServiceProvider;
+use App\Services\RolePermissionService;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -27,19 +27,14 @@ class RedirectIfAuthenticated
                 // For admin guard, check if user has proper roles before redirecting
                 // This prevents redirect loops when user is authenticated but lacks roles
                 if ($guard === 'admin') {
-                    $user->loadMissing('roles');
-                    // Get allowed roles dynamically from database
-                    $allowedRoles = Role::getAllRoleNames();
-                    if ($user->roles->contains(function ($role) use ($allowedRoles) {
-                        return in_array($role->name, $allowedRoles);
-                    })) {
+                    if (app(RolePermissionService::class)->userCanAccessManager($user)) {
                         return redirect(RouteServiceProvider::HOME);
-                    } else {
-                        // User is authenticated but doesn't have required roles
-                        // Log them out and allow them to see the login page
-                        Auth::guard($guard)->logout();
-                        return $next($request);
                     }
+
+                    // Signed in, but not staff. Drop the session so login can render.
+                    Auth::guard($guard)->logout();
+
+                    return $next($request);
                 }
                 
                 return redirect(RouteServiceProvider::HOME);

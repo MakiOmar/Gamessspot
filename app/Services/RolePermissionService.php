@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Role;
+use App\Models\User;
 use Illuminate\Support\Collection;
 use InvalidArgumentException;
 
@@ -218,6 +219,16 @@ class RolePermissionService
     public function isStaffRole(Role $role): bool
     {
         return ! in_array($role->name, config('permissions.excluded_roles', array('customer')), true);
+    }
+
+    /**
+     * Manager sign-in is for staff roles only. Customer accounts are excluded.
+     */
+    public function userCanAccessManager(User $user): bool
+    {
+        $user->loadMissing('roles');
+
+        return $user->roles->contains(fn (Role $role) => $this->isStaffRole($role));
     }
 
     /**

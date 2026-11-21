@@ -16,8 +16,10 @@ class AdminLoginOtpService
 {
     public const PURPOSE = 'admin-login';
 
-    public function __construct(private OneTimeCodeAttempts $codeAttempts)
-    {
+    public function __construct(
+        private OneTimeCodeAttempts $codeAttempts,
+        private RolePermissionService $roles,
+    ) {
     }
 
     /**
@@ -32,7 +34,7 @@ class AdminLoginOtpService
             ->where('is_active', 1)
             ->first();
 
-        if (! $user || empty($user->email)) {
+        if (! $user || empty($user->email) || ! $this->roles->userCanAccessManager($user)) {
             return;
         }
 
@@ -70,7 +72,7 @@ class AdminLoginOtpService
             'code' => ['Invalid or expired login code.'],
         ]);
 
-        if (! $user || (int) $user->is_active !== 1) {
+        if (! $user || (int) $user->is_active !== 1 || ! $this->roles->userCanAccessManager($user)) {
             throw $invalid;
         }
 

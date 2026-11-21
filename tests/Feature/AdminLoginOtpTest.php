@@ -37,6 +37,18 @@ class AdminLoginOtpTest extends TestCase
         return $user;
     }
 
+    private function customer(): User
+    {
+        $role = Role::firstOrCreate(['name' => 'customer']);
+        $user = User::factory()->create([
+            'email' => 'customer_'.uniqid().'@example.com',
+            'is_active' => 1,
+        ]);
+        $user->roles()->attach($role->id);
+
+        return $user;
+    }
+
     public function test_request_otp_sends_mail_for_active_staff_without_revealing_existence(): void
     {
         $user = $this->staff();
@@ -90,6 +102,8 @@ class AdminLoginOtpTest extends TestCase
         $user->refresh();
         $this->assertNull($user->login_otp_hash);
         $this->assertNull($user->login_otp_expires_at);
+
+        $this->get(route('manager.dashboard'))->assertOk();
     }
 
     public function test_verify_otp_rejects_wrong_code(): void
@@ -153,6 +167,42 @@ class AdminLoginOtpTest extends TestCase
             'phone' => '01012345678',
             'password' => 'password',
         ])->assertMethodNotAllowed();
+    }
+
+    public function test_customer_email_does_not_receive_a_manager_code(): void
+    {
+        $user = $this->customer();
+
+        $this->post(route('manager.login.otp.request'), ['email' => $user->email])
+            ->assertRedirect(route('manager.login', ['step' => 'code']));
+
+        Mail::assertNothingSent();
+        $this->assertNull($user->fresh()->login_otp_hash);
+    }
+
+    public function test_customer_cannot_verify_a_manager_code(): void
+    {
+        $user = $this->customer();
+        $user->login_otp_hash = Hash::make('123456');
+        $user->login_otp_expires_at = now()->addMinutes(10);
+        $user->save();
+
+        $this->post(route('manager.login.otp.verify'), [
+            'email' => $user->email,
+            'code' => '123456',
+        ])->assertSessionHasErrors('code');
+
+        $this->assertGuest('admin');
+    }
+
+    public function test_customer_session_is_sent_back_to_login_instead_of_403(): void
+    {
+        $this->actingAs($this->customer(), 'admin')
+            ->get(route('manager.dashboard'))
+            ->assertRedirect(route('manager.login'))
+            ->assertSessionHasErrors('email');
+
+        $this->assertGuest('admin');
     }
 
     public function test_login_page_is_email_otp_only(): void

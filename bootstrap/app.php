@@ -24,6 +24,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'signed' => \App\Http\Middleware\ValidateSignature::class,
             'admin' => \App\Http\Middleware\AdminMiddleware::class,
             'checkRole' => \App\Http\Middleware\CheckRole::class,
+            'manager.staff' => \App\Http\Middleware\EnsureManagerStaff::class,
             'system.ops' => \App\Http\Middleware\EnsureSystemOpsUnlocked::class,
         ]);
     })
