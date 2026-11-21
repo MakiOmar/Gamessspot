@@ -147,23 +147,21 @@ class AdminLoginOtpTest extends TestCase
         $this->assertNull($user->fresh()->login_otp_hash);
     }
 
-    public function test_password_login_fallback_still_works(): void
+    public function test_password_login_route_is_gone(): void
     {
-        $user = $this->staff(['phone' => '01012345678']);
-
-        $this->post(route('manager.login.submit'), [
+        $this->post('/manager/login', [
             'phone' => '01012345678',
             'password' => 'password',
-        ])->assertRedirect(route('manager.dashboard'));
-
-        $this->assertAuthenticatedAs($user, 'admin');
+        ])->assertMethodNotAllowed();
     }
 
-    public function test_login_page_defaults_to_email_otp_form(): void
+    public function test_login_page_is_email_otp_only(): void
     {
         $this->get(route('manager.login'))
             ->assertOk()
             ->assertSee('Send login code', false)
-            ->assertSee(route('manager.login.otp.request'), false);
+            ->assertSee(route('manager.login.otp.request'), false)
+            ->assertDontSee('Sign in with phone', false)
+            ->assertDontSee('method=password', false);
     }
 }

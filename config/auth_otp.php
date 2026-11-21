@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Manager login email OTP (phone OTP can be added later).
+ * Manager login email OTP.
  */
 return [
     /** Minutes until a issued login code expires. */

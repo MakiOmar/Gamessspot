@@ -282,126 +282,121 @@
     </style>
 @stop
 
-@php( $login_url = View::getSection('login_url') ?? config('adminlte.login_url', 'login') )
-@php( $register_url = View::getSection('register_url') ?? config('adminlte.register_url', 'register') )
-@php( $password_reset_url = View::getSection('password_reset_url') ?? config('adminlte.password_reset_url', 'password/reset') )
-@php( $dashboard_url = View::getSection('dashboard_url') ?? config('adminlte.dashboard_url', 'home') )
-
-@if (config('adminlte.use_route_url', false))
-    @php( $dashboard_url = $dashboard_url ? route($dashboard_url) : '' )
-@else
-    @php( $dashboard_url = $dashboard_url ? url($dashboard_url) : '' )
-@endif
-@if (config('adminlte.use_route_url', false))
-    @php( $login_url = $login_url ? route($login_url) : '' )
-    @php( $register_url = $register_url ? route($register_url) : '' )
-    @php( $password_reset_url = $password_reset_url ? route($password_reset_url) : '' )
-@else
-    @php( $login_url = $login_url ? url($login_url) : '' )
-    @php( $register_url = $register_url ? url($register_url) : '' )
-    @php( $password_reset_url = $password_reset_url ? url($password_reset_url) : '' )
-@endif
-
 @section('auth_header', __('adminlte::adminlte.login_message'))
 
 @section('auth_body')
+@php
+    $loginStep = $loginStep ?? 'email';
+    $otpEmail = $otpEmail ?? old('email', session('login_otp_email'));
+@endphp
 <div class="container">
     <div class="row justify-content-center">
         <div class="col-md-6 col-lg-5">
             <div class="login-container">
                 <div class="login-header">
-                    {{-- Logo --}}
-        <div class="{{ $auth_type ?? 'login' }}-logo">
-            <a href="{{ $dashboard_url }}">
-
-                {{-- Logo Image --}}
-                @if (config('adminlte.auth_logo.enabled', false))
-                    <img src="{{ asset(config('adminlte.auth_logo.img.path')) }}"
-                         alt="{{ config('adminlte.auth_logo.img.alt') }}"
-                         @if (config('adminlte.auth_logo.img.class', null))
-                            class="{{ config('adminlte.auth_logo.img.class') }}"
-                         @endif
-                         @if (config('adminlte.auth_logo.img.width', null))
-                            width="{{ config('adminlte.auth_logo.img.width') }}"
-                         @endif
-                         @if (config('adminlte.auth_logo.img.height', null))
-                            height="{{ config('adminlte.auth_logo.img.height') }}"
-                         @endif>
-                @else
-                    <img src="{{ asset(config('adminlte.logo_img')) }}"
-                         alt="{{ config('adminlte.logo_img_alt') }}" height="50">
-                @endif
-
-                {{-- Logo Label --}}
-                {!! config('adminlte.logo', '<b>Admin</b>LTE') !!}
-
-            </a>
-        </div>
+                    <div class="{{ $auth_type ?? 'login' }}-logo">
+                        <a href="{{ url(config('adminlte.dashboard_url', 'manager')) }}">
+                            @if (config('adminlte.auth_logo.enabled', false))
+                                <img src="{{ asset(config('adminlte.auth_logo.img.path')) }}"
+                                     alt="{{ config('adminlte.auth_logo.img.alt') }}"
+                                     @if (config('adminlte.auth_logo.img.class', null))
+                                        class="{{ config('adminlte.auth_logo.img.class') }}"
+                                     @endif
+                                     @if (config('adminlte.auth_logo.img.width', null))
+                                        width="{{ config('adminlte.auth_logo.img.width') }}"
+                                     @endif
+                                     @if (config('adminlte.auth_logo.img.height', null))
+                                        height="{{ config('adminlte.auth_logo.img.height') }}"
+                                     @endif>
+                            @else
+                                <img src="{{ asset(config('adminlte.logo_img')) }}"
+                                     alt="{{ config('adminlte.logo_img_alt') }}" height="50">
+                            @endif
+                            {!! config('adminlte.logo', '<b>Admin</b>LTE') !!}
+                        </a>
+                    </div>
                 </div>
-                
+
                 <div class="p-4">
-                    <form action="{{ route('manager.login.submit') }}" method="post">
-                        @csrf
-                        <div class="mb-3">
-                            <label for="phone" class="form-label">PHONE</label>
-                            <div class="input-group">
-                                <span class="input-group-text"><i class="fas fa-user"></i></span>
-                                <input id="phone" type="text" class="form-control @error('phone') is-invalid @enderror" name="phone" value="{{ old('phone') }}" required autofocus>
-                                @error('phone')
-                                    <span class="invalid-feedback" role="alert">
-                                        <strong>{{ $message }}</strong>
-                                    </span>
-                                @enderror
+                    @if (session('status'))
+                        <div class="alert alert-success" role="status">{{ session('status') }}</div>
+                    @endif
+
+                    @if ($errors->any())
+                        <div class="alert alert-danger" role="alert">
+                            <ul class="mb-0 ps-3">
+                                @foreach ($errors->all() as $message)
+                                    <li>{{ $message }}</li>
+                                @endforeach
+                            </ul>
+                        </div>
+                    @endif
+
+                    @if ($loginStep === 'code')
+                        <form action="{{ route('manager.login.otp.verify') }}" method="post">
+                            @csrf
+                            <input type="hidden" name="email" value="{{ $otpEmail }}">
+
+                            <div class="mb-3">
+                                <label class="form-label">EMAIL</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="fas fa-envelope"></i></span>
+                                    <input type="email" class="form-control" value="{{ $otpEmail }}" disabled>
+                                </div>
                             </div>
-                        </div>
-                        
-                        <div class="mb-3">
-                            <label for="password" class="form-label">ACCESS CODE</label>
-                            <div class="input-group">
-                                <span class="input-group-text"><i class="fas fa-key"></i></span>
-                                <input type="password" name="password" id="password" class="form-control @error('password') is-invalid @enderror"
-                   placeholder="{{ __('adminlte::adminlte.password') }}">
-                                <button class="btn btn-outline-orange" type="button" id="togglePassword">
-                                    <i class="fas fa-eye"></i>
-                                </button>
-                                @error('password')
-                                    <span class="invalid-feedback" role="alert">
-                                        <strong>{{ $message }}</strong>
-                                    </span>
-                                @enderror
+
+                            <div class="mb-3">
+                                <label for="code" class="form-label">LOGIN CODE</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="fas fa-shield-halved"></i></span>
+                                    <input id="code" type="text" inputmode="numeric" pattern="[0-9]{6}" maxlength="6"
+                                           class="form-control @error('code') is-invalid @enderror"
+                                           name="code" value="{{ old('code') }}" required autofocus
+                                           autocomplete="one-time-code" placeholder="6-digit code">
+                                </div>
                             </div>
-                        </div>
-                        
-                        <div class="d-flex justify-content-between mb-3">
-                            <div class="form-check">
-                                <input type="checkbox" name="remember" id="remember" {{ old('remember') ? 'checked' : '' }}>
-                                <label class="form-check-label" for="remember">{{ __('adminlte::adminlte.remember_me') }}</label>
+
+                            <div class="d-flex justify-content-between mb-3">
+                                <div class="form-check">
+                                    <input type="checkbox" name="remember" id="remember" value="1" {{ old('remember') ? 'checked' : '' }}>
+                                    <label class="form-check-label" for="remember">{{ __('adminlte::adminlte.remember_me') }}</label>
+                                </div>
                             </div>
-                        </div>
-                        
-                        <button type="submit" class="btn btn-login pulse">{{ __('adminlte::adminlte.sign_in') }} <i class="fas fa-chevron-right ms-2"></i></button>
-                        {{--
-                        <div class="divider">
-                            <span class="divider-text">OR CONNECT WITH</span>
-                        </div>
-                        
-                        <div class="social-login">
-                            <button type="button" class="btn btn-dark mb-2 w-100">
-                                <i class="fab fa-steam me-2"></i> Steam
+
+                            <button type="submit" class="btn btn-login pulse">
+                                Verify &amp; sign in <i class="fas fa-chevron-right ms-2"></i>
                             </button>
-                            <button type="button" class="btn btn-dark mb-2 w-100">
-                                <i class="fab fa-discord me-2"></i> Discord
+                        </form>
+
+                        <form action="{{ route('manager.login.otp.request') }}" method="post" class="mt-3">
+                            @csrf
+                            <input type="hidden" name="email" value="{{ $otpEmail }}">
+                            <button type="submit" class="btn btn-outline-orange w-100">Resend code</button>
+                        </form>
+
+                        <p class="text-center mt-3 mb-0">
+                            <a href="{{ route('manager.login') }}" class="forgot-link">Use a different email</a>
+                        </p>
+                    @else
+                        <form action="{{ route('manager.login.otp.request') }}" method="post">
+                            @csrf
+                            <div class="mb-3">
+                                <label for="email" class="form-label">EMAIL</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="fas fa-envelope"></i></span>
+                                    <input id="email" type="email"
+                                           class="form-control @error('email') is-invalid @enderror"
+                                           name="email" value="{{ old('email', $otpEmail) }}"
+                                           required autofocus autocomplete="email"
+                                           placeholder="you@example.com">
+                                </div>
+                            </div>
+
+                            <button type="submit" class="btn btn-login pulse">
+                                Send login code <i class="fas fa-chevron-right ms-2"></i>
                             </button>
-                            <button type="button" class="btn btn-dark w-100">
-                                <i class="fab fa-google me-2"></i> Google
-                            </button>
-                        </div>
-                        
-                        <div class="text-center mt-4">
-                            <p class="text-muted">Not registered? <a href="#" class="register-link">Create warrior ID</a></p>
-                        </div>
-                        --}}
-                    </form>
+                        </form>
+                    @endif
                 </div>
             </div>
         </div>
@@ -411,89 +406,45 @@
 
 
 @section('auth_footer')
-    {{-- Password reset link 
-    @if($password_reset_url)
-        <p class="my-0">
-            <a href="{{ $password_reset_url }}">
-                {{ __('adminlte::adminlte.i_forgot_my_password') }}
-            </a>
-        </p>
-    @endif
-    --}}
-
-    {{-- Register link 
-    @if($register_url)
-        <p class="my-0">
-            <a href="{{ $register_url }}">
-                {{ __('adminlte::adminlte.register_a_new_membership') }}
-            </a>
-        </p>
-    @endif
-    --}}
 @stop
-@push('js')
+
+@section('js')
 <script>
-    // Toggle password visibility
-    document.getElementById('togglePassword').addEventListener('click', function() {
-        const password = document.getElementById('password');
-        const icon = this.querySelector('i');
-        if (password.type === 'password') {
-            password.type = 'text';
-            icon.classList.remove('fa-eye');
-            icon.classList.add('fa-eye-slash');
-        } else {
-            password.type = 'password';
-            icon.classList.remove('fa-eye-slash');
-            icon.classList.add('fa-eye');
+    (function () {
+        const loginBtn = document.querySelector('.btn-login');
+        if (loginBtn) {
+            loginBtn.addEventListener('mouseenter', () => loginBtn.classList.add('pulse'));
+            loginBtn.addEventListener('mouseleave', () => loginBtn.classList.remove('pulse'));
         }
-    });
-    
-    // Add animation to login button on hover
-    const loginBtn = document.querySelector('.btn-login');
-    loginBtn.addEventListener('mouseenter', () => {
-        loginBtn.classList.add('pulse');
-    });
-    loginBtn.addEventListener('mouseleave', () => {
-        loginBtn.classList.remove('pulse');
-    });
-    
-    // Create floating particles
-    function createParticles() {
-        const particleCount = 50;
-        
-        for (let i = 0; i < particleCount; i++) {
-            const particle = document.createElement('div');
-            particle.classList.add('particle');
-            
-            // Random properties
-            const size = Math.random() * 5 + 1;
-            const posX = Math.random() * window.innerWidth;
-            const delay = Math.random() * 5;
-            const duration = Math.random() * 10 + 10;
-            const opacity = Math.random() * 0.5 + 0.1;
-            const randomX = (Math.random() - 0.5) * 2; // Between -1 and 1
-            
-            // Set properties
-            particle.style.width = `${size}px`;
-            particle.style.height = `${size}px`;
-            particle.style.left = `${posX}px`;
-            particle.style.bottom = `-10px`;
-            particle.style.opacity = opacity;
-            particle.style.animationDuration = `${duration}s`;
-            particle.style.animationDelay = `${delay}s`;
-            particle.style.setProperty('--random-x', randomX);
-            
-            document.body.appendChild(particle);
+
+        function createParticles() {
+            const particleCount = 50;
+            for (let i = 0; i < particleCount; i++) {
+                const particle = document.createElement('div');
+                particle.classList.add('particle');
+                const size = Math.random() * 5 + 1;
+                const posX = Math.random() * window.innerWidth;
+                const delay = Math.random() * 5;
+                const duration = Math.random() * 10 + 10;
+                const opacity = Math.random() * 0.5 + 0.1;
+                const randomX = (Math.random() - 0.5) * 2;
+                particle.style.width = `${size}px`;
+                particle.style.height = `${size}px`;
+                particle.style.left = `${posX}px`;
+                particle.style.bottom = `-10px`;
+                particle.style.opacity = opacity;
+                particle.style.animationDuration = `${duration}s`;
+                particle.style.animationDelay = `${delay}s`;
+                particle.style.setProperty('--random-x', randomX);
+                document.body.appendChild(particle);
+            }
         }
-    }
-    
-    // Initialize particles when DOM is loaded
-    document.addEventListener('DOMContentLoaded', createParticles);
-    
-    // Recreate particles when window is resized
-    window.addEventListener('resize', function() {
-        document.querySelectorAll('.particle').forEach(p => p.remove());
-        createParticles();
-    });
+
+        document.addEventListener('DOMContentLoaded', createParticles);
+        window.addEventListener('resize', function () {
+            document.querySelectorAll('.particle').forEach(p => p.remove());
+            createParticles();
+        });
+    })();
 </script>
-@endpush
+@stop

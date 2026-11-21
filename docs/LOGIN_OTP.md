@@ -1,11 +1,11 @@
 # Manager login OTP (email)
 
-Staff sign-in at `/manager/login` uses a **6-digit email code** by default. Phone + password remains available at `/manager/login?method=password`.
+Staff sign-in at `/manager/login` uses a **6-digit email code** only. Phone + password login is removed.
 
 ## Flow
 
 1. `POST /manager/login/otp/request` with `{ email }` — if the address matches an **active** user, a code is hashed onto `users.login_otp_*` and emailed synchronously (`Mail::sendNow`). Response never reveals whether the email exists.
-2. `POST /manager/login/otp/verify` with `{ email, code, remember? }` — on success, starts the `admin` session (same role checks as password login) and clears the code.
+2. `POST /manager/login/otp/verify` with `{ email, code, remember? }` — on success, starts the `admin` session (role checks) and clears the code.
 3. After **5** wrong guesses for one issued code, the code is burned (`OneTimeCodeAttempts`).
 
 ## Config / env

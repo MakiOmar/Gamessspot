@@ -8,7 +8,6 @@ use App\Models\User;
 use App\Services\AdminLoginOtpService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 
@@ -32,15 +31,12 @@ class AdminLoginController extends Controller
         }
 
         $otpEmail = old('email', session('login_otp_email'));
-        $step = 'email';
-        if ($request->query('method') === 'password') {
-            $step = 'password';
-        } elseif ($request->query('step') === 'code' || session('login_otp_email') || old('code')) {
-            $step = 'code';
-        }
+        $step = ($request->query('step') === 'code' || session('login_otp_email') || old('code'))
+            ? 'code'
+            : 'email';
 
         return response()
-            ->view('auth.manager-login', [
+            ->view('adminlte::auth.login', [
                 'loginStep' => $step,
                 'otpEmail' => $otpEmail,
             ])
@@ -95,59 +91,6 @@ class AdminLoginController extends Controller
         $request->session()->regenerate();
 
         return $this->finishAdminLogin($user);
-    }
-
-    /**
-     * Handle phone + password login (fallback while email OTP is primary).
-     *
-     * @param  \Illuminate\Http\Request $request
-     * @return \Illuminate\Http\RedirectResponse
-     */
-    public function login(Request $request)
-    {
-        $request->validate([
-            'phone' => 'required|string',
-            'password' => 'required|string',
-        ]);
-
-        $user = User::where('phone', $request->phone)->first();
-
-        if ($user && Hash::check($request->password, $user->password)) {
-            if ($user->is_active != 1) {
-                Log::warning('Login attempt failed - account is inactive', [
-                    'phone' => $request->phone,
-                    'user_id' => $user->id,
-                ]);
-
-                return redirect()->back()->withInput($request->only('phone', 'remember'))->withErrors([
-                    'phone' => 'Your account has been deactivated. Please contact support.',
-                ]);
-            }
-        }
-
-        $attemptResult = Auth::guard('admin')->attempt([
-            'phone' => $request->phone,
-            'password' => $request->password,
-            'is_active' => 1,
-        ], $request->boolean('remember'));
-
-        if ($attemptResult) {
-            $user = Auth::guard('admin')->user();
-            $request->session()->regenerate();
-
-            return $this->finishAdminLogin($user);
-        }
-
-        Log::warning('Login failed - invalid credentials', [
-            'phone' => $request->phone,
-        ]);
-
-        return redirect()
-            ->route('manager.login', ['method' => 'password'])
-            ->withInput($request->only('phone', 'remember'))
-            ->withErrors([
-                'phone' => 'These credentials do not match our records.',
-            ]);
     }
 
     /**
