@@ -71,6 +71,7 @@ class User extends Authenticatable
     protected $hidden = array(
         'password',
         'remember_token',
+        'login_otp_hash',
     );
 
     /**
@@ -80,6 +81,7 @@ class User extends Authenticatable
      */
     protected $casts = array(
         'email_verified_at' => 'datetime',
+        'login_otp_expires_at' => 'datetime',
         'password'          => 'hashed',
     );
 

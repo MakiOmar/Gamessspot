@@ -3,134 +3,151 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
-use App\Models\User;
 use App\Models\Role;
+use App\Models\User;
+use App\Services\AdminLoginOtpService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\ValidationException;
 
 class AdminLoginController extends Controller
 {
-    public function __construct()
+    public function __construct(private AdminLoginOtpService $otpService)
     {
         $this->middleware('guest:admin')->except('logout');
     }
 
     /**
-     * Show the manager (admin) login form.
+     * Show the manager (admin) login form (email OTP by default).
      *
-     * @return \Illuminate\View\View
+     * @return \Illuminate\Http\Response
      */
-    public function showLoginForm()
+    public function showLoginForm(Request $request)
     {
         // Regenerate CSRF token on each login page load to prevent 419 errors
-        if ( ! request()->isMethod('post') ) {
+        if (! $request->isMethod('post')) {
             session()->regenerateToken();
         }
 
-        // Prevent caching of login page to ensure fresh CSRF token
+        $otpEmail = old('email', session('login_otp_email'));
+        $step = 'email';
+        if ($request->query('method') === 'password') {
+            $step = 'password';
+        } elseif ($request->query('step') === 'code' || session('login_otp_email') || old('code')) {
+            $step = 'code';
+        }
+
         return response()
-            ->view('auth.manager-login')
+            ->view('auth.manager-login', [
+                'loginStep' => $step,
+                'otpEmail' => $otpEmail,
+            ])
             ->header('Cache-Control', 'no-cache, no-store, must-revalidate, private')
             ->header('Pragma', 'no-cache')
             ->header('Expires', '0');
     }
 
     /**
-     * Handle the admin login request.
+     * Email a 6-digit login code when the address matches an active staff user.
+     */
+    public function requestOtp(Request $request)
+    {
+        $data = $request->validate([
+            'email' => 'required|email',
+        ]);
+
+        $email = strtolower(trim($data['email']));
+        $this->otpService->requestCode($email);
+
+        return redirect()
+            ->route('manager.login', ['step' => 'code'])
+            ->with('login_otp_email', $email)
+            ->with('status', 'If that email is registered, a login code has been sent.');
+    }
+
+    /**
+     * Verify the emailed OTP and start an admin session.
+     */
+    public function verifyOtp(Request $request)
+    {
+        $data = $request->validate([
+            'email' => 'required|email',
+            'code' => 'required|string|size:6',
+            'remember' => 'sometimes|boolean',
+        ]);
+
+        $email = strtolower(trim($data['email']));
+
+        try {
+            $user = $this->otpService->verifyCode($email, $data['code']);
+        } catch (ValidationException $e) {
+            return redirect()
+                ->route('manager.login', ['step' => 'code'])
+                ->with('login_otp_email', $email)
+                ->withInput($request->only('email', 'remember'))
+                ->withErrors($e->errors());
+        }
+
+        Auth::guard('admin')->login($user, (bool) $request->boolean('remember'));
+        $request->session()->forget('login_otp_email');
+        $request->session()->regenerate();
+
+        return $this->finishAdminLogin($user);
+    }
+
+    /**
+     * Handle phone + password login (fallback while email OTP is primary).
      *
      * @param  \Illuminate\Http\Request $request
      * @return \Illuminate\Http\RedirectResponse
      */
     public function login(Request $request)
     {
-        // Validate the form data
-        $request->validate(
-            array(
-                'phone'    => 'required|string',
-                'password' => 'required|string',
-            )
-        );
+        $request->validate([
+            'phone' => 'required|string',
+            'password' => 'required|string',
+        ]);
 
-        // First, check if user exists and if account is inactive
         $user = User::where('phone', $request->phone)->first();
 
-        // If user exists and password is correct but account is inactive
         if ($user && Hash::check($request->password, $user->password)) {
             if ($user->is_active != 1) {
                 Log::warning('Login attempt failed - account is inactive', [
                     'phone' => $request->phone,
                     'user_id' => $user->id,
                 ]);
-                return redirect()->back()->withInput($request->only('phone', 'remember'))->withErrors(
-                    array(
-                        'phone' => 'Your account has been deactivated. Please contact support.',
-                    )
-                );
+
+                return redirect()->back()->withInput($request->only('phone', 'remember'))->withErrors([
+                    'phone' => 'Your account has been deactivated. Please contact support.',
+                ]);
             }
         }
 
-        // Attempt to log the manager in using phone number and password
-        // Include is_active check in credentials to prevent inactive users from logging in
-        $attemptResult = Auth::guard('admin')->attempt(
-            array(
-                'phone'    => $request->phone,
-                'password' => $request->password,
-                'is_active' => 1,
-            ),
-            $request->remember
-        );
+        $attemptResult = Auth::guard('admin')->attempt([
+            'phone' => $request->phone,
+            'password' => $request->password,
+            'is_active' => 1,
+        ], $request->boolean('remember'));
 
         if ($attemptResult) {
-            // Get the authenticated user and ensure roles are loaded
             $user = Auth::guard('admin')->user();
-            $user->loadMissing('roles');
-            
-            $userRoles = $user->roles->pluck('name')->toArray();
-            
-            // Check if user has any roles at all
-            if ($user->roles->isEmpty()) {
-                Log::warning('User logged in but has no roles assigned', [
-                    'user_id' => $user->id,
-                    'phone' => $user->phone,
-                ]);
-                Auth::guard('admin')->logout();
-                return redirect()->route('manager.login')->withErrors(array( 'Your account has no roles assigned. Please contact an administrator.' ));
-            }
-            
-            // Get allowed roles dynamically from database
-            // All roles in the database are considered valid for login
-            $allowedRoles = Role::getAllRoleNames();
-            $hasValidRole = $user->roles->contains(
-                function ($role) use ($allowedRoles) {
-                    return in_array($role->name, $allowedRoles);
-                }
-            );
+            $request->session()->regenerate();
 
-            if ($hasValidRole) {
-                // If the user has one of the allowed roles, redirect to the dashboard
-                return redirect()->intended(route('manager.dashboard'));
-            }
-            // If the user doesn't have one of the specified roles, log them out and show an error
-            Log::warning('User logged in but lacks required roles', [
-                'user_id' => $user->id,
-                'user_roles' => $userRoles,
-                'allowed_roles' => $allowedRoles,
-            ]);
-            Auth::guard('admin')->logout();
-            return redirect()->route('manager.login')->withErrors(array( 'You do not have the required role to access this area. Your roles: ' . implode(', ', $userRoles) ));
+            return $this->finishAdminLogin($user);
         }
 
-        // If unsuccessful, redirect back with an error
         Log::warning('Login failed - invalid credentials', [
             'phone' => $request->phone,
         ]);
-        return redirect()->back()->withInput($request->only('phone', 'remember'))->withErrors(
-            array(
+
+        return redirect()
+            ->route('manager.login', ['method' => 'password'])
+            ->withInput($request->only('phone', 'remember'))
+            ->withErrors([
                 'phone' => 'These credentials do not match our records.',
-            )
-        );
+            ]);
     }
 
     /**
@@ -141,6 +158,50 @@ class AdminLoginController extends Controller
     public function logout()
     {
         Auth::guard('admin')->logout();
+
         return redirect('/manager/login');
+    }
+
+    /**
+     * After Auth::login / attempt: require a valid role, else log out.
+     *
+     * @return \Illuminate\Http\RedirectResponse
+     */
+    private function finishAdminLogin(User $user)
+    {
+        $user->loadMissing('roles');
+        $userRoles = $user->roles->pluck('name')->toArray();
+
+        if ($user->roles->isEmpty()) {
+            Log::warning('User logged in but has no roles assigned', [
+                'user_id' => $user->id,
+                'phone' => $user->phone,
+            ]);
+            Auth::guard('admin')->logout();
+
+            return redirect()->route('manager.login')->withErrors([
+                'Your account has no roles assigned. Please contact an administrator.',
+            ]);
+        }
+
+        $allowedRoles = Role::getAllRoleNames();
+        $hasValidRole = $user->roles->contains(function ($role) use ($allowedRoles) {
+            return in_array($role->name, $allowedRoles);
+        });
+
+        if ($hasValidRole) {
+            return redirect()->intended(route('manager.dashboard'));
+        }
+
+        Log::warning('User logged in but lacks required roles', [
+            'user_id' => $user->id,
+            'user_roles' => $userRoles,
+            'allowed_roles' => $allowedRoles,
+        ]);
+        Auth::guard('admin')->logout();
+
+        return redirect()->route('manager.login')->withErrors([
+            'You do not have the required role to access this area. Your roles: '.implode(', ', $userRoles),
+        ]);
     }
 }

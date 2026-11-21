@@ -47,6 +47,19 @@ class AppServiceProvider extends ServiceProvider
             return Limit::perMinute(60)->by($request->user()?->id ?: $request->ip());
         });
 
+        // Manager email OTP issue (per IP + email)
+        RateLimiter::for('auth-otp', function (Request $request) {
+            $perMinute = max(1, (int) config('auth_otp.issue_per_minute', 5));
+            $email = strtolower(trim((string) $request->input('email', '')));
+
+            return Limit::perMinute($perMinute)->by($request->ip().'|'.$email);
+        });
+
+        // OTP verify guesses (per IP)
+        RateLimiter::for('auth-otp-verify', function (Request $request) {
+            return Limit::perMinute(12)->by($request->ip());
+        });
+
         // Paginator links default to the raw request URL, which ignores forceScheme('https') above;
         // behind the proxy that yields http:// page links that browsers block as mixed content.
         Paginator::currentPathResolver(fn () => url()->current());

@@ -12,7 +12,7 @@ Accounts (`gamessspot`) sends transactional mail through **Zoho CPaaS** / ZeptoM
 | Mailer | `zeptomail` in `config/mail.php` |
 | Credentials | `config/services.php` → `zeptomail.host` / `zeptomail.token` from `ZEPTOMAIL_*` |
 | Per-store SMTP | **None** — single system `.env` only |
-| App mail | Device repair notices via `DeviceServiceNotification` / `DeviceServiceMail` |
+| App mail | Device repair notices via `DeviceServiceNotification` / `DeviceServiceMail`; manager login OTP via `AdminLoginOtpMail` ([LOGIN_OTP.md](./LOGIN_OTP.md)) |
 
 ## `.env` (production / staging)
 

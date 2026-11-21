@@ -596,9 +596,17 @@ Route::middleware($diagnosticsMiddleware)->get('/check-cache', function () {
 });
 
 Route::prefix('manager')->group(function () {
-    // Manager login routes (no middleware needed here)
+    // Manager login: email OTP primary; phone+password kept as fallback (?method=password)
     Route::get('/login', [AdminLoginController::class, 'showLoginForm'])->name('manager.login');
-    Route::post('/login', [AdminLoginController::class, 'login'])->name('manager.login.submit');
+    Route::post('/login/otp/request', [AdminLoginController::class, 'requestOtp'])
+        ->middleware('throttle:auth-otp')
+        ->name('manager.login.otp.request');
+    Route::post('/login/otp/verify', [AdminLoginController::class, 'verifyOtp'])
+        ->middleware('throttle:auth-otp-verify')
+        ->name('manager.login.otp.verify');
+    Route::post('/login', [AdminLoginController::class, 'login'])
+        ->middleware('throttle:10,1')
+        ->name('manager.login.submit');
     Route::post('/logout', [AdminLoginController::class, 'logout'])->name('manager.logout');
 
     // Group routes that require 'auth:admin' middleware
