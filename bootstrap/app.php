@@ -26,6 +26,8 @@ return Application::configure(basePath: dirname(__DIR__))
             'checkRole' => \App\Http\Middleware\CheckRole::class,
             'manager.staff' => \App\Http\Middleware\EnsureManagerStaff::class,
             'system.ops' => \App\Http\Middleware\EnsureSystemOpsUnlocked::class,
+            'abilities' => \Laravel\Sanctum\Http\Middleware\CheckAbilities::class,
+            'ability' => \Laravel\Sanctum\Http\Middleware\CheckForAnyAbility::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {

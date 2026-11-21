@@ -17,9 +17,14 @@
         </td>
         @endunless
         <td>{{ $order->id }}</td>
-        {{-- Website label for storefront orders and the WooCommerce profile with no seller user; otherwise show seller name --}}
+        {{-- Website = channel (storefront_order_id); seller name is the API/staff allocator when present --}}
         @if ($order->isWebsiteSale())
-        <td>Website</td>
+        <td>
+            Website
+            @if ($order->seller)
+                <small class="text-muted d-block">{{ $order->seller->name }}</small>
+            @endif
+        </td>
         @else
         <td class="{{ $order->seller ? '' : 'text-danger' }}">{{ $order->seller?->name ?? 'Maybe deleted' }}</td>
         @endif

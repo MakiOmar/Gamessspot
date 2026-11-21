@@ -3,26 +3,20 @@
 namespace Tests\Feature;
 
 use App\Models\User;
-// use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 use Tests\TestCase;
 
 class ApiRoutesTest extends TestCase
 {
-    // Note: Disabled RefreshDatabase due to migration foreign key constraints
-    // Database tests should use a properly migrated test database
-    // use RefreshDatabase;
-
-    /**
-     * Test API login route with valid credentials.
-     */
-    public function test_api_login_with_valid_credentials_returns_token(): void
+    public function test_api_login_with_allowlisted_user_returns_scoped_token(): void
     {
         $user = User::factory()->create([
-            'phone' => '+2011' . random_int(10000000, 99999999),
+            'phone' => '+2011'.random_int(10000000, 99999999),
             'password' => Hash::make('password123'),
             'is_active' => true,
         ]);
+
+        config(['api.login_user_ids' => [$user->id], 'api.login_phones' => []]);
 
         $response = $this->postJson('/api/login', [
             'phone' => $user->phone,
@@ -31,11 +25,30 @@ class ApiRoutesTest extends TestCase
 
         $response->assertStatus(200)
             ->assertJsonStructure(['token']);
+
+        $token = $user->tokens()->latest('id')->first();
+        $this->assertNotNull($token);
+        $this->assertContains('orders:receive', $token->abilities);
+        $this->assertNotContains('*', $token->abilities);
     }
 
-    /**
-     * Test API login route with invalid credentials.
-     */
+    public function test_api_login_rejects_non_allowlisted_user(): void
+    {
+        $user = User::factory()->create([
+            'phone' => '+2011'.random_int(10000000, 99999999),
+            'password' => Hash::make('password123'),
+            'is_active' => true,
+        ]);
+
+        config(['api.login_user_ids' => [], 'api.login_phones' => []]);
+
+        $this->postJson('/api/login', [
+            'phone' => $user->phone,
+            'password' => 'password123',
+        ])->assertStatus(403)
+            ->assertJson(['message' => 'API login is restricted to integration accounts.']);
+    }
+
     public function test_api_login_with_invalid_credentials_returns_error(): void
     {
         $response = $this->postJson('/api/login', [
@@ -47,9 +60,6 @@ class ApiRoutesTest extends TestCase
             ->assertJson(['message' => 'Invalid credentials']);
     }
 
-    /**
-     * Test API login route validation.
-     */
     public function test_api_login_requires_phone_and_password(): void
     {
         $response = $this->postJson('/api/login', []);
@@ -58,28 +68,22 @@ class ApiRoutesTest extends TestCase
             ->assertJsonValidationErrors(['phone', 'password']);
     }
 
-    /**
-     * Test authenticated API user route.
-     */
     public function test_authenticated_user_can_access_api_user_route(): void
     {
         $user = User::factory()->create(['is_active' => true]);
         $token = $user->createToken('test-token')->plainTextToken;
 
-        $response = $this->withHeader('Authorization', 'Bearer ' . $token)
+        $response = $this->withHeader('Authorization', 'Bearer '.$token)
             ->getJson('/api/user');
 
         $response->assertStatus(200)
             ->assertJsonStructure([
                 'id',
                 'name',
-                'phone'
+                'phone',
             ]);
     }
 
-    /**
-     * Test unauthenticated user cannot access API user route.
-     */
     public function test_unauthenticated_user_cannot_access_api_user_route(): void
     {
         $response = $this->getJson('/api/user');
@@ -87,20 +91,13 @@ class ApiRoutesTest extends TestCase
         $response->assertStatus(401);
     }
 
-    /**
-     * Test API games by platform route.
-     */
     public function test_api_games_by_platform_returns_successful_response(): void
     {
         $response = $this->getJson('/api/games/platform/ps4');
 
-        // Endpoint may return 400 when platform cache/data is unavailable in local/test env
         $this->assertContains($response->status(), [200, 400]);
     }
 
-    /**
-     * Test API card categories list route.
-     */
     public function test_api_card_categories_list_returns_successful_response(): void
     {
         $response = $this->getJson('/api/card-ctegories/list');
@@ -108,4 +105,3 @@ class ApiRoutesTest extends TestCase
         $response->assertStatus(200);
     }
 }
-

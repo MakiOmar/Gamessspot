@@ -26,7 +26,10 @@ class ApiOrderReceiveNotesTest extends TestCase
     {
         parent::setUp();
         Queue::fake();
-        Sanctum::actingAs(User::factory()->create(['is_active' => true]));
+        Sanctum::actingAs(
+            User::factory()->create(['is_active' => true]),
+            ['orders:receive', 'pos:receive-order', 'customers:write', 'orders:check-stock']
+        );
         $this->store = StoresProfile::factory()->create();
     }
 
@@ -57,6 +60,7 @@ class ApiOrderReceiveNotesTest extends TestCase
             'storefront_order_id' => $payload['storefront_order_id'],
             'notes' => 'POS sales order SO2026/0012 / Agent One',
             'pos_order_id' => '4242',
+            'seller_id' => auth()->id(),
         ]);
 
         $this->postJson('/api/orders/receive', $payload)

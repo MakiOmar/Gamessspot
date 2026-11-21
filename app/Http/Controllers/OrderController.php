@@ -816,10 +816,19 @@ class OrderController extends Controller
 
         // Idempotent replay for storefront: return existing secrets without re-allocating.
         if ($isStorefront) {
-            $existing = Order::where('storefront_order_id', $validatedData['storefront_order_id'])
+            $existing = Order::withTrashed()
+                ->where('storefront_order_id', $validatedData['storefront_order_id'])
                 ->where('storefront_line_key', $lineKey)
                 ->first();
             if ($existing) {
+                if ($existing->trashed()) {
+                    return response()->json([
+                        'message' => 'Order was undone/deleted; refuse re-issue of secrets for the same storefront line.',
+                        'order_id' => $existing->id,
+                        'duplicate' => true,
+                        'trashed' => true,
+                    ], 409);
+                }
                 if (empty($existing->pos_order_id) && ! empty($validatedData['pos_transaction_id'])) {
                     $existing->update(['pos_order_id' => (string) $validatedData['pos_transaction_id']]);
                     $existing->refresh();
@@ -887,7 +896,8 @@ class OrderController extends Controller
 
             $order_data = [
                 'stock_snapshot'       => $stockSnapshot,
-                'seller_id'            => null,
+                // API actor for attribution; Website label still comes from storefront_order_id.
+                'seller_id'            => Auth::id(),
                 'store_profile_id'     => $validatedData['store_profile_id'],
                 'account_id'           => $account->id,
                 'buyer_phone'          => $validatedData['buyer_phone'],
@@ -1635,6 +1645,14 @@ class OrderController extends Controller
             ]);
 
             $posOrderId = $validated['created'];
+            if (! is_numeric($posOrderId) || (int) $posOrderId <= 0) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'created must be a positive POS transaction id.',
+                ], 422);
+            }
+            $posOrderId = (string) (int) $posOrderId;
+
             $woocommerceOrderId = $validated['woocommerce_order_id'] ?? null;
             $storefrontOrderId = $validated['storefront_order_id'] ?? null;
             $accountsOrderId = $validated['order_id'] ?? null;
@@ -1646,6 +1664,7 @@ class OrderController extends Controller
                 ], 422);
             }
 
+            // Storefront badge path: only stamp rows that already carry this storefront id.
             $query = Order::query()->whereNull('pos_order_id');
             if (! empty($accountsOrderId)) {
                 $query->where('id', $accountsOrderId);

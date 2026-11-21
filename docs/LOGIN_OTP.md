@@ -21,8 +21,21 @@ Verify endpoint uses named limiter `auth-otp-verify` (12/min per IP).
 
 Uses the system ZeptoMail transport (`docs/ZOHO_CPAAS_MAIL.md`). Template: `resources/views/emails/admin-login-otp.blade.php`.
 
+## Machine API login (separate from OTP)
+
+POS and other integrations still use `POST /api/login` (phone + password). That route is **allowlisted**:
+
+| Env | Purpose |
+|-----|---------|
+| `API_LOGIN_USER_IDS` | Comma-separated user ids allowed to mint tokens |
+| `API_LOGIN_PHONES` | Optional phone allowlist (exact `users.phone` match) |
+| `API_TOKEN_TTL_DAYS` | Token lifetime (default `8`) |
+
+Tokens are issued with scoped abilities (`orders:receive`, `pos:receive-order`, `customers:write`, `orders:check-stock`) — not `*`. Protect those routes with Sanctum `abilities:…`. Set the allowlist to the same account POS uses via `ACCOUNTS_AUTH_PHONE` / `ACCOUNTS_AUTH_PASSWORD`.
+
 ## Tests
 
 ```bash
 php artisan test --filter=AdminLoginOtpTest
+php artisan test --filter=ApiRoutesTest
 ```

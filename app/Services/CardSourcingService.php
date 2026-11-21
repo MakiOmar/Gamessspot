@@ -200,11 +200,22 @@ class CardSourcingService
      */
     private function duplicateResponse(array $data, string $lineKey): ?array
     {
-        $existing = Order::where('storefront_order_id', $data['storefront_order_id'])
+        $existing = Order::withTrashed()
+            ->where('storefront_order_id', $data['storefront_order_id'])
             ->where('storefront_line_key', $lineKey)
             ->first();
         if (! $existing) {
             return null;
+        }
+
+        if ($existing->trashed()) {
+            return $this->result(409, [
+                'success' => false,
+                'message' => 'Order was undone/deleted; refuse re-issue of secrets for the same storefront line.',
+                'duplicate' => true,
+                'trashed' => true,
+                'order_id' => $existing->id,
+            ]);
         }
 
         if (empty($existing->pos_order_id) && ! empty($data['pos_transaction_id'])) {
@@ -229,8 +240,9 @@ class CardSourcingService
      */
     private function orderData(array $data, string $lineKey, bool $isStorefront, ?int $sellerId, int $cardId): array
     {
+        // Always record the API/token actor; Website channel is storefront_order_id, not a null seller.
         $orderData = [
-            'seller_id' => $isStorefront ? null : $sellerId,
+            'seller_id' => $sellerId,
             'store_profile_id' => $data['store_profile_id'],
             'account_id' => null,
             'buyer_phone' => $data['buyer_phone'],

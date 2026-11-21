@@ -231,16 +231,33 @@ class UserController extends Controller
             'password' => 'nullable|string|min:8',
             'update_existing' => 'nullable|boolean',
         ]);
-        $updateExisting = $request->boolean('update_existing', true);
+        // Default false: do not rebind email on phone match (OTP takeover vector).
+        $updateExisting = $request->boolean('update_existing', false);
         unset($validated['update_existing']);
 
         // Match any stored format of the same number (010…, +2010…, 002010…).
         $existingUser = PhoneUserResolver::findByPhone($validated['phone']);
         
         if ($existingUser) {
-            // User exists, update email if it's different
+            $isStaff = $existingUser->roles()
+                ->whereNotIn('name', config('permissions.excluded_roles', ['customer']))
+                ->exists();
+
+            if ($isStaff) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Customer already exists',
+                    'data' => [
+                        'id' => $existingUser->id,
+                        'name' => $existingUser->name,
+                        'email' => $existingUser->email,
+                        'phone' => $existingUser->phone,
+                        'created_at' => $existingUser->created_at,
+                    ],
+                ], 200);
+            }
+
             if ($updateExisting && $existingUser->email !== $validated['email']) {
-                // Check if the new email is already taken by another user
                 $emailTakenByOther = User::where('email', $validated['email'])
                     ->where('id', '!=', $existingUser->id)
                     ->exists();
@@ -252,10 +269,17 @@ class UserController extends Controller
                         'errors' => ['email' => ['The email has already been taken.']]
                     ], 422);
                 }
-                
-                // Update the email
+
+                $previousEmail = $existingUser->email;
                 $existingUser->email = $validated['email'];
                 $existingUser->save();
+
+                \Log::info('customer.email_changed', [
+                    'user_id' => $existingUser->id,
+                    'previous_email' => $previousEmail,
+                    'new_email' => $validated['email'],
+                    'actor_id' => $request->user()?->id,
+                ]);
             }
             
             // Return the existing (possibly updated) user information
