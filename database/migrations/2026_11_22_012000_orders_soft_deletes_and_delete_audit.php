@@ -19,26 +19,28 @@ return new class extends Migration
             }
         });
 
-        Schema::create('order_delete_audit', function (Blueprint $table) {
-            $table->bigIncrements('id');
-            $table->unsignedBigInteger('order_id');
-            $table->unsignedBigInteger('seller_id')->nullable();
-            $table->unsignedBigInteger('store_profile_id')->nullable();
-            $table->unsignedBigInteger('account_id')->nullable();
-            $table->unsignedBigInteger('card_id')->nullable();
-            $table->string('buyer_phone', 32)->nullable();
-            $table->string('buyer_name', 191)->nullable();
-            $table->decimal('price', 12, 2)->nullable();
-            $table->string('sold_item', 64)->nullable();
-            $table->string('pos_order_id', 64)->nullable();
-            $table->string('storefront_order_id', 191)->nullable();
-            $table->string('storefront_line_key', 191)->nullable();
-            $table->string('source', 32)->default('mysql_trigger');
-            $table->timestamp('deleted_at')->useCurrent();
-            $table->index('order_id');
-            $table->index('storefront_order_id');
-            $table->index('deleted_at');
-        });
+        if (! Schema::hasTable('order_delete_audit')) {
+            Schema::create('order_delete_audit', function (Blueprint $table) {
+                $table->bigIncrements('id');
+                $table->unsignedBigInteger('order_id');
+                $table->unsignedBigInteger('seller_id')->nullable();
+                $table->unsignedBigInteger('store_profile_id')->nullable();
+                $table->unsignedBigInteger('account_id')->nullable();
+                $table->unsignedBigInteger('card_id')->nullable();
+                $table->string('buyer_phone', 32)->nullable();
+                $table->string('buyer_name', 191)->nullable();
+                $table->decimal('price', 12, 2)->nullable();
+                $table->string('sold_item', 64)->nullable();
+                $table->string('pos_order_id', 64)->nullable();
+                $table->string('storefront_order_id', 191)->nullable();
+                $table->string('storefront_line_key', 191)->nullable();
+                $table->string('source', 32)->default('mysql_trigger');
+                $table->timestamp('deleted_at')->useCurrent();
+                $table->index('order_id');
+                $table->index('storefront_order_id');
+                $table->index('deleted_at');
+            });
+        }
 
         // Hard DELETE only (raw SQL / forceDelete). Soft deletes are UPDATEs.
         // On managed MySQL without SUPER, set log_bin_trust_function_creators=1
