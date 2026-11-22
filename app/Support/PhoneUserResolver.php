@@ -22,6 +22,17 @@ class PhoneUserResolver
     }
 
     /**
+     * Name written on a sale: always the stored user name when the phone is known.
+     * Submitted names only apply for brand-new phones.
+     */
+    public static function saleBuyerName(string $rawPhone, string $submittedName): string
+    {
+        $existing = self::findByPhone($rawPhone);
+
+        return $existing ? (string) $existing->name : $submittedName;
+    }
+
+    /**
      * Find or create a customer user for the given phone.
      */
     public static function findOrCreateCustomer(string $rawPhone, ?string $name = null): User

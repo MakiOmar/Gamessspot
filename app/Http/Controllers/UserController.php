@@ -358,26 +358,30 @@ class UserController extends Controller
 
     public function searchUserHelper(Request $request)
     {
-        // Extract search query
-        $query = $request->input('search');
+        $query = trim((string) $request->input('search', ''));
 
-        // Ensure admin-only access
-        $user = Auth::user();
-        /*
-        if (!$user->roles->contains('name', 'admin') ) {
-            abort(403, 'Unauthorized action.');
+        if ($query !== '') {
+            $exact = PhoneUserResolver::findByPhone($query);
+            if ($exact) {
+                return response()->json([
+                    [
+                        'buyer_name' => $exact->name,
+                        'buyer_phone' => $exact->phone,
+                    ],
+                ]);
+            }
         }
-        */
-        // Query for users based on phone number or name
+
         $users = User::query()
             ->select('name as buyer_name', 'phone as buyer_phone')
-            ->when($query, function ($q) use ($query) {
+            ->when($query !== '', function ($q) use ($query) {
                 $q->where(function ($q) use ($query) {
-                    $q->where('phone', 'like', "%$query%")
-                    ->orWhere('name', 'like', "%$query%");
+                    $q->where('phone', 'like', '%'.$query.'%')
+                        ->orWhere('name', 'like', '%'.$query.'%');
                 });
             })
             ->orderBy('name')
+            ->limit(20)
             ->get();
 
         return $users;

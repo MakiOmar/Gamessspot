@@ -27,6 +27,7 @@ use App\Services\CardSourcingService;
 use App\Services\NextLoad\NextLoadCatalog;
 use App\Models\CardCategory;
 use App\Services\AccountLoginCodeService;
+use App\Support\PhoneUserResolver;
 use Illuminate\Support\Facades\Log;
 
 class OrderController extends Controller
@@ -972,11 +973,9 @@ class OrderController extends Controller
                 ->withInput();
         }
 
-        // Check if the user already exists by phone number
-        $user = User::where('phone', $validatedData['buyer_phone'])->first();
-
-        // If the user does not exist, create a new one
-        if (!$user) {
+        // Known phone → always use the stored customer name (ignore forged/edited form value).
+        $user = PhoneUserResolver::findByPhone($validatedData['buyer_phone']);
+        if (! $user) {
             $user = User::create([
                 'name'     => $validatedData['buyer_name'],
                 'email'    => Str::random(10) . '@' . Str::random(4) . '.com',
@@ -984,14 +983,12 @@ class OrderController extends Controller
                 'password' => bcrypt(Str::random(12)),
             ]);
 
-            // Assign a default role if necessary
             $defaultRole = Role::where('name', 'customer')->first();
             if ($defaultRole) {
                 $user->roles()->attach($defaultRole->id);
             }
         }
 
-        // Update buyer name to match user record if necessary
         $validatedData['buyer_name'] = $user->name;
 
         $isFull = $validatedData['type'] === 'full';
@@ -1239,6 +1236,10 @@ class OrderController extends Controller
         }
 
         $validatedData = $request->validate($rules);
+        $validatedData['buyer_name'] = PhoneUserResolver::saleBuyerName(
+            $validatedData['buyer_phone'],
+            $validatedData['buyer_name']
+        );
 
         $lineKey = $validatedData['storefront_line_key']
             ?? ('card|category:'.$validatedData['card_category_id']);

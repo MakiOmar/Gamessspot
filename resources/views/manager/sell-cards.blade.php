@@ -349,11 +349,13 @@
             });
             window.iti = iti;
             let buyPhoneRequest = false;
-            $('#buyer_phone').on('focusout', function () {
+            function lockBuyerNameFromPhone() {
                 if (buyPhoneRequest) return;
                 buyPhoneRequest = true;
 
-                const query = $(this).val().trim();
+                const query = (window.iti && typeof window.iti.getNumber === 'function')
+                    ? window.iti.getNumber()
+                    : $('#buyer_phone').val().trim();
                 if (query.length > 0) {
                     $.ajax({
                         url: '{{ route("manager.buyer.name") }}',
@@ -362,19 +364,27 @@
                         dataType: 'json',
                         success: function (response) {
                             if (response.length > 0) {
-                                $('#buyer_name').val(response[0].buyer_name);
+                                $('#buyer_name').val(response[0].buyer_name).prop('readonly', true);
                             } else {
-                                $('#buyer_name').val('');
+                                $('#buyer_name').val('').prop('readonly', false);
                             }
                         },
                         error: function (xhr) {
                             console.error(xhr.responseText);
+                            $('#buyer_name').prop('readonly', false);
                         },
                         complete: function () {
                             buyPhoneRequest = false;
                         }
                     });
+                } else {
+                    $('#buyer_name').val('').prop('readonly', false);
+                    buyPhoneRequest = false;
                 }
+            }
+            $('#buyer_phone').on('focusout', lockBuyerNameFromPhone);
+            $('#buyer_phone').on('input', function () {
+                $('#buyer_name').prop('readonly', false);
             });
 
         });
@@ -399,6 +409,7 @@
             document.getElementById('card_category_id').value = categoryId;
             document.getElementById('categoryName').textContent = categoryName;
             document.getElementById('orderForm').reset();
+            jQuery('#buyer_name').prop('readonly', false);
             jQuery('#orderModal').modal('show');
         }
         function showOrderModal(code) {
