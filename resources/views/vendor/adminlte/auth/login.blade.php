@@ -429,8 +429,8 @@
         }
 
         document.querySelectorAll('form[data-otp-form]').forEach(function (form) {
-            // Disable on the next tick — disabling the submitter synchronously
-            // during submit cancels the POST in Chromium.
+            // Do not disable the submitter — Chromium cancels navigation when
+            // the submit button is disabled during/just after submit.
             form.addEventListener('submit', function (e) {
                 if (form.dataset.otpSubmitting === '1') {
                     e.preventDefault();
@@ -438,11 +438,10 @@
                 }
                 form.dataset.otpSubmitting = '1';
                 const btn = form.querySelector('button[type="submit"]');
-                window.setTimeout(function () {
-                    if (btn) {
-                        btn.disabled = true;
-                    }
-                }, 0);
+                if (btn) {
+                    btn.setAttribute('aria-busy', 'true');
+                    btn.style.pointerEvents = 'none';
+                }
             });
         });
 
