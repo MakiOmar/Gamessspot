@@ -180,6 +180,64 @@ class AdminLoginOtpTest extends TestCase
         $this->assertNull($user->fresh()->login_otp_hash);
     }
 
+    public function test_whitelist_allows_matching_id_and_email(): void
+    {
+        $email = 'otp_ok_'.uniqid().'@example.com';
+        $user = $this->staff(['email' => $email]);
+        config(['auth_otp.whitelist' => [(int) $user->id => strtolower($email)]]);
+
+        $this->post(route('manager.login.otp.request'), ['email' => $user->email])
+            ->assertRedirect(route('manager.login', ['step' => 'code']));
+
+        Mail::assertSent(AdminLoginOtpMail::class);
+        $this->assertNotEmpty($user->fresh()->login_otp_hash);
+    }
+
+    public function test_whitelist_blocks_listed_id_with_wrong_email(): void
+    {
+        // Same id as a whitelist entry, but DB email was swapped — no OTP.
+        $user = $this->staff(['email' => 'attacker_'.uniqid().'@example.com']);
+        config(['auth_otp.whitelist' => [
+            (int) $user->id => 'pinned-owner_'.uniqid().'@example.com',
+            999999 => 'other@example.com',
+        ]]);
+
+        $this->post(route('manager.login.otp.request'), ['email' => $user->email])
+            ->assertRedirect(route('manager.login', ['step' => 'code']));
+
+        Mail::assertNothingSent();
+        $this->assertNull($user->fresh()->login_otp_hash);
+    }
+
+    public function test_whitelist_blocks_staff_not_on_the_list(): void
+    {
+        $allowed = $this->staff(['email' => 'allowed@example.com']);
+        $other = $this->staff(['email' => 'other-staff@example.com']);
+        config(['auth_otp.whitelist' => [(int) $allowed->id => 'allowed@example.com']]);
+
+        $this->post(route('manager.login.otp.request'), ['email' => $other->email])
+            ->assertRedirect(route('manager.login', ['step' => 'code']));
+
+        Mail::assertNothingSent();
+        $this->assertNull($other->fresh()->login_otp_hash);
+    }
+
+    public function test_whitelist_blocks_verify_when_email_no_longer_matches(): void
+    {
+        $user = $this->staff(['email' => 'attacker_'.uniqid().'@example.com']);
+        $user->login_otp_hash = Hash::make('123456');
+        $user->login_otp_expires_at = now()->addMinutes(10);
+        $user->save();
+        config(['auth_otp.whitelist' => [(int) $user->id => 'pinned-owner_'.uniqid().'@example.com']]);
+
+        $this->post(route('manager.login.otp.verify'), [
+            'email' => $user->email,
+            'code' => '123456',
+        ])->assertSessionHasErrors('code');
+
+        $this->assertGuest('admin');
+    }
+
     public function test_customer_cannot_verify_a_manager_code(): void
     {
         $user = $this->customer();

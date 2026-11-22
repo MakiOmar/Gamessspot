@@ -38,6 +38,10 @@ class AdminLoginOtpService
             return;
         }
 
+        if (! $this->passesWhitelist($user)) {
+            return;
+        }
+
         $code = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
         $user->login_otp_hash = Hash::make($code);
         $user->login_otp_expires_at = now()->addMinutes(
@@ -76,6 +80,10 @@ class AdminLoginOtpService
             throw $invalid;
         }
 
+        if (! $this->passesWhitelist($user)) {
+            throw $invalid;
+        }
+
         if (
             empty($user->login_otp_hash)
             || empty($user->login_otp_expires_at)
@@ -99,5 +107,34 @@ class AdminLoginOtpService
         $this->codeAttempts->clear(self::PURPOSE, (string) $user->id);
 
         return $user;
+    }
+
+    /**
+     * When ADMIN_OTP_WHITELIST is set, only listed id+email pairs are eligible.
+     */
+    private function passesWhitelist(User $user): bool
+    {
+        /** @var array<int, string> $whitelist */
+        $whitelist = config('auth_otp.whitelist', []);
+        if ($whitelist === []) {
+            return true;
+        }
+
+        $userId = (int) $user->id;
+        $email = strtolower(trim((string) $user->email));
+        $expected = $whitelist[$userId] ?? null;
+
+        if ($expected !== null && $expected === $email) {
+            return true;
+        }
+
+        Log::warning('Admin login OTP blocked by whitelist.', [
+            'user_id' => $userId,
+            'email' => $email,
+            'expected_email' => $expected,
+            'listed' => array_key_exists($userId, $whitelist),
+        ]);
+
+        return false;
     }
 }
