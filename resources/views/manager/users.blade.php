@@ -76,6 +76,7 @@
                     <div class="form-group mb-3">
                         <label for="email">Email</label>
                         <input type="email" class="form-control" id="editEmail" name="email" required>
+                        <p id="editEmailLockHint" class="help-block text-muted mb-0 d-none">Staff email is locked (ADMIN_EMAIL_LOCK).</p>
                     </div>
 
                     <!-- Phone Field -->
@@ -244,6 +245,8 @@
             $('#editUserModalLabel').text('Create New User'); // Change modal title
             $('#editUserForm').trigger('reset'); // Reset the form
             $('#userId').val(''); // Clear user ID to indicate creation
+            $('#editEmail').prop('readonly', false);
+            $('#editEmailLockHint').addClass('d-none');
         });
 
         // Load user data into the modal on click of Edit button (using event delegation)
@@ -264,6 +267,15 @@
                         $('#editEmail').val(data.email);
                         $('#editPhone').val(data.phone);
                         $('#editStoreProfileId').val(data.store_profile_id);
+
+                        // Staff emails stay read-only when ADMIN_EMAIL_LOCK is on.
+                        var emailLocked = !!data.email_locked;
+                        $('#editEmail').prop('readonly', emailLocked);
+                        if (emailLocked) {
+                            $('#editEmailLockHint').removeClass('d-none');
+                        } else {
+                            $('#editEmailLockHint').addClass('d-none');
+                        }
 
                         // Uncheck all checkboxes first
                         $('#rolesCheckboxes input[type="checkbox"]').prop('checked', false);

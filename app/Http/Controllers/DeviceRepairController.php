@@ -152,7 +152,18 @@ class DeviceRepairController extends Controller
             $existingUser = User::where('phone', $fullPhoneNumber)->first();
 
             if ($existingUser) {
-                if (empty($existingUser->email) || $existingUser->email === $validated['client_email']) {
+                $staffEmailLocked = app(\App\Services\RolePermissionService::class)
+                    ->staffEmailIsLocked($existingUser);
+
+                if ($staffEmailLocked) {
+                    // Never rewrite staff email from the repair intake form.
+                    if ($existingUser->email !== $validated['client_email']
+                        && ! empty($existingUser->email)) {
+                        throw new \Exception('A user with this phone number already exists with a different email address.');
+                    }
+                    $existingUser->name = $validated['client_name'];
+                    $existingUser->save();
+                } elseif (empty($existingUser->email) || $existingUser->email === $validated['client_email']) {
                     $existingUser->email = $validated['client_email'];
                     $existingUser->name = $validated['client_name'];
                     $existingUser->save();

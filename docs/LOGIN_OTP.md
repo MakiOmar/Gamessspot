@@ -15,8 +15,11 @@ Staff sign-in at `/manager/login` uses a **6-digit email code** only. Phone + pa
 | `AUTH_OTP_EXPIRE_MINUTES` | `auth_otp.expire_minutes` | `10` |
 | `AUTH_OTP_ISSUE_PER_MINUTE` | `auth_otp.issue_per_minute` | `5` (per IP+email) |
 | `ADMIN_OTP_WHITELIST` | `auth_otp.whitelist` | empty (all active staff with manager access) |
+| `ADMIN_EMAIL_LOCK` | `auth_otp.email_lock` | `true` (staff/admin emails cannot be changed in manager UI) |
 
 **Whitelist:** comma-separated `user_id:email` pairs (emails compared case-insensitively). When **non-empty**, only those exact id+email matches may receive or verify a manager OTP — so if user `32` is listed as `32:mhmuddmostfa0@gmail.com` and their DB email was changed, no code is sent. Unknown / non-listed staff get the same silent response as an unknown address. Blocks are logged (`Admin login OTP blocked by whitelist`). Recreate the Accounts container after changing `.env` so `config:cache` picks it up.
+
+**Email lock:** when `ADMIN_EMAIL_LOCK=true` (default), manager user edit cannot change email on any staff/admin account (roles other than `customer`). The field is read-only in the UI; a forged change returns validation error. Customer emails remain editable. The customers API already refused staff email rebinds; device-repair intake also skips rewriting staff emails when the lock is on. Set `ADMIN_EMAIL_LOCK=false` only for controlled recovery.
 
 Verify endpoint uses named limiter `auth-otp-verify` (12/min per IP).
 

@@ -10,7 +10,9 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use App\Services\CacheManager;
+use App\Services\RolePermissionService;
 use App\Support\PhoneUserResolver;
+use Illuminate\Validation\ValidationException;
 
 class UserController extends Controller
 {
@@ -140,18 +142,19 @@ class UserController extends Controller
     public function edit($id)
     {
         $user = User::with(array( 'storeProfile', 'roles' ))->findOrFail($id);
+        $emailLocked = app(RolePermissionService::class)->staffEmailIsLocked($user);
 
         if (request()->expectsJson()) {
-            // Convert the user object to an array
             $userArray = $user->toArray();
-            // Return the user data as a JSON response
+            $userArray['email_locked'] = $emailLocked;
+
             return response()->json($userArray);
         }
 
         // For normal non-AJAX request, return the edit view
         $storeProfiles = storesProfile::all()->toArray();
         $userRoles     = Role::all()->toArray();
-        return view('manager.edit-user', compact('user', 'storeProfiles', 'userRoles'));
+        return view('manager.edit-user', compact('user', 'storeProfiles', 'userRoles', 'emailLocked'));
     }
 
     public function destroy($id)
@@ -168,7 +171,8 @@ class UserController extends Controller
     // Method to update the user in the database
     public function update(Request $request, $id)
     {
-        $user = User::findOrFail($id);
+        $user = User::with('roles')->findOrFail($id);
+        $emailLocked = app(RolePermissionService::class)->staffEmailIsLocked($user);
 
         // Validate request data
         $validated = $request->validate(
@@ -180,11 +184,23 @@ class UserController extends Controller
                 'password'         => 'nullable|min:8|confirmed',
             )
         );
+
+        if ($emailLocked
+            && strtolower(trim((string) $validated['email'])) !== strtolower(trim((string) $user->email))) {
+            throw ValidationException::withMessages([
+                'email' => ['Staff email cannot be changed while ADMIN_EMAIL_LOCK is enabled.'],
+            ]);
+        }
+        if ($emailLocked) {
+            $validated['email'] = $user->email;
+        }
+
         // Check if the current authenticated user is an admin
         if (Auth::user()->roles->contains('name', 'admin')) {
-            // If the user is an admin, make roles required
-            $validated['roles']   = 'required|array';
-            $validated['roles.*'] = 'exists:roles,id';
+            $request->validate([
+                'roles' => 'required|array',
+                'roles.*' => 'exists:roles,id',
+            ]);
         }
         // Update only if a new password is provided
         if ($request->filled('password')) {
@@ -194,7 +210,9 @@ class UserController extends Controller
         }
         // Update user
         $user->update($validated);
-        $user->roles()->sync($request->input('roles')); // Sync roles
+        if ($request->has('roles')) {
+            $user->roles()->sync($request->input('roles'));
+        }
         if (request()->expectsJson()) {
             return response()->json(array( 'message' => 'User updated successfully' ));
         }

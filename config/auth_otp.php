@@ -35,4 +35,10 @@ return [
      * @var array<int, string>
      */
     'whitelist' => $whitelist,
+
+    /**
+     * When true, manager UI (and other write paths) cannot change email on
+     * staff/admin users (any role except customer). Customer emails stay editable.
+     */
+    'email_lock' => filter_var(env('ADMIN_EMAIL_LOCK', true), FILTER_VALIDATE_BOOLEAN),
 ];

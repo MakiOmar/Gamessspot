@@ -232,6 +232,18 @@ class RolePermissionService
     }
 
     /**
+     * Staff/admin email changes blocked when ADMIN_EMAIL_LOCK is on (default).
+     */
+    public function staffEmailIsLocked(User $user): bool
+    {
+        if (! config('auth_otp.email_lock', true)) {
+            return false;
+        }
+
+        return $this->userCanAccessManager($user);
+    }
+
+    /**
      * @param array<int, string> $keys
      * @return array<int, string>
      */

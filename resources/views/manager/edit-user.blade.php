@@ -24,7 +24,11 @@
             <!-- Email Field -->
             <div class="form-group mb-3">
                 <label for="email">Email</label>
-                <input type="email" class="form-control" id="editEmail" name="email" required value="{{ old('email', $user->email) }}">
+                <input type="email" class="form-control" id="editEmail" name="email" required value="{{ old('email', $user->email) }}"
+                    @if(!empty($emailLocked)) readonly @endif>
+                @if(!empty($emailLocked))
+                    <p class="help-block text-muted mb-0">Staff email is locked (ADMIN_EMAIL_LOCK).</p>
+                @endif
             </div>
 
             <!-- Phone Field -->
