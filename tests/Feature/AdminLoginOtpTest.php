@@ -8,6 +8,8 @@ use App\Models\User;
 use App\Services\AdminLoginOtpService;
 use App\Services\OneTimeCodeAttempts;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
+use Illuminate\Log\Events\MessageLogged;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use Tests\TestCase;
@@ -22,7 +24,16 @@ class AdminLoginOtpTest extends TestCase
     {
         parent::setUp();
         Mail::fake();
+        Event::fake([MessageLogged::class]);
         $this->adminRole = Role::firstOrCreate(['name' => 'admin']);
+    }
+
+    /**
+     * @param  callable(MessageLogged): bool  $callback
+     */
+    private function assertOtpLogged(callable $callback): void
+    {
+        Event::assertDispatched(MessageLogged::class, $callback);
     }
 
     private function staff(array $overrides = []): User
@@ -60,6 +71,15 @@ class AdminLoginOtpTest extends TestCase
             return $mail->user->is($user) && strlen($mail->code) === 6;
         });
 
+        $this->assertOtpLogged(fn (MessageLogged $log) => $log->level === 'info'
+            && $log->message === 'Admin login OTP: send_attempt'
+            && ($log->context['user_id'] ?? null) === $user->id
+            && ($log->context['email'] ?? null) === $user->email);
+        $this->assertOtpLogged(fn (MessageLogged $log) => $log->level === 'info'
+            && $log->message === 'Admin login OTP: send_ok'
+            && ($log->context['user_id'] ?? null) === $user->id
+            && array_key_exists('duration_ms', $log->context));
+
         $user->refresh();
         $this->assertNotEmpty($user->login_otp_hash);
         $this->assertNotNull($user->login_otp_expires_at);
@@ -78,6 +98,11 @@ class AdminLoginOtpTest extends TestCase
             ->assertSessionHas('status_level', 'warning');
 
         Mail::assertSent(AdminLoginOtpMail::class, 1);
+
+        $this->assertOtpLogged(fn (MessageLogged $log) => $log->level === 'info'
+            && $log->message === 'Admin login OTP: request'
+            && ($log->context['reason'] ?? null) === AdminLoginOtpService::OUTCOME_COOLDOWN
+            && ($log->context['user_id'] ?? null) === $user->id);
     }
 
     public function test_request_otp_after_cooldown_resends_same_code(): void
@@ -122,6 +147,10 @@ class AdminLoginOtpTest extends TestCase
             ->assertSessionHas('status');
 
         Mail::assertNothingSent();
+
+        $this->assertOtpLogged(fn (MessageLogged $log) => $log->level === 'info'
+            && $log->message === 'Admin login OTP: request'
+            && ($log->context['reason'] ?? null) === 'ineligible');
     }
 
     public function test_request_otp_skips_inactive_users(): void
@@ -133,6 +162,10 @@ class AdminLoginOtpTest extends TestCase
 
         Mail::assertNothingSent();
         $this->assertNull($user->fresh()->login_otp_hash);
+
+        $this->assertOtpLogged(fn (MessageLogged $log) => $log->level === 'info'
+            && $log->message === 'Admin login OTP: request'
+            && ($log->context['reason'] ?? null) === 'ineligible');
     }
 
     public function test_verify_otp_logs_in_and_clears_code(): void
@@ -154,6 +187,11 @@ class AdminLoginOtpTest extends TestCase
         $this->assertNull($user->login_otp_expires_at);
 
         $this->get(route('manager.dashboard'))->assertOk();
+
+        $this->assertOtpLogged(fn (MessageLogged $log) => $log->level === 'info'
+            && $log->message === 'Admin login OTP: verify'
+            && ($log->context['reason'] ?? null) === 'accepted'
+            && ($log->context['user_id'] ?? null) === $user->id);
     }
 
     public function test_verify_otp_rejects_wrong_code(): void
@@ -173,6 +211,11 @@ class AdminLoginOtpTest extends TestCase
 
         $this->assertGuest('admin');
         $this->assertNotNull($user->fresh()->login_otp_hash);
+
+        $this->assertOtpLogged(fn (MessageLogged $log) => $log->level === 'warning'
+            && $log->message === 'Admin login OTP: verify'
+            && ($log->context['reason'] ?? null) === 'bad_code'
+            && ($log->context['user_id'] ?? null) === $user->id);
     }
 
     public function test_verify_otp_rejects_expired_code(): void

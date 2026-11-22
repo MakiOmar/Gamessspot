@@ -19,7 +19,29 @@ Staff sign-in at `/manager/login` uses a **6-digit email code** only. Phone + pa
 | `ADMIN_OTP_WHITELIST` | `auth_otp.whitelist` | empty (all active staff with manager access) |
 | `ADMIN_EMAIL_LOCK` | `auth_otp.email_lock` | `true` (staff/admin emails cannot be changed in manager UI) |
 
-**Whitelist:** comma-separated `user_id:email` pairs (emails compared case-insensitively). When **non-empty**, only those exact id+email matches may receive or verify a manager OTP — so if user `32` is listed as `32:mhmuddmostfa0@gmail.com` and their DB email was changed, no code is sent. Unknown / non-listed staff get the same silent response as an unknown address. Blocks are logged (`Admin login OTP blocked by whitelist`). Recreate the Accounts container after changing `.env` so `config:cache` picks it up.
+**Whitelist:** comma-separated `user_id:email` pairs (emails compared case-insensitively). When **non-empty**, only those exact id+email matches may receive or verify a manager OTP — so if user `32` is listed as `32:mhmuddmostfa0@gmail.com` and their DB email was changed, no code is sent. Unknown / non-listed staff get the same silent response as an unknown address. Blocks are logged (`Admin login OTP: whitelist_block`). Recreate the Accounts container after changing `.env` so `config:cache` picks it up.
+
+### Diagnosing “OTP not received”
+
+Every request/send/verify writes structured lines to the Laravel log (message prefix `Admin login OTP:`). The plaintext code is never logged. Public responses stay non-enumerating; logs still record the real reason.
+
+| Message | Meaning |
+|---------|---------|
+| `Admin login OTP: request` | Early exit before mail (`reason`: `ineligible`, `whitelist`, `cooldown`) |
+| `Admin login OTP: whitelist_block` | Whitelist rejected the id/email pair |
+| `Admin login OTP: send_attempt` | About to call the mailer (`mailer`, `mail_from`, `reused`) |
+| `Admin login OTP: send_ok` | Transport accepted the message (`duration_ms`) — inbox delivery is still up to the provider/spam filters |
+| `Admin login OTP: send_failed` | Transport/API threw (`exception`, `error`); UI still looks like a silent skip |
+| `Admin login OTP: verify` | Code check result (`reason`: `accepted`, `bad_code`, `missing_or_expired`, …) |
+
+On the VPS (Accounts container):
+
+```bash
+docker compose exec -T accounts sh -lc \
+  "grep -F 'Admin login OTP' \$(ls -1t /var/www/html/storage/logs/laravel*.log | head -1) | tail -n 80"
+```
+
+Filter by address with `| grep -F 'user@example.com'`. If you see `send_ok` but the staff still has nothing, check spam and Zoho CPaaS delivery logs — the app already handed the message off.
 
 **Email lock:** when `ADMIN_EMAIL_LOCK=true` (default), manager user edit cannot change email on any staff/admin account (roles other than `customer`). The field is read-only in the UI; a forged change returns validation error. Customer emails remain editable. The customers API already refused staff email rebinds; device-repair intake also skips rewriting staff emails when the lock is on. Set `ADMIN_EMAIL_LOCK=false` only for controlled recovery.
 

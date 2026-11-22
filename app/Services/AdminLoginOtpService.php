@@ -43,21 +43,37 @@ class AdminLoginOtpService
     public function requestCode(string $email): array
     {
         $email = strtolower(trim($email));
+        $base = $this->logContext(email: $email);
+
         $user = User::query()
             ->whereRaw('LOWER(email) = ?', [$email])
             ->where('is_active', 1)
             ->first();
 
         if (! $user || empty($user->email) || ! $this->roles->userCanAccessManager($user)) {
+            $this->logRequest('blocked', 'ineligible', $base + [
+                'found_active' => (bool) $user,
+                'has_email' => $user ? ! empty($user->email) : false,
+                'manager_access' => $user ? $this->roles->userCanAccessManager($user) : false,
+            ]);
+
             return ['outcome' => self::OUTCOME_SKIPPED];
         }
 
+        $base = $this->logContext(email: $email, user: $user);
+
         if (! $this->passesWhitelist($user, logBlock: true)) {
+            $this->logRequest('blocked', 'whitelist', $base, warning: true);
+
             return ['outcome' => self::OUTCOME_SKIPPED];
         }
 
         $retryAfter = $this->secondsUntilResendAllowed($user);
         if ($retryAfter > 0) {
+            $this->logRequest('blocked', self::OUTCOME_COOLDOWN, $base + [
+                'retry_after' => $retryAfter,
+            ]);
+
             return [
                 'outcome' => self::OUTCOME_COOLDOWN,
                 'retry_after' => $retryAfter,
@@ -129,10 +145,14 @@ class AdminLoginOtpService
         ]);
 
         if (! $user || (int) $user->is_active !== 1 || ! $this->roles->userCanAccessManager($user)) {
+            $this->logVerify('failed', 'ineligible', $this->logContext(email: $email, user: $user));
             throw $invalid;
         }
 
+        $base = $this->logContext(email: $email, user: $user);
+
         if (! $this->passesWhitelist($user, logBlock: true)) {
+            $this->logVerify('failed', 'whitelist', $base);
             throw $invalid;
         }
 
@@ -141,18 +161,27 @@ class AdminLoginOtpService
             || empty($user->login_otp_expires_at)
             || now()->gt($user->login_otp_expires_at)
         ) {
+            $this->logVerify('failed', 'missing_or_expired', $base + [
+                'has_hash' => ! empty($user->login_otp_hash),
+                'expires_at' => $user->login_otp_expires_at?->toIso8601String(),
+            ]);
             throw $invalid;
         }
 
         if (! Hash::check($code, $user->login_otp_hash)) {
-            if ($this->codeAttempts->recordFailure(self::PURPOSE, (string) $user->id)) {
+            $burned = $this->codeAttempts->recordFailure(self::PURPOSE, (string) $user->id);
+            if ($burned) {
                 $this->clearOtp($user);
             }
+            $this->logVerify('failed', 'bad_code', $base + [
+                'burned' => $burned,
+            ]);
             throw $invalid;
         }
 
         $this->clearOtp($user);
         $this->codeAttempts->clear(self::PURPOSE, (string) $user->id);
+        $this->logVerify('ok', 'accepted', $base);
 
         return $user;
     }
@@ -177,11 +206,13 @@ class AdminLoginOtpService
         }
 
         if ($logBlock) {
-            Log::warning('Admin login OTP blocked by whitelist.', [
+            Log::warning('Admin login OTP: whitelist_block', [
+                'purpose' => self::PURPOSE,
                 'user_id' => $userId,
                 'email' => $email,
                 'expected_email' => $expected,
                 'listed' => array_key_exists($userId, $whitelist),
+                'ip' => request()?->ip(),
             ]);
         }
 
@@ -193,12 +224,25 @@ class AdminLoginOtpService
      */
     private function sendMail(User $user, string $code, bool $reused): array
     {
+        $context = $this->logContext(email: (string) $user->email, user: $user) + [
+            'reused' => $reused,
+            'mailer' => (string) config('mail.default'),
+            'mail_from' => (string) config('mail.from.address'),
+            'expires_at' => $user->login_otp_expires_at?->toIso8601String(),
+        ];
+
+        Log::info('Admin login OTP: send_attempt', $context);
+
+        $started = microtime(true);
+
         try {
             // Sync send — manager login must not depend on a queue worker.
             Mail::to($user->email)->sendNow(new AdminLoginOtpMail($user, $code));
         } catch (\Throwable $e) {
-            Log::warning('Admin login OTP email failed.', [
-                'user_id' => $user->id,
+            $durationMs = (int) round((microtime(true) - $started) * 1000);
+            Log::warning('Admin login OTP: send_failed', $context + [
+                'duration_ms' => $durationMs,
+                'exception' => $e::class,
                 'error' => $e->getMessage(),
             ]);
             report($e);
@@ -213,9 +257,66 @@ class AdminLoginOtpService
             return ['outcome' => self::OUTCOME_SKIPPED];
         }
 
+        $durationMs = (int) round((microtime(true) - $started) * 1000);
+        $outcome = $reused ? self::OUTCOME_REUSED : self::OUTCOME_SENT;
+        Log::info('Admin login OTP: send_ok', $context + [
+            'duration_ms' => $durationMs,
+            'outcome' => $outcome,
+        ]);
+
         return [
-            'outcome' => $reused ? self::OUTCOME_REUSED : self::OUTCOME_SENT,
+            'outcome' => $outcome,
         ];
+    }
+
+    /**
+     * Shared context for OTP diagnostics (never includes the plaintext code).
+     *
+     * @return array{purpose: string, email: string, ip?: string|null, user_id?: int, name?: string|null}
+     */
+    private function logContext(string $email, ?User $user = null): array
+    {
+        $context = [
+            'purpose' => self::PURPOSE,
+            'email' => $email,
+            'ip' => request()?->ip(),
+        ];
+
+        if ($user) {
+            $context['user_id'] = (int) $user->id;
+            $context['name'] = $user->name;
+        }
+
+        return $context;
+    }
+
+    /**
+     * @param  array<string, mixed>  $context
+     */
+    private function logRequest(string $result, string $reason, array $context, bool $warning = false): void
+    {
+        $payload = $context + [
+            'result' => $result,
+            'reason' => $reason,
+        ];
+
+        if ($warning) {
+            Log::warning('Admin login OTP: request', $payload);
+        } else {
+            Log::info('Admin login OTP: request', $payload);
+        }
+    }
+
+    /**
+     * @param  array<string, mixed>  $context
+     */
+    private function logVerify(string $result, string $reason, array $context): void
+    {
+        $level = $result === 'ok' ? 'info' : 'warning';
+        Log::{$level}('Admin login OTP: verify', $context + [
+            'result' => $result,
+            'reason' => $reason,
+        ]);
     }
 
     private function secondsUntilResendAllowed(User $user): int
