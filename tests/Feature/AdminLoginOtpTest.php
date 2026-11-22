@@ -320,7 +320,8 @@ class AdminLoginOtpTest extends TestCase
             ->assertSee('Send login code', false)
             ->assertSee(route('manager.login.otp.request'), false)
             ->assertDontSee('Sign in with phone', false)
-            ->assertDontSee('method=password', false);
+            ->assertDontSee('method=password', false)
+            ->assertDontSee('name="remember"', false);
     }
 
     public function test_code_step_shows_inbox_hint_and_resend_control(): void
@@ -331,6 +332,8 @@ class AdminLoginOtpTest extends TestCase
             ->get(route('manager.login', ['step' => 'code']))
             ->assertOk()
             ->assertSee('Check your inbox and spam', false)
-            ->assertSee('Resend code', false);
+            ->assertSee('Resend code', false)
+            ->assertDontSee('name="remember"', false)
+            ->assertDontSee(__('adminlte::adminlte.remember_me'), false);
     }
 }

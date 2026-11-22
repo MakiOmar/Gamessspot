@@ -94,7 +94,6 @@ class AdminLoginController extends Controller
         $data = $request->validate([
             'email' => 'required|email',
             'code' => 'required|string|size:6',
-            'remember' => 'sometimes|boolean',
         ]);
 
         $email = strtolower(trim($data['email']));
@@ -105,11 +104,11 @@ class AdminLoginController extends Controller
             return redirect()
                 ->route('manager.login', ['step' => 'code'])
                 ->with('login_otp_email', $email)
-                ->withInput($request->only('email', 'remember'))
+                ->withInput($request->only('email'))
                 ->withErrors($e->errors());
         }
 
-        Auth::guard('admin')->login($user, (bool) $request->boolean('remember'));
+        Auth::guard('admin')->login($user);
         $request->session()->forget('login_otp_email');
         $request->session()->regenerate();
 

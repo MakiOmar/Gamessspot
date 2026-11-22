@@ -363,13 +363,6 @@
                                 </div>
                             </div>
 
-                            <div class="d-flex justify-content-between mb-3">
-                                <div class="form-check">
-                                    <input type="checkbox" name="remember" id="remember" value="1" {{ old('remember') ? 'checked' : '' }}>
-                                    <label class="form-check-label" for="remember">{{ __('adminlte::adminlte.remember_me') }}</label>
-                                </div>
-                            </div>
-
                             <button type="submit" class="btn btn-login pulse">
                                 Verify &amp; sign in <i class="fas fa-chevron-right ms-2"></i>
                             </button>

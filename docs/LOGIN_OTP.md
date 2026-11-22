@@ -5,7 +5,7 @@ Staff sign-in at `/manager/login` uses a **6-digit email code** only. Phone + pa
 ## Flow
 
 1. `POST /manager/login/otp/request` with `{ email }` — if the address matches an **active staff** user (any role except `customer`), a code is hashed onto `users.login_otp_*` and emailed synchronously (`Mail::sendNow`). Customer accounts and unknown addresses get the same generic response and no email. A customer session that opens `/manager` is signed out and returned to the login form.
-2. `POST /manager/login/otp/verify` with `{ email, code, remember? }` — on success, starts the `admin` session (role checks) and clears the code.
+2. `POST /manager/login/otp/verify` with `{ email, code }` — on success, starts the `admin` session (role checks) and clears the code. No “remember me”; the session lasts until logout or the normal session lifetime.
 3. After **5** wrong guesses for one issued code, the code is burned (`OneTimeCodeAttempts`).
 4. **Resend cooldown** (default **60s**): another request within the window sends nothing and shows a wait message. After the cooldown, a still-valid code is **re-mailed unchanged** (plaintext kept in cache until expiry) so older inbox copies keep working; only an expired/missing code mints a new one. The login UI disables Resend with a countdown and reminds staff to check spam. Unknown emails stay non-enumerating (generic “if registered” copy; no cooldown state).
 
