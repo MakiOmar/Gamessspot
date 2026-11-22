@@ -30,6 +30,13 @@ return [
     'issue_per_minute' => max(1, (int) env('AUTH_OTP_ISSUE_PER_MINUTE', 5)),
 
     /**
+     * Minimum seconds between OTP emails for the same user.
+     * Within this window a new request is skipped (no mail); after it, a still-valid
+     * code is re-sent unchanged instead of minting a new one.
+     */
+    'resend_cooldown_seconds' => max(1, (int) env('AUTH_OTP_RESEND_COOLDOWN_SECONDS', 60)),
+
+    /**
      * Map of user id => lowercase email. Empty disables the gate.
      *
      * @var array<int, string>

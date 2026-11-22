@@ -288,6 +288,9 @@
 @php
     $loginStep = $loginStep ?? 'email';
     $otpEmail = $otpEmail ?? old('email', session('login_otp_email'));
+    $resendAvailableIn = max(0, (int) ($resendAvailableIn ?? 0));
+    $statusLevel = session('status_level', 'success');
+    $statusAlertClass = $statusLevel === 'warning' ? 'alert-warning' : 'alert-success';
 @endphp
 <div class="container">
     <div class="row justify-content-center">
@@ -319,7 +322,7 @@
 
                 <div class="p-4">
                     @if (session('status'))
-                        <div class="alert alert-success" role="status">{{ session('status') }}</div>
+                        <div class="alert {{ $statusAlertClass }}" role="status">{{ session('status') }}</div>
                     @endif
 
                     @if ($errors->any())
@@ -333,7 +336,11 @@
                     @endif
 
                     @if ($loginStep === 'code')
-                        <form action="{{ route('manager.login.otp.verify') }}" method="post">
+                        <p class="text-muted small text-center mb-3">
+                            Check your inbox and spam. After a resend we keep the same code so older emails still work.
+                        </p>
+
+                        <form action="{{ route('manager.login.otp.verify') }}" method="post" data-otp-form>
                             @csrf
                             <input type="hidden" name="email" value="{{ $otpEmail }}">
 
@@ -368,17 +375,28 @@
                             </button>
                         </form>
 
-                        <form action="{{ route('manager.login.otp.request') }}" method="post" class="mt-3">
+                        <form action="{{ route('manager.login.otp.request') }}" method="post" class="mt-3" data-otp-form id="login-otp-resend-form">
                             @csrf
                             <input type="hidden" name="email" value="{{ $otpEmail }}">
-                            <button type="submit" class="btn btn-outline-orange w-100">Resend code</button>
+                            <button type="submit" class="btn btn-outline-orange w-100"
+                                    id="login-otp-resend-btn"
+                                    @if ($resendAvailableIn > 0) disabled @endif
+                                    data-resend-label="Resend code"
+                                    data-wait-label="Resend in __S__ s"
+                                    data-available-in="{{ $resendAvailableIn }}">
+                                @if ($resendAvailableIn > 0)
+                                    Resend in {{ $resendAvailableIn }} s
+                                @else
+                                    Resend code
+                                @endif
+                            </button>
                         </form>
 
                         <p class="text-center mt-3 mb-0">
                             <a href="{{ route('manager.login') }}" class="forgot-link">Use a different email</a>
                         </p>
                     @else
-                        <form action="{{ route('manager.login.otp.request') }}" method="post">
+                        <form action="{{ route('manager.login.otp.request') }}" method="post" data-otp-form>
                             @csrf
                             <div class="mb-3">
                                 <label for="email" class="form-label">EMAIL</label>
@@ -415,6 +433,39 @@
         if (loginBtn) {
             loginBtn.addEventListener('mouseenter', () => loginBtn.classList.add('pulse'));
             loginBtn.addEventListener('mouseleave', () => loginBtn.classList.remove('pulse'));
+        }
+
+        document.querySelectorAll('form[data-otp-form]').forEach(function (form) {
+            form.addEventListener('submit', function () {
+                const btn = form.querySelector('button[type="submit"]');
+                if (!btn || btn.disabled) {
+                    return false;
+                }
+                btn.disabled = true;
+            });
+        });
+
+        const resend = document.getElementById('login-otp-resend-btn');
+        if (resend) {
+            let remaining = parseInt(resend.getAttribute('data-available-in'), 10) || 0;
+            const resendLabel = resend.getAttribute('data-resend-label') || 'Resend code';
+            const waitTemplate = resend.getAttribute('data-wait-label') || 'Resend in __S__ s';
+
+            function paintResend() {
+                if (remaining <= 0) {
+                    resend.disabled = false;
+                    resend.textContent = resendLabel;
+                    return;
+                }
+                resend.disabled = true;
+                resend.textContent = waitTemplate.split('__S__').join(String(remaining));
+                remaining -= 1;
+                window.setTimeout(paintResend, 1000);
+            }
+
+            if (remaining > 0) {
+                paintResend();
+            }
         }
 
         function createParticles() {

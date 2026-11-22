@@ -37,10 +37,17 @@ class AdminLoginController extends Controller
             ? 'code'
             : 'email';
 
+        $resendAvailableIn = 0;
+        if ($step === 'code' && is_string($otpEmail) && $otpEmail !== '') {
+            $resendAvailableIn = $this->otpService->secondsUntilResendAllowedForEmail($otpEmail);
+        }
+
         return response()
             ->view('adminlte::auth.login', [
                 'loginStep' => $step,
                 'otpEmail' => $otpEmail,
+                'resendAvailableIn' => $resendAvailableIn,
+                'resendCooldownSeconds' => max(1, (int) config('auth_otp.resend_cooldown_seconds', 60)),
             ])
             ->header('Cache-Control', 'no-cache, no-store, must-revalidate, private')
             ->header('Pragma', 'no-cache')
@@ -57,12 +64,26 @@ class AdminLoginController extends Controller
         ]);
 
         $email = strtolower(trim($data['email']));
-        $this->otpService->requestCode($email);
+        $result = $this->otpService->requestCode($email);
 
-        return redirect()
+        $redirect = redirect()
             ->route('manager.login', ['step' => 'code'])
-            ->with('login_otp_email', $email)
-            ->with('status', 'If that email is registered, a login code has been sent.');
+            ->with('login_otp_email', $email);
+
+        return match ($result['outcome']) {
+            AdminLoginOtpService::OUTCOME_COOLDOWN => $redirect
+                ->with('status', 'Please wait '.(int) ($result['retry_after'] ?? 1).' seconds before requesting another code.')
+                ->with('status_level', 'warning'),
+            AdminLoginOtpService::OUTCOME_REUSED => $redirect
+                ->with('status', 'We sent the same login code again. Earlier emails with that code still work. Check spam if needed.')
+                ->with('status_level', 'success'),
+            AdminLoginOtpService::OUTCOME_SENT => $redirect
+                ->with('status', 'If that email is registered, a login code has been sent. Check spam if it is missing.')
+                ->with('status_level', 'success'),
+            default => $redirect
+                ->with('status', 'If that email is registered, a login code has been sent.')
+                ->with('status_level', 'success'),
+        };
     }
 
     /**

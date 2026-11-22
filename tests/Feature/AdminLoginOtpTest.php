@@ -65,6 +65,56 @@ class AdminLoginOtpTest extends TestCase
         $this->assertNotNull($user->login_otp_expires_at);
     }
 
+    public function test_request_otp_within_cooldown_does_not_send_again(): void
+    {
+        $user = $this->staff();
+
+        $this->post(route('manager.login.otp.request'), ['email' => $user->email])
+            ->assertRedirect(route('manager.login', ['step' => 'code']));
+
+        $this->post(route('manager.login.otp.request'), ['email' => $user->email])
+            ->assertRedirect(route('manager.login', ['step' => 'code']))
+            ->assertSessionHas('status')
+            ->assertSessionHas('status_level', 'warning');
+
+        Mail::assertSent(AdminLoginOtpMail::class, 1);
+    }
+
+    public function test_request_otp_after_cooldown_resends_same_code(): void
+    {
+        config(['auth_otp.resend_cooldown_seconds' => 60]);
+        $user = $this->staff();
+
+        $this->post(route('manager.login.otp.request'), ['email' => $user->email])
+            ->assertRedirect(route('manager.login', ['step' => 'code']));
+
+        $firstCode = null;
+        Mail::assertSent(AdminLoginOtpMail::class, function (AdminLoginOtpMail $mail) use (&$firstCode) {
+            $firstCode = $mail->code;
+
+            return true;
+        });
+        $this->assertNotNull($firstCode);
+
+        $this->travel(61)->seconds();
+
+        $this->post(route('manager.login.otp.request'), ['email' => $user->email])
+            ->assertRedirect(route('manager.login', ['step' => 'code']))
+            ->assertSessionHas('status_level', 'success');
+
+        Mail::assertSent(AdminLoginOtpMail::class, 2);
+        Mail::assertSent(AdminLoginOtpMail::class, function (AdminLoginOtpMail $mail) use ($firstCode) {
+            return $mail->code === $firstCode;
+        });
+
+        $this->post(route('manager.login.otp.verify'), [
+            'email' => $user->email,
+            'code' => $firstCode,
+        ])->assertRedirect(route('manager.dashboard'));
+
+        $this->assertAuthenticatedAs($user, 'admin');
+    }
+
     public function test_request_otp_for_unknown_email_returns_same_message_and_sends_nothing(): void
     {
         $this->post(route('manager.login.otp.request'), ['email' => 'nobody@example.com'])
@@ -271,5 +321,16 @@ class AdminLoginOtpTest extends TestCase
             ->assertSee(route('manager.login.otp.request'), false)
             ->assertDontSee('Sign in with phone', false)
             ->assertDontSee('method=password', false);
+    }
+
+    public function test_code_step_shows_inbox_hint_and_resend_control(): void
+    {
+        $user = $this->staff();
+
+        $this->withSession(['login_otp_email' => $user->email])
+            ->get(route('manager.login', ['step' => 'code']))
+            ->assertOk()
+            ->assertSee('Check your inbox and spam', false)
+            ->assertSee('Resend code', false);
     }
 }
