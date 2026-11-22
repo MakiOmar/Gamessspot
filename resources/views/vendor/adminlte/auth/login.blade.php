@@ -429,12 +429,20 @@
         }
 
         document.querySelectorAll('form[data-otp-form]').forEach(function (form) {
-            form.addEventListener('submit', function () {
-                const btn = form.querySelector('button[type="submit"]');
-                if (!btn || btn.disabled) {
-                    return false;
+            // Disable on the next tick — disabling the submitter synchronously
+            // during submit cancels the POST in Chromium.
+            form.addEventListener('submit', function (e) {
+                if (form.dataset.otpSubmitting === '1') {
+                    e.preventDefault();
+                    return;
                 }
-                btn.disabled = true;
+                form.dataset.otpSubmitting = '1';
+                const btn = form.querySelector('button[type="submit"]');
+                window.setTimeout(function () {
+                    if (btn) {
+                        btn.disabled = true;
+                    }
+                }, 0);
             });
         });
 
