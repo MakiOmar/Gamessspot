@@ -33,6 +33,8 @@ POS and other integrations still use `POST /api/login` (phone + password). That 
 
 Tokens are issued with scoped abilities (`orders:receive`, `pos:receive-order`, `customers:write`, `orders:check-stock`) — not `*`. Protect those routes with Sanctum `abilities:…`. Set the allowlist to the same account POS uses via `ACCOUNTS_AUTH_PHONE` / `ACCOUNTS_AUTH_PASSWORD`.
 
+`ACCOUNTS_AUTH_PASSWORD` on POS must be a long random secret. Accounts keeps only the **bcrypt hash** on `users.password`; rotate by hashing a new secret on the allowlisted user and updating POS `.env`, then recreate the POS container and clear `accounts_auth_token` cache.
+
 ## Tests
 
 ```bash
