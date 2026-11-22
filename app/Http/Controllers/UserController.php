@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use App\Services\CacheManager;
 use App\Services\RolePermissionService;
+use App\Services\UserAccessRevoker;
 use App\Support\PhoneUserResolver;
 use Illuminate\Validation\ValidationException;
 
@@ -23,15 +24,16 @@ class UserController extends Controller
 
         if ($action === 'deactivate') {
             $user->is_active = 0;
+            $user->save();
+            app(UserAccessRevoker::class)->revoke($user);
             $message = "User account deactivated successfully.";
         } elseif ($action === 'activate') {
             $user->is_active = 1;
+            $user->save();
             $message = "User account activated successfully.";
         } else {
             return response()->json(['success' => false, 'message' => 'Invalid action.']);
         }
-
-        $user->save();
 
         return response()->json(['success' => true, 'message' => $message]);
     }
@@ -161,10 +163,9 @@ class UserController extends Controller
     {
         $user = User::findOrFail($id);
 
-        // Delete the user
+        app(UserAccessRevoker::class)->revoke($user);
         $user->delete();
-        // ✅ No need to manually clear cache - UserObserver handles it automatically
-        // Return a success response
+
         return response()->json(array( 'message' => 'User deleted successfully!' ));
     }
 

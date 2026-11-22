@@ -60,6 +60,13 @@ class AppServiceProvider extends ServiceProvider
             return Limit::perMinute(12)->by($request->ip());
         });
 
+        // Manager gift-card sales (per staff user, fall back to IP)
+        RateLimiter::for('sell-card', function (Request $request) {
+            $key = $request->user('admin')?->id ?: $request->ip();
+
+            return Limit::perMinute(20)->by('sell-card|'.$key);
+        });
+
         // Paginator links default to the raw request URL, which ignores forceScheme('https') above;
         // behind the proxy that yields http:// page links that browsers block as mixed content.
         Paginator::currentPathResolver(fn () => url()->current());

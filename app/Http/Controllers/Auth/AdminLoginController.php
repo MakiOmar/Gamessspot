@@ -111,6 +111,7 @@ class AdminLoginController extends Controller
         Auth::guard('admin')->login($user);
         $request->session()->forget('login_otp_email');
         $request->session()->regenerate();
+        $request->session()->put('admin_auth_at', now()->getTimestamp());
 
         return $this->finishAdminLogin($user);
     }
@@ -120,9 +121,11 @@ class AdminLoginController extends Controller
      *
      * @return \Illuminate\Http\RedirectResponse
      */
-    public function logout()
+    public function logout(Request $request)
     {
         Auth::guard('admin')->logout();
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
 
         return redirect('/manager/login');
     }

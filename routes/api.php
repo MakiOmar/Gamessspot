@@ -21,7 +21,7 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
-Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
+Route::middleware(['auth:sanctum', 'active'])->get('/user', function (Request $request) {
     return $request->user();
 });
 
@@ -65,11 +65,11 @@ Route::post('/login', function (Request $request) {
     return response()->json(['token' => $token], 200);
 })->middleware('throttle:20,1');
 
-Route::middleware(['auth:sanctum', 'abilities:orders:check-stock'])->get('orders/latest', [OrderController::class, 'latestCustomerOrders']);
-Route::middleware(['auth:sanctum', 'abilities:orders:receive'])->post('/orders/receive', [OrderController::class, 'storeApi']);
-Route::middleware(['auth:sanctum', 'abilities:orders:check-stock'])->post('/orders/check_stock', [OrderController::class, 'checkStockApi']);
-Route::middleware(['auth:sanctum', 'abilities:orders:check-stock'])->post('/orders/check_card_stock', [OrderController::class, 'checkCardStockApi']);
-Route::middleware(['auth:sanctum', 'abilities:pos:receive-order'])->post('/pos/receive-order', [OrderController::class, 'receiveFromPos']);
+Route::middleware(['auth:sanctum', 'active', 'abilities:orders:check-stock'])->get('orders/latest', [OrderController::class, 'latestCustomerOrders']);
+Route::middleware(['auth:sanctum', 'active', 'abilities:orders:receive'])->post('/orders/receive', [OrderController::class, 'storeApi']);
+Route::middleware(['auth:sanctum', 'active', 'abilities:orders:check-stock'])->post('/orders/check_stock', [OrderController::class, 'checkStockApi']);
+Route::middleware(['auth:sanctum', 'active', 'abilities:orders:check-stock'])->post('/orders/check_card_stock', [OrderController::class, 'checkCardStockApi']);
+Route::middleware(['auth:sanctum', 'active', 'abilities:pos:receive-order'])->post('/pos/receive-order', [OrderController::class, 'receiveFromPos']);
 Route::get('/games/platform/{platform}', [ManagerController::class, 'getGamesByPlatformApi']);
 // Combined featured (both platforms) must be registered before /games/featured/{platform}
 Route::get('/games/featured', [ManagerController::class, 'getFeaturedGamesApi']);
@@ -78,7 +78,7 @@ Route::get('/games/{id}', [ManagerController::class, 'getGameById']);
 Route::get('/card-ctegories/list', [CardCategoryController::class, 'sellApi']);
 Route::get('/card-categories/{cardCategory}', [CardCategoryController::class, 'showApi']);
 
-Route::middleware(['auth:sanctum', 'abilities:customers:write'])->post('/customers', [UserController::class, 'createCustomerApi'])->name('api.customers.create');
+Route::middleware(['auth:sanctum', 'active', 'abilities:customers:write'])->post('/customers', [UserController::class, 'createCustomerApi'])->name('api.customers.create');
 
 Route::match(['get', 'post'], '/device/track', [PublicDeviceController::class, 'trackByPhoneApi'])
     ->middleware('throttle:30,1')

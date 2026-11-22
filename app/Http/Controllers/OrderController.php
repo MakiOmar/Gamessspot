@@ -1228,7 +1228,7 @@ class OrderController extends Controller
             'store_profile_id' => 'required|exists:stores_profile,id',
             'buyer_phone'      => 'required|string|max:15',
             'buyer_name'       => 'required|string|max:100',
-            'price'            => 'required|numeric|min:0',
+            'price'            => 'required|numeric|gt:0',
             'buyer_email'      => 'nullable|email',
             'storefront_line_key' => 'nullable|string|max:191',
             'notes'            => 'nullable|string|max:500',
@@ -1248,6 +1248,8 @@ class OrderController extends Controller
             $result = app(CardSourcingService::class)->sell($validatedData, $lineKey, $isStorefront, Auth::id());
 
             return response()->json($result['body'], $result['status']);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            throw $e;
         } catch (\Throwable $e) {
             Log::error('Card order creation failed', [
                 'seller_id' => Auth::id(),

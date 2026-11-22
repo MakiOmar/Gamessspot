@@ -733,7 +733,9 @@ Route::prefix('manager')->group(function () {
                     Route::post('/store', [OrderController::class, 'store'])
                         ->middleware('throttle:5,1')
                         ->name('orders.store');
-                    Route::post('/sell-card', [OrderController::class, 'sellCard'])->name('manager.orders.sell.card');
+                    Route::post('/sell-card', [OrderController::class, 'sellCard'])
+                        ->middleware(['can:manage-gift-cards', 'throttle:sell-card'])
+                        ->name('manager.orders.sell.card');
                     Route::post('/send-to-pos', [OrderController::class, 'sendToPos'])->name('manager.orders.sendToPos');
                     Route::post('/unsend-from-pos', [OrderController::class, 'unsendFromPos'])->name('manager.orders.unsendFromPos');
                 });
@@ -821,6 +823,9 @@ Route::prefix('manager')->group(function () {
             Route::get('/cards/search', [CardCategoryController::class, 'searchSellCategories'])
             ->name('manager.sell-cards.search');
 
+            // Inventory codes (pins) — never open to every staff role
+            Route::resource('cards', CardController::class);
+
             // Gift card sales only (local and Next Load codes)
             Route::get('/gift-cards/sell-log', [GiftCardSellLogController::class, 'index'])
                 ->middleware('can:view-sell-log')
@@ -856,7 +861,6 @@ Route::prefix('manager')->group(function () {
         // Resource routes
         Route::resource('masters', MasterController::class);
         Route::resource('card-categories', CardCategoryController::class);
-        Route::resource('cards', CardController::class);
         
         // Device Repair Management Routes
         Route::middleware('can:manage-device-repairs')->group(function () {

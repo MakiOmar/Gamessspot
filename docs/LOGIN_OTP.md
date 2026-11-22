@@ -47,6 +47,17 @@ Filter by address with `| grep -F 'user@example.com'`. If you see `send_ok` but 
 
 Verify endpoint uses named limiter `auth-otp-verify` (12/min per IP).
 
+## Session and deactivation
+
+- Every manager request runs `EnsureManagerStaff`: the user must be **active**, have a staff role, and their session must be newer than `users.auth_revoked_at` (stamped when staff are deactivated or deleted).
+- OTP login stores `admin_auth_at` in the session after verify; deactivate/delete clears Sanctum tokens, `remember_token`, pending OTP fields, and sets `auth_revoked_at` so open file sessions die on the next click.
+- Sanctum API routes use the `active` middleware so a deactivated integration account cannot keep calling with an old token (tokens are also deleted on deactivate).
+
+## Gift card sell controls
+
+- `POST /manager/orders/sell-card` requires `manage-gift-cards` (in addition to `manage-sell-log`), is throttled (`sell-card`, 20/min per staff user), rejects `price <= 0`, and refuses sales below the unit cost (local card `cost`, or category `supplier_cost` for Next Load).
+- `GET/POST /manager/cards` (inventory codes) requires `manage-gift-cards`.
+
 ## Mail
 
 Uses the system ZeptoMail transport (`docs/ZOHO_CPAAS_MAIL.md`). Template: `resources/views/emails/admin-login-otp.blade.php`.

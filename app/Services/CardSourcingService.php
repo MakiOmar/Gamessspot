@@ -11,6 +11,7 @@ use App\Services\NextLoad\NextLoadException;
 use App\Services\NextLoad\NextLoadPurchaseService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\ValidationException;
 
 /**
  * Sells one gift card code for a category: local stock and/or Next Load depending on the category mode.
@@ -38,12 +39,18 @@ class CardSourcingService
         }
 
         $category = CardCategory::findOrFail($data['card_category_id']);
+        $this->assertSalePricePositive((float) $data['price']);
 
         if ($category->usesLocalStock() && ($sold = $this->sellLocal($data, $lineKey, $isStorefront, $sellerId))) {
             return $sold;
         }
 
         if ($category->usesSupplier() && NextLoadClient::enabled()) {
+            $this->assertSalePriceAboveCost(
+                (float) $data['price'],
+                (float) ($category->supplier_cost ?? 0)
+            );
+
             return $this->sellFromSupplier($category, $data, $lineKey, $isStorefront, $sellerId);
         }
 
@@ -63,6 +70,8 @@ class CardSourcingService
             if (! $card) {
                 return null;
             }
+
+            $this->assertSalePriceAboveCost((float) $data['price'], (float) $card->cost);
 
             $order = Order::create($this->orderData($data, $lineKey, $isStorefront, $sellerId, $card->id));
             $card->update(['status' => false]);
@@ -178,12 +187,33 @@ class CardSourcingService
         }
 
         $card = $this->purchases->createCard($locked, $item, false);
+        $this->assertSalePriceAboveCost((float) ($data['price'] ?? 0), (float) $card->cost);
         $order = Order::create($this->orderData($data, $lineKey, $isStorefront, $sellerId, $card->id));
         if (! $locked->unconvertedItems()->exists()) {
             $locked->update(['consumed_at' => now()]);
         }
 
         return ['card' => $card, 'order' => $order];
+    }
+
+    private function assertSalePricePositive(float $price): void
+    {
+        if ($price <= 0) {
+            throw ValidationException::withMessages([
+                'price' => ['Sale price must be greater than zero.'],
+            ]);
+        }
+    }
+
+    private function assertSalePriceAboveCost(float $price, float $cost): void
+    {
+        $this->assertSalePricePositive($price);
+
+        if ($cost > 0 && $price + 1e-6 < $cost) {
+            throw ValidationException::withMessages([
+                'price' => ['Sale price cannot be below the card cost ('.$cost.').'],
+            ]);
+        }
     }
 
     private function audit(NextLoadOrder $supplierOrder, Order $order): void

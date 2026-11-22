@@ -82,6 +82,7 @@ class User extends Authenticatable
     protected $casts = array(
         'email_verified_at' => 'datetime',
         'login_otp_expires_at' => 'datetime',
+        'auth_revoked_at' => 'datetime',
         'password'          => 'hashed',
     );
 
