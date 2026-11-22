@@ -428,10 +428,15 @@
             loginBtn.addEventListener('mouseleave', () => loginBtn.classList.remove('pulse'));
         }
 
-        document.querySelectorAll('form[data-otp-form]').forEach(function (form) {
+        if (!window.__adminOtpSubmitLockBound) {
+            window.__adminOtpSubmitLockBound = true;
             // Do not disable the submitter — Chromium cancels navigation when
             // the submit button is disabled during/just after submit.
-            form.addEventListener('submit', function (e) {
+            document.addEventListener('submit', function (e) {
+                const form = e.target;
+                if (!(form instanceof HTMLFormElement) || !form.matches('form[data-otp-form]')) {
+                    return;
+                }
                 if (form.dataset.otpSubmitting === '1') {
                     e.preventDefault();
                     return;
@@ -442,8 +447,8 @@
                     btn.setAttribute('aria-busy', 'true');
                     btn.style.pointerEvents = 'none';
                 }
-            });
-        });
+            }, true);
+        }
 
         const resend = document.getElementById('login-otp-resend-btn');
         if (resend) {
