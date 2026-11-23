@@ -23,3 +23,6 @@ public/logos
 .DS_Store
 Thumbs.db
 .ftpquota
+# Markdown stays local only — never push *.md to remote
+*.md
+*.MD
