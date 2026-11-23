@@ -25,6 +25,7 @@ class AdminLoginOtpTest extends TestCase
         parent::setUp();
         Mail::fake();
         Event::fake([MessageLogged::class]);
+        config(['auth_otp.login_method' => 'otp']);
         $this->adminRole = Role::firstOrCreate(['name' => 'admin']);
     }
 
@@ -254,12 +255,48 @@ class AdminLoginOtpTest extends TestCase
         $this->assertNull($user->fresh()->login_otp_hash);
     }
 
-    public function test_password_login_route_is_gone(): void
+    public function test_password_login_is_disabled_when_method_is_otp(): void
     {
-        $this->post('/manager/login', [
+        config(['auth_otp.login_method' => 'otp']);
+
+        $this->post(route('manager.login.submit'), [
             'phone' => '01012345678',
             'password' => 'password',
-        ])->assertMethodNotAllowed();
+        ])->assertNotFound();
+    }
+
+    public function test_password_login_succeeds_when_enabled(): void
+    {
+        config(['auth_otp.login_method' => 'both']);
+        $phone = '010'.substr(uniqid(), -8);
+        $user = $this->staff([
+            'phone' => $phone,
+            'password' => Hash::make('secret-pass'),
+        ]);
+
+        $this->post(route('manager.login.submit'), [
+            'phone' => $phone,
+            'password' => 'secret-pass',
+        ])->assertRedirect(route('manager.dashboard'));
+
+        $this->assertAuthenticatedAs($user, 'admin');
+    }
+
+    public function test_both_mode_defaults_to_password_with_otp_switch(): void
+    {
+        config(['auth_otp.login_method' => 'both']);
+
+        $this->get(route('manager.login'))
+            ->assertOk()
+            ->assertSee('name="phone"', false)
+            ->assertSee('name="password"', false)
+            ->assertSee('Sign in with email code', false)
+            ->assertDontSee('name="remember"', false);
+
+        $this->get(route('manager.login', ['method' => 'otp']))
+            ->assertOk()
+            ->assertSee('Send login code', false)
+            ->assertSee('Sign in with phone', false);
     }
 
     public function test_customer_email_does_not_receive_a_manager_code(): void
@@ -356,14 +393,16 @@ class AdminLoginOtpTest extends TestCase
         $this->assertGuest('admin');
     }
 
-    public function test_login_page_is_email_otp_only(): void
+    public function test_login_page_is_email_otp_only_when_method_is_otp(): void
     {
+        config(['auth_otp.login_method' => 'otp']);
+
         $this->get(route('manager.login'))
             ->assertOk()
             ->assertSee('Send login code', false)
             ->assertSee(route('manager.login.otp.request'), false)
             ->assertDontSee('Sign in with phone', false)
-            ->assertDontSee('method=password', false)
+            ->assertDontSee('name="phone"', false)
             ->assertDontSee('name="remember"', false);
     }
 
@@ -372,7 +411,7 @@ class AdminLoginOtpTest extends TestCase
         $user = $this->staff();
 
         $this->withSession(['login_otp_email' => $user->email])
-            ->get(route('manager.login', ['step' => 'code']))
+            ->get(route('manager.login', ['step' => 'code', 'method' => 'otp']))
             ->assertOk()
             ->assertSee('Check your inbox and spam', false)
             ->assertSee('Resend code', false)

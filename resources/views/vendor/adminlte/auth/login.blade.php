@@ -288,6 +288,8 @@
 @php
     $loginStep = $loginStep ?? 'email';
     $otpEmail = $otpEmail ?? old('email', session('login_otp_email'));
+    $passwordLoginEnabled = (bool) ($passwordLoginEnabled ?? false);
+    $otpLoginEnabled = (bool) ($otpLoginEnabled ?? true);
     $resendAvailableIn = max(0, (int) ($resendAvailableIn ?? 0));
     $statusLevel = session('status_level', 'success');
     $statusAlertClass = $statusLevel === 'warning' ? 'alert-warning' : 'alert-success';
@@ -335,7 +337,43 @@
                         </div>
                     @endif
 
-                    @if ($loginStep === 'code')
+                    @if ($loginStep === 'password')
+                        <form action="{{ route('manager.login.submit') }}" method="post">
+                            @csrf
+                            <div class="mb-3">
+                                <label for="phone" class="form-label">PHONE</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="fas fa-user"></i></span>
+                                    <input id="phone" type="text" class="form-control @error('phone') is-invalid @enderror"
+                                           name="phone" value="{{ old('phone') }}" required autofocus autocomplete="username">
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="password" class="form-label">PASSWORD</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="fas fa-key"></i></span>
+                                    <input type="password" name="password" id="password"
+                                           class="form-control @error('password') is-invalid @enderror"
+                                           placeholder="{{ __('adminlte::adminlte.password') }}"
+                                           required autocomplete="current-password">
+                                    <button class="btn btn-outline-orange" type="button" id="togglePassword">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <button type="submit" class="btn btn-login pulse">
+                                {{ __('adminlte::adminlte.sign_in') }} <i class="fas fa-chevron-right ms-2"></i>
+                            </button>
+
+                            @if ($otpLoginEnabled)
+                                <p class="text-center mt-3 mb-0">
+                                    <a href="{{ route('manager.login', ['method' => 'otp']) }}" class="forgot-link">Sign in with email code</a>
+                                </p>
+                            @endif
+                        </form>
+                    @elseif ($loginStep === 'code')
                         <p class="text-muted small text-center mb-3">
                             Check your inbox and spam. After a resend we keep the same code so older emails still work.
                         </p>
@@ -386,8 +424,13 @@
                         </form>
 
                         <p class="text-center mt-3 mb-0">
-                            <a href="{{ route('manager.login') }}" class="forgot-link">Use a different email</a>
+                            <a href="{{ route('manager.login', ['method' => 'otp']) }}" class="forgot-link">Use a different email</a>
                         </p>
+                        @if ($passwordLoginEnabled)
+                            <p class="text-center mt-2 mb-0">
+                                <a href="{{ route('manager.login') }}" class="forgot-link">Sign in with phone &amp; password</a>
+                            </p>
+                        @endif
                     @else
                         <form action="{{ route('manager.login.otp.request') }}" method="post" data-otp-form>
                             @csrf
@@ -406,6 +449,14 @@
                             <button type="submit" class="btn btn-login pulse">
                                 Send login code <i class="fas fa-chevron-right ms-2"></i>
                             </button>
+
+                            @if ($passwordLoginEnabled)
+                                <p class="text-center mt-3 mb-0">
+                                    <a href="{{ route('manager.login') }}" class="forgot-link">
+                                        Sign in with phone &amp; password
+                                    </a>
+                                </p>
+                            @endif
                         </form>
                     @endif
                 </div>
@@ -426,6 +477,24 @@
         if (loginBtn) {
             loginBtn.addEventListener('mouseenter', () => loginBtn.classList.add('pulse'));
             loginBtn.addEventListener('mouseleave', () => loginBtn.classList.remove('pulse'));
+        }
+
+        const toggle = document.getElementById('togglePassword');
+        if (toggle) {
+            toggle.addEventListener('click', function () {
+                const password = document.getElementById('password');
+                const icon = this.querySelector('i');
+                if (!password || !icon) return;
+                if (password.type === 'password') {
+                    password.type = 'text';
+                    icon.classList.remove('fa-eye');
+                    icon.classList.add('fa-eye-slash');
+                } else {
+                    password.type = 'password';
+                    icon.classList.remove('fa-eye-slash');
+                    icon.classList.add('fa-eye');
+                }
+            });
         }
 
         if (!window.__adminOtpSubmitLockBound) {

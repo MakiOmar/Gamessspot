@@ -60,6 +60,11 @@ class AppServiceProvider extends ServiceProvider
             return Limit::perMinute(12)->by($request->ip());
         });
 
+        // Manager phone/password login (per IP)
+        RateLimiter::for('auth-password', function (Request $request) {
+            return Limit::perMinute(12)->by($request->ip());
+        });
+
         // Manager gift-card sales (per staff user, fall back to IP)
         RateLimiter::for('sell-card', function (Request $request) {
             $key = $request->user('admin')?->id ?: $request->ip();

@@ -596,8 +596,11 @@ Route::middleware($diagnosticsMiddleware)->get('/check-cache', function () {
 });
 
 Route::prefix('manager')->group(function () {
-    // Manager login: email OTP only
+    // Manager login: STAFF_LOGIN_METHOD=otp|password|both (see config/auth_otp.php)
     Route::get('/login', [AdminLoginController::class, 'showLoginForm'])->name('manager.login');
+    Route::post('/login', [AdminLoginController::class, 'login'])
+        ->middleware('throttle:auth-password')
+        ->name('manager.login.submit');
     Route::post('/login/otp/request', [AdminLoginController::class, 'requestOtp'])
         ->middleware('throttle:auth-otp')
         ->name('manager.login.otp.request');
