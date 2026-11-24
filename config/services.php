@@ -57,7 +57,7 @@ return [
         'timeout' => (int) env('NEXTLOAD_TIMEOUT', 30),
         // Balance under this triggers a low-balance warning (supplier currency, 3 decimals).
         'low_balance' => (string) env('NEXTLOAD_LOW_BALANCE', '0'),
-        // Local currency units per 1 supplier unit; converts supplier prices into card cost / loss checks.
+        // Fallback only when settings nextload.exchange_rate is unset (SettingsService::getNextLoadExchangeRate).
         'exchange_rate' => (string) env('NEXTLOAD_EXCHANGE_RATE', '1'),
         // When false, never buy a code whose converted supplier price is above the category sale price.
         'allow_loss' => filter_var(env('NEXTLOAD_ALLOW_LOSS', false), FILTER_VALIDATE_BOOL),

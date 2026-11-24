@@ -8,6 +8,7 @@ use App\Services\NextLoad\NextLoadCatalog;
 use App\Services\NextLoad\NextLoadClient;
 use App\Services\NextLoad\NextLoadException;
 use App\Services\NextLoad\NextLoadSyncService;
+use App\Services\SettingsService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -31,7 +32,7 @@ class NextLoadController extends Controller
             'baseUrl' => (string) config('services.nextload.base_url'),
             'balance' => $configured ? $catalog->balance() : null,
             'lowBalance' => (string) config('services.nextload.low_balance', '0'),
-            'exchangeRate' => (string) config('services.nextload.exchange_rate', '1'),
+            'exchangeRate' => SettingsService::getNextLoadExchangeRate(),
             'lastProductSync' => Cache::get(NextLoadSyncService::LAST_PRODUCT_SYNC_KEY),
             'linkedCount' => CardCategory::whereNotNull('next_load_product_id')->count(),
             'linked' => $configured ? $this->linkedRows($catalog) : collect(),
@@ -140,7 +141,7 @@ class NextLoadController extends Controller
             'search' => $search,
             'error' => $error,
             'links' => CardCategory::whereNotNull('next_load_product_id')->get(array('id', 'name', 'next_load_product_id', 'supplier_mode'))->groupBy('next_load_product_id'),
-            'exchangeRate' => (string) config('services.nextload.exchange_rate', '1'),
+            'exchangeRate' => SettingsService::getNextLoadExchangeRate(),
         ));
     }
 }

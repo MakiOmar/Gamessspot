@@ -2,6 +2,7 @@
 
 namespace App\Services\NextLoad;
 
+use App\Services\SettingsService;
 use Illuminate\Http\Client\Events\ConnectionFailed;
 use Illuminate\Http\Client\Events\RequestSending;
 use Illuminate\Http\Client\Events\ResponseReceived;
@@ -106,7 +107,7 @@ class NextLoadDiagnostics
             'password_set'     => filled(config('services.nextload.password')),
             'security_code_set' => filled(config('services.nextload.security_code')),
             'timeout'          => config('services.nextload.timeout'),
-            'exchange_rate'    => config('services.nextload.exchange_rate'),
+            'exchange_rate'    => SettingsService::getNextLoadExchangeRate(),
             'allow_loss'       => (bool) config('services.nextload.allow_loss'),
         );
     }

@@ -61,6 +61,9 @@ class SettingsController extends Controller
                 'password' => Settings::get('pos.password', 'pos@123'),
                 'base_url' => Settings::get('pos.base_url', 'https://pos.gamesspoteg.com'),
             ],
+            'nextload' => [
+                'exchange_rate' => SettingsService::getNextLoadExchangeRate(),
+            ],
         ];
 
         $storeProfiles = StoresProfile::orderBy('id')->get(['id', 'name']);
@@ -134,6 +137,7 @@ class SettingsController extends Controller
             'pos.base_url' => 'required|url|max:255',
             'pos_location' => 'array',
             'pos_location.*' => 'nullable|integer|min:0',
+            'nextload.exchange_rate' => 'required|numeric|gt:0',
         ]);
 
         if ($validator->fails()) {
@@ -212,6 +216,8 @@ class SettingsController extends Controller
 
         Settings::set('pos.location_map', $posLocationMap);
 
+        Settings::set('nextload.exchange_rate', (string) $request->input('nextload.exchange_rate'));
+
         return redirect()->route('settings.index')
             ->with('success', 'Settings updated successfully!');
     }
@@ -249,6 +255,7 @@ class SettingsController extends Controller
         Settings::forget('pos.password');
         Settings::forget('pos.base_url');
         Settings::forget('pos.location_map');
+        Settings::forget('nextload.exchange_rate');
 
         return redirect()->route('settings.index')
             ->with('success', 'Settings reset to default values!');
@@ -317,6 +324,9 @@ class SettingsController extends Controller
                 'pos.password',
                 'pos.base_url',
                 'pos.location_map',
+
+                // Next Load
+                'nextload.exchange_rate',
             ];
             
             // Build settings array - get actual values using Settings facade

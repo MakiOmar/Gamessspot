@@ -321,4 +321,16 @@ class SettingsService
             'base_url' => self::getPosBaseUrl(),
         ];
     }
+
+    /**
+     * Local currency units per 1 Next Load supplier unit (card cost + loss guard).
+     * Stored in settings; falls back to config/env when unset.
+     */
+    public static function getNextLoadExchangeRate(): string
+    {
+        $rate = Settings::get('nextload.exchange_rate', config('services.nextload.exchange_rate', '1'));
+        $rate = trim((string) ($rate ?? ''));
+
+        return $rate === '' ? '1' : $rate;
+    }
 }

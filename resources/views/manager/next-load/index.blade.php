@@ -48,6 +48,7 @@
                 <div class="small text-muted">
                     Price list synced: {{ $lastProductSync ? \Illuminate\Support\Carbon::parse($lastProductSync)->diffForHumans() : 'never' }}
                     · Exchange rate {{ $exchangeRate }}
+                    (<a href="{{ route('settings.index') }}#nextload">edit in Settings</a>)
                 </div>
             </div>
         </div>

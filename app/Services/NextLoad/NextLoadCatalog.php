@@ -4,6 +4,7 @@ namespace App\Services\NextLoad;
 
 use App\Models\CardCategory;
 use App\Models\NextLoadOrder;
+use App\Services\SettingsService;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 
@@ -152,7 +153,7 @@ class NextLoadCatalog
     /** Supplier price converted to local currency (card cost). */
     public function localCost(string $supplierPrice): string
     {
-        return Money::toLocal($supplierPrice, (string) config('services.nextload.exchange_rate', '1'));
+        return Money::toLocal($supplierPrice, SettingsService::getNextLoadExchangeRate());
     }
 
     public function withinLossGuard(CardCategory $category, string $supplierPrice): bool

@@ -18,6 +18,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
 use Laravel\Sanctum\Sanctum;
+use Rawilk\Settings\Facades\Settings;
 use Tests\TestCase;
 
 /**
@@ -59,11 +60,15 @@ class NextLoadSaleTest extends TestCase
             'services.nextload.exchange_rate' => '1',
             'services.nextload.allow_loss' => false,
         ]);
+        Settings::set('nextload.exchange_rate', '1');
         foreach (['nextload:token', NextLoadClient::PRODUCTS_CACHE_KEY, NextLoadCatalog::BALANCE_CACHE_KEY, 'nextload:outage'] as $key) {
             Cache::forget($key);
         }
 
-        Sanctum::actingAs(User::factory()->create(['is_active' => true]));
+        Sanctum::actingAs(
+            User::factory()->create(['is_active' => true]),
+            ['orders:receive', 'orders:check-stock']
+        );
         $this->store = StoresProfile::factory()->create();
         $this->category = CardCategory::create([
             'name' => 'NL Test '.uniqid(),
@@ -161,11 +166,10 @@ class NextLoadSaleTest extends TestCase
         $this->assertStringEndsWith('-2', $references[1]);
     }
 
-    public function test_refetch_after_undo_buys_a_new_code_with_a_new_reference(): void
+    public function test_refetch_after_undo_refuses_same_storefront_line(): void
     {
         $payload = $this->storefrontPayload();
         $this->createResponses[] = $this->complete('PIN-UND-1');
-        $this->createResponses[] = $this->complete('PIN-UND-2');
 
         $this->sell($payload)->assertCreated()->assertJsonPath('code', 'PIN-UND-1');
         $order = Order::where('storefront_order_id', $payload['storefront_order_id'])->firstOrFail();
@@ -175,11 +179,16 @@ class NextLoadSaleTest extends TestCase
             ->postJson(route('manager.orders.undo'), ['order_id' => $order->id, 'sold_item' => $order->sold_item])
             ->assertOk()->assertJsonPath('success', true);
 
-        $this->sell($payload)->assertCreated()->assertJsonPath('code', 'PIN-UND-2');
+        // Same storefront line must not re-issue a code after undo (soft-deleted order kept for idempotency).
+        Sanctum::actingAs(
+            User::factory()->create(['is_active' => true]),
+            ['orders:receive', 'orders:check-stock']
+        );
+        $this->sell($payload)
+            ->assertStatus(409)
+            ->assertJsonPath('trashed', true);
 
-        $references = NextLoadOrder::where('storefront_order_id', $payload['storefront_order_id'])->orderBy('id')->pluck('reference');
-        $this->assertCount(2, $references);
-        $this->assertStringEndsWith('-2', $references[1]);
+        $this->assertSame(1, NextLoadOrder::where('storefront_order_id', $payload['storefront_order_id'])->count());
     }
 
     public function test_timeout_keeps_reference_and_retry_resends_it(): void

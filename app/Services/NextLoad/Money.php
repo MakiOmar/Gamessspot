@@ -36,7 +36,7 @@ final class Money
     }
 
     /**
-     * Supplier amount converted to local currency (NEXTLOAD_EXCHANGE_RATE local units per supplier unit), rounded up.
+     * Supplier amount converted to local currency (settings nextload.exchange_rate local units per supplier unit), rounded up.
      */
     public static function toLocal(string|int|float|null $supplierAmount, string|int|float|null $rate): string
     {

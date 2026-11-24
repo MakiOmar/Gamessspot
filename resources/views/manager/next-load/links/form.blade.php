@@ -176,7 +176,7 @@
                     <p class="mb-1">Local codes available: <strong>{{ $category->available_count }}</strong></p>
                     <p class="mb-1">Supplier cost: <strong>{{ $category->supplier_cost ?? '—' }}</strong>
                         @if ($category->supplier_cost !== null)
-                            (local {{ \App\Services\NextLoad\Money::toLocal($category->supplier_cost, config('services.nextload.exchange_rate', '1')) }})
+                            (local {{ \App\Services\NextLoad\Money::toLocal($category->supplier_cost, \App\Services\SettingsService::getNextLoadExchangeRate()) }})
                         @endif
                     </p>
                     <p class="mb-1">Bought from Next Load today: <strong>{{ $purchasedToday }}</strong>

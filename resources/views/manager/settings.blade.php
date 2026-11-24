@@ -148,6 +148,12 @@
                                 POS Settings
                             </a>
                         </li>
+                        <li>
+                            <a href="#nextload" class="settings-nav-link" data-tab="nextload">
+                                <i class="fas fa-gift"></i>
+                                Next Load
+                            </a>
+                        </li>
                     </ul>
                 </div>
             </div>
@@ -596,6 +602,32 @@
                             </div>
                         </div>
 
+                        <!-- Next Load Settings Tab -->
+                        <div id="nextload" class="settings-tab">
+                            <h3><i class="fas fa-gift"></i> Next Load</h3>
+                            <p class="text-muted mb-4">
+                                Credentials stay in <code>.env</code>. The exchange rate is editable here so you can change it without recreating containers.
+                            </p>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="nextload_exchange_rate" class="form-label">Exchange rate</label>
+                                        <input type="number" step="any" min="0.001"
+                                               class="form-control @error('nextload.exchange_rate') is-invalid @enderror"
+                                               id="nextload_exchange_rate" name="nextload[exchange_rate]"
+                                               value="{{ old('nextload.exchange_rate', $settings['nextload']['exchange_rate']) }}"
+                                               required>
+                                        @error('nextload.exchange_rate')
+                                            <div class="invalid-feedback">{{ $message }}</div>
+                                        @enderror
+                                        <small class="form-text text-muted">
+                                            Local currency units (e.g. EGP) per 1 Next Load supplier unit. Used for card cost and the loss guard.
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
                         <!-- Action Buttons -->
                         <div class="settings-actions">
                             <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
@@ -723,6 +755,7 @@ document.addEventListener('DOMContentLoaded', function() {
                       '<li>Order settings</li>' +
                       '<li>Notification preferences</li>' +
                       '<li>POS configuration</li>' +
+                      '<li>Next Load exchange rate</li>' +
                       '</ul>' +
                       '<p class="text-danger"><strong>This action cannot be undone!</strong></p>' +
                       '<p class="text-muted">Make sure to export your settings first as a backup.</p>' +
